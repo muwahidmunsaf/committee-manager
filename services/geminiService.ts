@@ -1,9 +1,7 @@
-
 import { GoogleGenAI, GenerateContentResponse, Chat } from "@google/genai";
 import { GEMINI_TEXT_MODEL } from '../constants';
 import { AISummaryRequest, Language, GeminiResponseData, GroundingChunk } from '../types';
 import { parseGeminiJsonResponse } from '../utils/appUtils';
-
 
 // Ensure API_KEY is available. In a real build process, this would be set.
 // For development, you might temporarily set it here or use a .env file (not part of this deliverable).
@@ -17,7 +15,7 @@ const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
 export const generateCommitteeSummary = async (request: AISummaryRequest): Promise<string> => {
   if (!ai) return "AI Service not available (API Key missing).";
-  
+
   const langPrompt = request.language === Language.UR 
     ? "براہ کرم کمیٹی کا خلاصہ اردو میں فراہم کریں۔" 
     : "Please provide a summary for the committee in English.";
@@ -39,7 +37,7 @@ export const generateCommitteeSummary = async (request: AISummaryRequest): Promi
     });
     return response.text;
   } catch (error) {
-    console.error("Error generating committee summary:", error);
+    console.error("Error generating committee summary");
     if (request.language === Language.UR) {
       return "خلاصہ تیار کرنے میں خرابی۔";
     }
@@ -62,11 +60,10 @@ export const generateUrduNotification = async (memberName: string, isLate: boole
     });
     return response.text;
   } catch (error) {
-    console.error("Error generating Urdu notification:", error);
+    console.error("Error generating Urdu notification");
     return "اردو اطلاع بنانے میں خرابی۔";
   }
 };
-
 
 // Example of generating JSON (e.g., for risk assessment - conceptual)
 interface RiskAssessment {
@@ -107,11 +104,10 @@ export const assessPaymentRisk = async (memberName: string, paymentHistory: stri
     }
 
   } catch (error) {
-    console.error("Error assessing payment risk:", error);
+    console.error("Error assessing payment risk");
     return language === Language.UR ? "ادائیگی کے خطرے کا اندازہ لگانے میں خرابی۔" : "Error assessing payment risk.";
   }
 };
-
 
 export const getInfoWithGoogleSearch = async (query: string): Promise<GeminiResponseData> => {
   if (!ai) return { text: "AI Service not available (API Key missing)." };
@@ -120,25 +116,24 @@ export const getInfoWithGoogleSearch = async (query: string): Promise<GeminiResp
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: GEMINI_TEXT_MODEL, // Or a model that explicitly supports tools well
       contents: query,
-      config: {
+      config: { 
         tools: [{ googleSearch: {} }],
       },
     });
     
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     
-    return {
+    return { 
       text: response.text,
       candidates: response.candidates,
     };
 
   } catch (error) {
-    console.error("Error with Google Search grounding:", error);
+    console.error("Error with Google Search grounding");
     return { text: "Error fetching information with Google Search." };
   }
 };
 
-// Placeholder for chat functionality if needed later
 let chatInstance: Chat | null = null;
 
 export const startOrContinueChat = async (message: string, systemInstruction?: string): Promise<string> => {
@@ -150,12 +145,12 @@ export const startOrContinueChat = async (message: string, systemInstruction?: s
       config: { systemInstruction: systemInstruction || "You are a helpful assistant." }
     });
   }
-  
+
   try {
     const response: GenerateContentResponse = await chatInstance.sendMessage({ message });
     return response.text;
   } catch (error) {
-    console.error("Error in chat:", error);
+    console.error("Error in chat");
     chatInstance = null; // Reset chat on error
     return "Error in chat communication.";
   }
@@ -178,14 +173,14 @@ export const generateImageDescription = async (imageUrl: string, promptText: str
     // const contents = { parts: [imagePart, textPart] };
     // model would be like 'gemini-1.5-flash-latest' or similar multimodal model
 
-    try {
-        const response: GenerateContentResponse = await ai.models.generateContent({
+  try {
+    const response: GenerateContentResponse = await ai.models.generateContent({
             model: GEMINI_TEXT_MODEL, // Using text model for this simplified example
             contents: prompt, // Sending URL as text, model will treat it as text
         });
         return response.text;
     } catch (error) {
-        console.error("Error generating image description:", error);
+        console.error("Error generating image description");
         return "Error generating image description.";
     }
 };

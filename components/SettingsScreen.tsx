@@ -420,7 +420,7 @@ const SettingsScreen: React.FC = () => {
       alert(t('dataExported'));
 
     } catch (err) {
-      console.error("Error exporting data to Excel:", err);
+      console.error("Error exporting data to Excel");
       alert(language === Language.UR 
         ? 'ڈیٹا ایکسپورٹ کرنے میں خرابی پیش آگئی۔ براہ کرم دوبارہ کوشش کریں۔'
         : 'Error exporting data. Please try again.');

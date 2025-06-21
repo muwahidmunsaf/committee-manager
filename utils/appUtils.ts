@@ -1,4 +1,3 @@
-
 import { PAKISTANI_CNIC_REGEX, PAKISTANI_PHONE_REGEX } from '../constants';
 import { Member, Committee, CommitteePayment, PayoutMethod, CommitteeType } from '../types';
 
@@ -137,15 +136,8 @@ export function parseGeminiJsonResponse<T,>(jsonString: string): T | null {
   try {
     return JSON.parse(cleanedJsonString) as T;
   } catch (error) {
-    console.error('Failed to parse JSON response:', error, 'Original string:', jsonString);
-    try {
-        const fixedJson = cleanedJsonString
-            .replace(/,\s*}/g, '}')
-            .replace(/,\s*]/g, ']');
-        return JSON.parse(fixedJson) as T;
-    } catch (e2) {
-        console.error('Failed to parse JSON response even after attempting to fix:', e2);
-        return null;
-    }
+    console.error('Failed to parse JSON response');
+    // Don't expose sensitive error details or original string content
+    return null;
   }
 }

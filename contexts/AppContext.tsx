@@ -434,7 +434,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           if (data.pinLength) setPinLengthState(data.pinLength);
         }
       } catch (error) {
-        console.error('Error fetching data from Firestore:', error);
+        console.error('Error fetching data from Firestore');
+        // Don't expose sensitive error details
       } finally {
         setIsLoadingState(false);
       }
@@ -472,7 +473,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
         }
       } catch (error) {
-        console.error('Error syncing auth settings:', error);
+        console.error('Error syncing auth settings');
+        // Don't expose sensitive error details
       }
     };
     syncAuthSettings();
@@ -492,7 +494,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }, { merge: true });
       setAuthMethodState(method);
     } catch (error) {
-      console.error('Error updating auth method:', error);
+      console.error('Error updating auth method');
+      // Don't expose sensitive error details
     }
   };
 
@@ -507,7 +510,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }, { merge: true });
       setPinLengthState(length);
     } catch (error) {
-      console.error('Error updating PIN length:', error);
+      console.error('Error updating PIN length');
+      // Don't expose sensitive error details
     }
   };
 
@@ -524,7 +528,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setAppPinState(newPin);
         return true;
       } catch (error) {
-        console.error('Error updating PIN:', error);
+        console.error('Error updating PIN');
+        // Don't expose sensitive error details
         return false;
       }
     }
@@ -542,7 +547,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }, { merge: true });
       setAppPinState(newPin);
     } catch (error) {
-      console.error('Error force updating PIN:', error);
+      console.error('Error force updating PIN');
+      // Don't expose sensitive error details
       throw error;
     }
   };
@@ -562,7 +568,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try {
       await setDoc(doc(db, 'settings', USER_SETTINGS_DOC_ID), { userProfile: profile }, { merge: true });
     } catch (error) {
-      console.error('Error updating userProfile in Firestore:', error);
+      console.error('Error updating userProfile in Firestore');
+      // Don't expose sensitive error details
     }
   };
 
@@ -586,7 +593,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       await setDoc(doc(db, 'committees', newCommittee.id), newCommittee as any);
       setCommitteesState((prev: Committee[]) => [...prev, newCommittee]);
     } catch (error) {
-      console.error('Error adding committee to Firestore:', error);
+      console.error('Error adding committee to Firestore');
+      // Don't expose sensitive error details
     }
     return newCommittee;
   };
@@ -604,7 +612,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return c;
     }));
     } catch (error) {
-      console.error('Error updating committee in Firestore:', error);
+      console.error('Error updating committee in Firestore');
+      // Don't expose sensitive error details
     }
   };
   
@@ -613,7 +622,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       await deleteDoc(doc(db, 'committees', committeeId));
       setCommitteesState((prev: Committee[]) => prev.filter((c: Committee) => c.id !== committeeId));
     } catch (error) {
-      console.error('Error deleting committee from Firestore:', error);
+      console.error('Error deleting committee from Firestore');
+      // Don't expose sensitive error details
     }
   };
 
@@ -626,7 +636,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       await setDoc(doc(db, 'members', newMember.id), newMember as any);
       setMembersState((prev: Member[]) => [...prev, newMember]);
     } catch (error) {
-      console.error('Error adding member to Firestore:', error);
+      console.error('Error adding member to Firestore');
+      // Don't expose sensitive error details
     }
     return newMember;
   };
@@ -636,7 +647,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       await updateDoc(doc(db, 'members', updatedMember.id), updatedMember as any);
       setMembersState((prev: Member[]) => prev.map((m: Member) => m.id === updatedMember.id ? updatedMember : m));
     } catch (error) {
-      console.error('Error updating member in Firestore:', error);
+      console.error('Error updating member in Firestore');
+      // Don't expose sensitive error details
     }
   };
 
@@ -645,7 +657,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       await deleteDoc(doc(db, 'members', memberId));
       setMembersState((prev: Member[]) => prev.filter((m: Member) => m.id !== memberId));
     } catch (error) {
-      console.error('Error deleting member from Firestore:', error);
+      console.error('Error deleting member from Firestore');
+      // Don't expose sensitive error details
     }
   };
   
@@ -762,32 +775,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
       return false;
     } catch (error) {
-      console.error('Error checking PIN:', error);
+      console.error('Error checking PIN');
+      // Don't expose sensitive error details
     return false;
     }
   };
   const lockApp = () => setIsLockedState(true);
 
   // Activity tracking functions
+  const handleAutoLock = () => {
+    setIsLockedState(true);
+  };
+
   const resetAutoLockTimer = () => {
-    const now = Date.now();
-    setLastActivity(now);
-    
-    // Clear existing timer
     if (autoLockTimer) {
       clearTimeout(autoLockTimer);
     }
-    
-    // Set new timer
-    const timer = setTimeout(() => {
-      if (!isLockedState) {
-        console.log(`App auto-locked after ${AUTO_LOCK_DURATION / 1000 / 60} minutes of inactivity`);
-        setIsLockedState(true);
-      }
-    }, AUTO_LOCK_DURATION);
-    
-    setAutoLockTimer(timer);
-    console.log(`Auto-lock timer reset. Will lock in ${AUTO_LOCK_DURATION / 1000 / 60} minutes if no activity`);
+    const newTimer = setTimeout(handleAutoLock, AUTO_LOCK_DURATION);
+    setAutoLockTimer(newTimer);
+    setLastActivity(Date.now());
   };
 
   const getAutoLockTimeRemaining = () => {

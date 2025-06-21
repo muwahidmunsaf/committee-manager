@@ -32,8 +32,8 @@ const AppLockScreen: React.FC = () => {
 
   // Check if user is locked out on component mount
   React.useEffect(() => {
-    const savedAttempts = localStorage.getItem('loginAttempts');
-    const savedLockEndTime = localStorage.getItem('lockEndTime');
+    const savedAttempts = localStorage.getItem('auth_attempts');
+    const savedLockEndTime = localStorage.getItem('lock_expiry');
     
     if (savedAttempts) {
       setLoginAttempts(parseInt(savedAttempts));
@@ -50,8 +50,8 @@ const AppLockScreen: React.FC = () => {
         setTimeRemaining(remaining);
       } else {
         // Lock period has expired, reset
-        localStorage.removeItem('loginAttempts');
-        localStorage.removeItem('lockEndTime');
+        localStorage.removeItem('auth_attempts');
+        localStorage.removeItem('lock_expiry');
         setLoginAttempts(0);
         setIsLocked(false);
         setLockEndTime(null);
@@ -72,8 +72,8 @@ const AppLockScreen: React.FC = () => {
             setIsLocked(false);
             setLockEndTime(null);
             setLoginAttempts(0);
-            localStorage.removeItem('loginAttempts');
-            localStorage.removeItem('lockEndTime');
+            localStorage.removeItem('auth_attempts');
+            localStorage.removeItem('lock_expiry');
             return 0;
           }
           return prev - 1;
@@ -134,7 +134,7 @@ const AppLockScreen: React.FC = () => {
         // Increment failed attempts
         const newAttempts = loginAttempts + 1;
         setLoginAttempts(newAttempts);
-        localStorage.setItem('loginAttempts', newAttempts.toString());
+        localStorage.setItem('auth_attempts', newAttempts.toString());
         
         if (newAttempts >= 3) {
           // Lock user out for 2 minutes
@@ -142,7 +142,7 @@ const AppLockScreen: React.FC = () => {
           setIsLocked(true);
           setLockEndTime(lockEnd);
           setTimeRemaining(120); // 2 minutes in seconds
-          localStorage.setItem('lockEndTime', lockEnd.toISOString());
+          localStorage.setItem('lock_expiry', lockEnd.toISOString());
           
           setError(language === Language.UR 
             ? 'بہت زیادہ غلط کوششیں۔ براہ کرم 2 منٹ انتظار کریں۔'
@@ -158,27 +158,23 @@ const AppLockScreen: React.FC = () => {
         setIsLocked(false);
         setLockEndTime(null);
         setTimeRemaining(0);
-        localStorage.removeItem('loginAttempts');
-        localStorage.removeItem('lockEndTime');
+        localStorage.removeItem('auth_attempts');
+        localStorage.removeItem('lock_expiry');
         
         // Send login notification
         try {
           const deviceInfo = `${navigator.platform} - ${navigator.userAgent}`;
           const loginTime = new Date().toLocaleString();
           if (userProfile.email) {
-            console.log('Attempting to send login notification to:', userProfile.email); // Debug log
             await sendLoginNotification(
               userProfile.email,
               userProfile.name,
               loginTime,
               deviceInfo
             );
-            console.log('Login notification sent successfully'); // Debug log
-          } else {
-            console.log('No email address found in user profile, skipping notification');
           }
         } catch (emailError) {
-          console.error('Failed to send login notification:', emailError);
+          console.error('Failed to send login notification');
           // Don't block the login process if email fails
         }
       }

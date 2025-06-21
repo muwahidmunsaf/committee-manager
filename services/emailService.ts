@@ -26,8 +26,6 @@ export const sendLoginNotification = async (
       device_info: deviceInfo || 'Unknown Device'
     };
 
-    console.log('Sending email with params:', templateParams); // Debug log
-
     const response = await emailjs.send(
       SERVICE_ID,
       TEMPLATE_ID,
@@ -35,10 +33,9 @@ export const sendLoginNotification = async (
       PUBLIC_KEY
     );
 
-    console.log('Email sent successfully:', response); // Debug log
     return response;
   } catch (error) {
-    console.error('Failed to send login notification:', error);
+    console.error('Failed to send login notification');
     if (error instanceof Error) {
       console.error('Error details:', error.message);
     }
