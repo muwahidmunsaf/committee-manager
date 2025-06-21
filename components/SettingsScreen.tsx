@@ -17,10 +17,22 @@ const SettingsScreen: React.FC = () => {
   const [pinError, setPinError] = useState('');
   const [pinSuccess, setPinSuccess] = useState('');
   const [previousAuthMethod, setPreviousAuthMethod] = useState(authMethod);
+  const [selectedPinLength, setSelectedPinLength] = useState(pinLength); // Temporary selection
+  const [selectedAuthMethod, setSelectedAuthMethod] = useState(authMethod); // Temporary auth method selection
 
   // Update previousAuthMethod when authMethod changes
   useEffect(() => {
     setPreviousAuthMethod(authMethod);
+  }, [authMethod]);
+
+  // Update selectedPinLength when pinLength changes from context
+  useEffect(() => {
+    setSelectedPinLength(pinLength);
+  }, [pinLength]);
+
+  // Update selectedAuthMethod when authMethod changes from context
+  useEffect(() => {
+    setSelectedAuthMethod(authMethod);
   }, [authMethod]);
 
   const handleThemeChange = (selectedTheme: Theme) => {
@@ -36,8 +48,8 @@ const SettingsScreen: React.FC = () => {
     setPinError('');
     setPinSuccess('');
 
-    // Validate input based on auth method
-    if (authMethod === AuthMethod.PIN) {
+    // Validate input based on selected auth method
+    if (selectedAuthMethod === AuthMethod.PIN) {
       // Check if inputs contain only digits for new PIN
       if (!/^\d+$/.test(newPin) || !/^\d+$/.test(confirmNewPin)) {
         setPinError(language === Language.UR 
@@ -49,17 +61,17 @@ const SettingsScreen: React.FC = () => {
 
     if (newPin !== confirmNewPin) {
       setPinError(language === Language.UR 
-        ? (authMethod === AuthMethod.PIN ? 'پن مماثل نہیں ہیں۔' : 'پاس ورڈ مماثل نہیں ہیں۔')
-        : (authMethod === AuthMethod.PIN ? 'PINs do not match.' : 'Passwords do not match.'));
+        ? (selectedAuthMethod === AuthMethod.PIN ? 'پن مماثل نہیں ہیں۔' : 'پاس ورڈ مماثل نہیں ہیں۔')
+        : (selectedAuthMethod === AuthMethod.PIN ? 'PINs do not match.' : 'Passwords do not match.'));
       return;
     }
 
-    if (authMethod === AuthMethod.PIN && newPin.length !== pinLength) {
+    if (selectedAuthMethod === AuthMethod.PIN && newPin.length !== selectedPinLength) {
       setPinError(language === Language.UR 
-        ? `پن ${pinLength} ہندسوں کا ہونا چاہیے۔`
-        : `PIN must be exactly ${pinLength} digits.`);
+        ? `پن ${selectedPinLength} ہندسوں کا ہونا چاہیے۔`
+        : `PIN must be exactly ${selectedPinLength} digits.`);
       return;
-    } else if (authMethod === AuthMethod.PASSWORD && newPin.length < 6) {
+    } else if (selectedAuthMethod === AuthMethod.PASSWORD && newPin.length < 6) {
       setPinError(language === Language.UR 
         ? 'پاس ورڈ کم از کم 6 حروف کا ہونا چاہیے۔'
         : 'Password must be at least 6 characters.');
@@ -68,14 +80,22 @@ const SettingsScreen: React.FC = () => {
 
     try {
       const success = await updateAppPin(currentPin, newPin);
-    if (success) {
+      if (success) {
+        // Update authentication method if it was changed
+        if (selectedAuthMethod !== authMethod) {
+          await setAuthMethod(selectedAuthMethod);
+        }
+        // Only update PIN length if it was changed and PIN was successfully updated
+        if (selectedAuthMethod === AuthMethod.PIN && selectedPinLength !== pinLength) {
+          await setPinLength(selectedPinLength);
+        }
         setPinSuccess(language === Language.UR 
-          ? (authMethod === AuthMethod.PIN ? 'پن کامیابی سے تبدیل ہو گیا۔' : 'پاس ورڈ کامیابی سے تبدیل ہو گیا۔')
-          : (authMethod === AuthMethod.PIN ? 'PIN changed successfully.' : 'Password changed successfully.'));
-      setCurrentPin('');
-      setNewPin('');
-      setConfirmNewPin('');
-    } else {
+          ? (selectedAuthMethod === AuthMethod.PIN ? 'پن کامیابی سے تبدیل ہو گیا۔' : 'پاس ورڈ کامیابی سے تبدیل ہو گیا۔')
+          : (selectedAuthMethod === AuthMethod.PIN ? 'PIN changed successfully.' : 'Password changed successfully.'));
+        setCurrentPin('');
+        setNewPin('');
+        setConfirmNewPin('');
+      } else {
         setPinError(language === Language.UR 
           ? (previousAuthMethod === AuthMethod.PIN ? 'موجودہ پن درست نہیں ہے۔' : 'موجودہ پاس ورڈ درست نہیں ہے۔')
           : (previousAuthMethod === AuthMethod.PIN ? 'Current PIN is incorrect.' : 'Current password is incorrect.'));
@@ -488,46 +508,98 @@ const SettingsScreen: React.FC = () => {
           </label>
           <div className="flex space-x-2 rtl:space-x-reverse">
             <Button 
-              variant={authMethod === AuthMethod.PIN ? 'primary' : 'ghost'} 
-              onClick={() => setAuthMethod(AuthMethod.PIN)}
+              variant={selectedAuthMethod === AuthMethod.PIN ? 'primary' : 'ghost'} 
+              onClick={() => setSelectedAuthMethod(AuthMethod.PIN)}
+              className={authMethod === AuthMethod.PIN ? 'ring-2 ring-green-500' : ''}
             >
               PIN
+              {authMethod === AuthMethod.PIN && (
+                <span className="ml-1 text-xs">({language === Language.UR ? 'موجودہ' : 'Current'})</span>
+              )}
             </Button>
             <Button 
-              variant={authMethod === AuthMethod.PASSWORD ? 'primary' : 'ghost'} 
-              onClick={() => setAuthMethod(AuthMethod.PASSWORD)}
+              variant={selectedAuthMethod === AuthMethod.PASSWORD ? 'primary' : 'ghost'} 
+              onClick={() => setSelectedAuthMethod(AuthMethod.PASSWORD)}
+              className={authMethod === AuthMethod.PASSWORD ? 'ring-2 ring-green-500' : ''}
             >
               {language === Language.UR ? 'پاس ورڈ' : 'Password'}
+              {authMethod === AuthMethod.PASSWORD && (
+                <span className="ml-1 text-xs">({language === Language.UR ? 'موجودہ' : 'Current'})</span>
+              )}
             </Button>
           </div>
+          {/* Show current authentication method */}
+          <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mt-2">
+            {language === Language.UR 
+              ? `موجودہ تصدیق کا طریقہ: ${authMethod === AuthMethod.PIN ? 'پن' : 'پاس ورڈ'}`
+              : `Current authentication method: ${authMethod === AuthMethod.PIN ? 'PIN' : 'Password'}`}
+          </p>
+          {/* Show warning if auth method changed but not updated */}
+          {selectedAuthMethod !== authMethod && (
+            <div className="mt-3 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+              <p className="text-sm text-orange-700 dark:text-orange-300">
+                {language === Language.UR 
+                  ? `آپ نے تصدیق کا طریقہ تبدیل کیا ہے۔ یہ تبدیلی تب تک لاگو نہیں ہوگی جب تک آپ نیا ${selectedAuthMethod === AuthMethod.PIN ? 'پن' : 'پاس ورڈ'} درج نہیں کرتے۔`
+                  : `You've changed the authentication method. This change will only take effect when you enter a new ${selectedAuthMethod === AuthMethod.PIN ? 'PIN' : 'password'}.`}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* PIN Length Selection (only show when PIN is selected) */}
-        {authMethod === AuthMethod.PIN && (
+        {selectedAuthMethod === AuthMethod.PIN && (
           <div className="mb-6">
             <label className="block text-sm font-medium text-neutral-dark dark:text-neutral-light mb-2">
               {language === Language.UR ? 'پن کی لمبائی' : 'PIN Length'}
             </label>
             <div className="flex space-x-2 rtl:space-x-reverse">
               <Button 
-                variant={pinLength === PinLength.FOUR ? 'primary' : 'ghost'} 
-                onClick={() => setPinLength(PinLength.FOUR)}
+                variant={selectedPinLength === PinLength.FOUR ? 'primary' : 'ghost'} 
+                onClick={() => setSelectedPinLength(PinLength.FOUR)}
+                className={pinLength === PinLength.FOUR ? 'ring-2 ring-green-500' : ''}
               >
                 4 {language === Language.UR ? 'ہندسے' : 'Digits'}
+                {pinLength === PinLength.FOUR && (
+                  <span className="ml-1 text-xs">({language === Language.UR ? 'موجودہ' : 'Current'})</span>
+                )}
               </Button>
               <Button 
-                variant={pinLength === PinLength.SIX ? 'primary' : 'ghost'} 
-                onClick={() => setPinLength(PinLength.SIX)}
+                variant={selectedPinLength === PinLength.SIX ? 'primary' : 'ghost'} 
+                onClick={() => setSelectedPinLength(PinLength.SIX)}
+                className={pinLength === PinLength.SIX ? 'ring-2 ring-green-500' : ''}
               >
                 6 {language === Language.UR ? 'ہندسے' : 'Digits'}
+                {pinLength === PinLength.SIX && (
+                  <span className="ml-1 text-xs">({language === Language.UR ? 'موجودہ' : 'Current'})</span>
+                )}
               </Button>
               <Button 
-                variant={pinLength === PinLength.EIGHT ? 'primary' : 'ghost'} 
-                onClick={() => setPinLength(PinLength.EIGHT)}
+                variant={selectedPinLength === PinLength.EIGHT ? 'primary' : 'ghost'} 
+                onClick={() => setSelectedPinLength(PinLength.EIGHT)}
+                className={pinLength === PinLength.EIGHT ? 'ring-2 ring-green-500' : ''}
               >
                 8 {language === Language.UR ? 'ہندسے' : 'Digits'}
+                {pinLength === PinLength.EIGHT && (
+                  <span className="ml-1 text-xs">({language === Language.UR ? 'موجودہ' : 'Current'})</span>
+                )}
               </Button>
             </div>
+            {/* Show current PIN length */}
+            <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mt-2">
+              {language === Language.UR 
+                ? `موجودہ پن کی لمبائی: ${pinLength} ہندسے`
+                : `Current PIN length: ${pinLength} digits`}
+            </p>
+            {/* Show warning if length changed but PIN not updated */}
+            {selectedPinLength !== pinLength && (
+              <div className="mt-3 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                <p className="text-sm text-orange-700 dark:text-orange-300">
+                  {language === Language.UR 
+                    ? `آپ نے پن کی لمبائی ${pinLength} سے ${selectedPinLength} میں تبدیل کی ہے۔ یہ تبدیلی تب تک لاگو نہیں ہوگی جب تک آپ نیا پن درج نہیں کرتے۔`
+                    : `You've changed PIN length from ${pinLength} to ${selectedPinLength} digits. This change will only take effect when you enter a new PIN.`}
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -550,44 +622,44 @@ const SettingsScreen: React.FC = () => {
           />
           <Input
             type="password"
-            label={authMethod === AuthMethod.PIN ? t('newPin') : (language === Language.UR ? 'نیا پاس ورڈ' : 'New Password')}
+            label={selectedAuthMethod === AuthMethod.PIN ? t('newPin') : (language === Language.UR ? 'نیا پاس ورڈ' : 'New Password')}
             value={newPin}
             onChange={(e) => {
               // Only allow digits in PIN mode
-              if (authMethod === AuthMethod.PIN) {
+              if (selectedAuthMethod === AuthMethod.PIN) {
                 const onlyDigits = e.target.value.replace(/[^0-9]/g, '');
                 setNewPin(onlyDigits);
               } else {
                 setNewPin(e.target.value);
               }
             }}
-            maxLength={authMethod === AuthMethod.PIN ? pinLength : undefined}
-            inputMode={authMethod === AuthMethod.PIN ? "numeric" : "text"}
-            showPasswordToggle={authMethod === AuthMethod.PASSWORD}
+            maxLength={selectedAuthMethod === AuthMethod.PIN ? selectedPinLength : undefined}
+            inputMode={selectedAuthMethod === AuthMethod.PIN ? "numeric" : "text"}
+            showPasswordToggle={selectedAuthMethod === AuthMethod.PASSWORD}
           />
           <Input
             type="password"
-            label={authMethod === AuthMethod.PIN ? t('confirmNewPin') : (language === Language.UR ? 'نئے پاس ورڈ کی تصدیق کریں' : 'Confirm New Password')}
+            label={selectedAuthMethod === AuthMethod.PIN ? t('confirmNewPin') : (language === Language.UR ? 'نئے پاس ورڈ کی تصدیق کریں' : 'Confirm New Password')}
             value={confirmNewPin}
             onChange={(e) => {
               // Only allow digits in PIN mode
-              if (authMethod === AuthMethod.PIN) {
+              if (selectedAuthMethod === AuthMethod.PIN) {
                 const onlyDigits = e.target.value.replace(/[^0-9]/g, '');
                 setConfirmNewPin(onlyDigits);
               } else {
                 setConfirmNewPin(e.target.value);
               }
             }}
-            maxLength={authMethod === AuthMethod.PIN ? pinLength : undefined}
-            inputMode={authMethod === AuthMethod.PIN ? "numeric" : "text"}
-            showPasswordToggle={authMethod === AuthMethod.PASSWORD}
+            maxLength={selectedAuthMethod === AuthMethod.PIN ? selectedPinLength : undefined}
+            inputMode={selectedAuthMethod === AuthMethod.PIN ? "numeric" : "text"}
+            showPasswordToggle={selectedAuthMethod === AuthMethod.PASSWORD}
           />
           {pinError && <p className="text-red-500 text-sm">{pinError}</p>}
           {pinSuccess && <p className="text-green-500 text-sm">{pinSuccess}</p>}
           <Button type="submit" className="w-full">
             {language === Language.UR 
-              ? (authMethod === AuthMethod.PIN ? 'پن تبدیل کریں' : 'پاس ورڈ تبدیل کریں')
-              : (authMethod === AuthMethod.PIN ? 'Change PIN' : 'Change Password')}
+              ? (selectedAuthMethod === AuthMethod.PIN ? 'پن تبدیل کریں' : 'پاس ورڈ تبدیل کریں')
+              : (selectedAuthMethod === AuthMethod.PIN ? 'Change PIN' : 'Change Password')}
           </Button>
         </form>
       </section>

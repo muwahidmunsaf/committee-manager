@@ -383,6 +383,7 @@ interface AppContextType {
   lockApp: () => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
+  isAuthSettingsLoaded: boolean; // New loading state for auth settings
   resetAutoLockTimer: () => void;
   getAutoLockTimeRemaining: () => number;
 }
@@ -399,6 +400,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [pinLengthState, setPinLengthState] = useState<PinLength>(PinLength.FOUR);
   const [isLockedState, setIsLockedState] = useState<boolean>(true);
   const [isLoadingState, setIsLoadingState] = useState<boolean>(false);
+  const [isAuthSettingsLoaded, setIsAuthSettingsLoaded] = useState<boolean>(false); // New loading state for auth settings
   const [userProfileState, setUserProfileState] = useState<UserProfile>({
     name: '',
     phone: '',
@@ -424,14 +426,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const membersSnapshot = await getDocs(collection(db, 'members'));
         const membersData: Member[] = membersSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as Omit<Member, 'id'>) }));
         setMembersState(membersData);
-        // Fetch user profile and pin
+        // Fetch user profile
         const settingsDoc = await getDoc(doc(db, 'settings', USER_SETTINGS_DOC_ID));
         if (settingsDoc.exists()) {
           const data = settingsDoc.data();
           if (data.userProfile) setUserProfileState(data.userProfile);
-          if (data.appPin) setAppPinState(data.appPin);
-          if (data.authMethod) setAuthMethodState(data.authMethod);
-          if (data.pinLength) setPinLengthState(data.pinLength);
         }
       } catch (error) {
         console.error('Error fetching data from Firestore');
@@ -443,18 +442,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     fetchData();
   }, []);
 
+  // Separate useEffect for auth settings to prevent flash
   useEffect(() => {
-    document.documentElement.lang = languageState;
-    document.documentElement.dir = languageState === Language.UR ? 'rtl' : 'ltr';
-    if (themeState === Theme.DARK) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [languageState, themeState]);
-
-  useEffect(() => {
-    const syncAuthSettings = async () => {
+    const loadAuthSettings = async () => {
       try {
         const settingsDoc = await getDoc(doc(db, 'settings', 'app'));
         if (settingsDoc.exists()) {
@@ -471,14 +461,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           if (data.appPin !== appPinState) {
             setAppPinState(data.appPin || DEFAULT_APP_PIN);
           }
+          // Update language and theme if they exist
+          if (data.language) setLanguageState(data.language);
+          if (data.theme) setThemeState(data.theme);
         }
       } catch (error) {
-        console.error('Error syncing auth settings');
+        console.error('Error loading auth settings');
         // Don't expose sensitive error details
+      } finally {
+        setIsAuthSettingsLoaded(true);
       }
     };
-    syncAuthSettings();
-  }, []);
+    loadAuthSettings();
+  }, []); // Only run once on mount
+
+  useEffect(() => {
+    document.documentElement.lang = languageState;
+    document.documentElement.dir = languageState === Language.UR ? 'rtl' : 'ltr';
+    if (themeState === Theme.DARK) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [languageState, themeState]);
 
   const setLanguage = (lang: Language) => setLanguageState(lang);
   const setTheme = (selectedTheme: Theme) => setThemeState(selectedTheme);
@@ -942,6 +947,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       lockApp,
       isLoading: isLoadingState,
       setIsLoading: setIsLoadingState,
+      isAuthSettingsLoaded,
       resetAutoLockTimer,
       getAutoLockTimeRemaining
     }}>

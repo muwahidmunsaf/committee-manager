@@ -427,7 +427,57 @@ const AppLockScreen: React.FC = () => {
 
 
 const App: React.FC = () => {
-  const { language, isLocked, isLoading: appIsLoading } = useAppContext();
+  const { language, isLocked, isLoading: appIsLoading, isAuthSettingsLoaded } = useAppContext();
+
+  // Show loading spinner while auth settings are being loaded
+  if (!isAuthSettingsLoaded) {
+    return (
+      <DevToolsProtection>
+        <div className={`min-h-screen flex flex-col bg-gradient-to-br from-primary to-primary-dark text-neutral-darker dark:text-neutral-light ${language === Language.UR ? 'font-notoNastaliqUrdu' : 'font-inter'}`} dir={language === Language.UR ? 'rtl' : 'ltr'}>
+          <div className="fixed inset-0 flex items-center justify-center z-[999]">
+            <div className="text-center">
+              {/* Animated Logo */}
+              <div className="relative mb-6">
+                <img 
+                  src="/assets/logo.png" 
+                  alt="Asad Mobile's Shop Logo" 
+                  className="h-32 w-auto mx-auto animate-pulse" 
+                />
+                {/* Loading ring around logo */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-40 h-40 border-4 border-white border-opacity-30 rounded-full animate-spin">
+                    <div className="w-40 h-40 border-4 border-transparent border-t-white rounded-full animate-spin"></div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* App Name */}
+              <h1 className={`text-2xl font-bold text-white mb-2 ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>
+                Asad Mobile's Shop
+              </h1>
+              
+              {/* Loading text with dots animation */}
+              <div className="flex items-center justify-center space-x-1">
+                <p className={`text-white text-lg ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>
+                  {language === Language.UR ? 'لوڈ ہو رہا ہے' : 'Loading'}
+                </p>
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+              </div>
+              
+              {/* Subtitle */}
+              <p className={`text-white text-opacity-80 text-sm mt-4 ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>
+                {language === Language.UR ? 'کمیٹی مینجمنٹ سسٹم' : 'Committee Management System'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </DevToolsProtection>
+    );
+  }
 
   return (
     <DevToolsProtection>
