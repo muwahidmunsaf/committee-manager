@@ -601,16 +601,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const updateCommittee = async (updatedCommittee: Committee) => {
     try {
+      // Check if payout turns need to be recalculated
+      const existingCommittee = committeesState.find(c => c.id === updatedCommittee.id);
+      if (existingCommittee && (existingCommittee.payoutMethod !== updatedCommittee.payoutMethod || JSON.stringify(existingCommittee.memberIds.sort()) !== JSON.stringify(updatedCommittee.memberIds.sort()))) {
+        updatedCommittee.payoutTurns = initializePayoutTurns(updatedCommittee, updatedCommittee.payoutMethod);
+      }
+      
       await updateDoc(doc(db, 'committees', updatedCommittee.id), updatedCommittee as any);
       setCommitteesState((prev: Committee[]) => prev.map((c: Committee) => {
         if (c.id === updatedCommittee.id) {
-            if (c.payoutMethod !== updatedCommittee.payoutMethod || JSON.stringify(c.memberIds.sort()) !== JSON.stringify(updatedCommittee.memberIds.sort())) {
-                updatedCommittee.payoutTurns = initializePayoutTurns(updatedCommittee, updatedCommittee.payoutMethod);
-            }
-            return updatedCommittee;
+          return updatedCommittee;
         }
         return c;
-    }));
+      }));
     } catch (error) {
       console.error('Error updating committee in Firestore');
       // Don't expose sensitive error details
@@ -618,11 +621,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
   
   const deleteCommittee = async (committeeId: string) => {
+    console.log('Attempting to delete committee:', committeeId);
     try {
       await deleteDoc(doc(db, 'committees', committeeId));
+      console.log('Committee deleted from Firestore successfully');
       setCommitteesState((prev: Committee[]) => prev.filter((c: Committee) => c.id !== committeeId));
+      console.log('Committee removed from local state');
     } catch (error) {
-      console.error('Error deleting committee from Firestore');
+      console.error('Error deleting committee from Firestore:', error);
       // Don't expose sensitive error details
     }
   };
@@ -653,11 +659,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const deleteMember = async (memberId: string) => {
+    console.log('Attempting to delete member:', memberId);
     try {
       await deleteDoc(doc(db, 'members', memberId));
+      console.log('Member deleted from Firestore successfully');
       setMembersState((prev: Member[]) => prev.filter((m: Member) => m.id !== memberId));
+      console.log('Member removed from local state');
     } catch (error) {
-      console.error('Error deleting member from Firestore');
+      console.error('Error deleting member from Firestore:', error);
       // Don't expose sensitive error details
     }
   };
@@ -665,54 +674,80 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const getMemberById = (memberId: string) => membersState.find(m => m.id === memberId);
 
   const addMemberToCommittee = async (committeeId: string, memberId: string) => {
-    setCommitteesState((prev: Committee[]) => prev.map((c: Committee) => {
-      if (c.id === committeeId && !c.memberIds.includes(memberId)) {
-        const updatedCommittee = { ...c, memberIds: [...c.memberIds, memberId] };
-        updatedCommittee.payoutTurns = initializePayoutTurns(updatedCommittee, updatedCommittee.payoutMethod);
-        // Update Firestore
-        updateDoc(doc(db, 'committees', committeeId), {
-          memberIds: updatedCommittee.memberIds,
-          payoutTurns: updatedCommittee.payoutTurns
-        });
-        return updatedCommittee;
-      }
-      return c;
-    }));
+    try {
+      setCommitteesState((prev: Committee[]) => prev.map((c: Committee) => {
+        if (c.id === committeeId && !c.memberIds.includes(memberId)) {
+          const updatedCommittee = { ...c, memberIds: [...c.memberIds, memberId] };
+          updatedCommittee.payoutTurns = initializePayoutTurns(updatedCommittee, updatedCommittee.payoutMethod);
+          // Update Firestore
+          updateDoc(doc(db, 'committees', committeeId), {
+            memberIds: updatedCommittee.memberIds,
+            payoutTurns: updatedCommittee.payoutTurns
+          });
+          return updatedCommittee;
+        }
+        return c;
+      }));
+    } catch (error) {
+      console.error('Error adding member to committee in Firestore');
+      // Don't expose sensitive error details
+    }
   };
   
-  const removeMemberFromCommittee = (committeeId: string, memberId: string) => {
-    setCommitteesState(prev => prev.map(c => {
-      if (c.id === committeeId) {
-        const updatedMemberIds = c.memberIds.filter(id => id !== memberId);
-        const updatedPayments = c.payments.filter(p => p.memberId !== memberId);
-        const tempCommitteeForPayoutReinit = { ...c, memberIds: updatedMemberIds };
-        const updatedPayoutTurns = initializePayoutTurns(tempCommitteeForPayoutReinit, c.payoutMethod);
-        return {
-          ...c,
-          memberIds: updatedMemberIds,
-          payments: updatedPayments, 
-          payoutTurns: updatedPayoutTurns,
-        };
-      }
-      return c;
-    }));
+  const removeMemberFromCommittee = async (committeeId: string, memberId: string) => {
+    console.log('Attempting to remove member from committee:', { committeeId, memberId });
+    try {
+      setCommitteesState(prev => prev.map(c => {
+        if (c.id === committeeId) {
+          const updatedMemberIds = c.memberIds.filter(id => id !== memberId);
+          const updatedPayments = c.payments.filter(p => p.memberId !== memberId);
+          const tempCommitteeForPayoutReinit = { ...c, memberIds: updatedMemberIds };
+          const updatedPayoutTurns = initializePayoutTurns(tempCommitteeForPayoutReinit, c.payoutMethod);
+          const updatedCommittee = {
+            ...c,
+            memberIds: updatedMemberIds,
+            payments: updatedPayments, 
+            payoutTurns: updatedPayoutTurns,
+          };
+          
+          // Update Firestore
+          updateDoc(doc(db, 'committees', committeeId), {
+            memberIds: updatedMemberIds,
+            payments: updatedPayments,
+            payoutTurns: updatedPayoutTurns
+          });
+          
+          console.log('Member removed from committee successfully');
+          return updatedCommittee;
+        }
+        return c;
+      }));
+    } catch (error) {
+      console.error('Error removing member from committee in Firestore:', error);
+      // Don't expose sensitive error details
+    }
   };
 
   const recordPayment = async (committeeId: string, paymentDetails: Omit<CommitteePayment, 'id'>) => {
-    setCommitteesState((prev: Committee[]) => prev.map((c: Committee) => {
-      if (c.id === committeeId) {
-        const newPayment: CommitteePayment = {
-          ...paymentDetails,
-          id: generateId(), 
-          status: (paymentDetails.status === 'Cleared' || paymentDetails.status === 'Pending') ? paymentDetails.status : 'Cleared',
-        };
-        const updatedCommittee = { ...c, payments: [...c.payments, newPayment] };
-        // Update Firestore
-        updateDoc(doc(db, 'committees', committeeId), { payments: updatedCommittee.payments });
-        return updatedCommittee;
-      }
-      return c;
-    }));
+    try {
+      setCommitteesState((prev: Committee[]) => prev.map((c: Committee) => {
+        if (c.id === committeeId) {
+          const newPayment: CommitteePayment = {
+            ...paymentDetails,
+            id: generateId(), 
+            status: (paymentDetails.status === 'Cleared' || paymentDetails.status === 'Pending') ? paymentDetails.status : 'Cleared',
+          };
+          const updatedCommittee = { ...c, payments: [...c.payments, newPayment] };
+          // Update Firestore
+          updateDoc(doc(db, 'committees', committeeId), { payments: updatedCommittee.payments });
+          return updatedCommittee;
+        }
+        return c;
+      }));
+    } catch (error) {
+      console.error('Error recording payment in Firestore');
+      // Don't expose sensitive error details
+    }
   };
 
   const getPaymentsForMemberByMonth = (committeeId: string, memberId: string, monthIndex: number): CommitteePayment[] => {
@@ -722,22 +757,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updatePayoutTurn = async (committeeId: string, turnToUpdate: Committee['payoutTurns'][0]) => {
-    setCommitteesState((prev: Committee[]) => prev.map((c: Committee) => {
-      if (c.id === committeeId) {
-        const updatedCommittee = {
-          ...c,
-          payoutTurns: c.payoutTurns.map(pt => 
-            (pt.memberId === turnToUpdate.memberId && pt.turnMonthIndex === turnToUpdate.turnMonthIndex) 
-            ? turnToUpdate 
-            : pt
-          )
-        };
-        // Update Firestore
-        updateDoc(doc(db, 'committees', committeeId), { payoutTurns: updatedCommittee.payoutTurns });
-        return updatedCommittee;
-      }
-      return c;
-    }));
+    try {
+      setCommitteesState((prev: Committee[]) => prev.map((c: Committee) => {
+        if (c.id === committeeId) {
+          const updatedCommittee = {
+            ...c,
+            payoutTurns: c.payoutTurns.map(pt => 
+              (pt.memberId === turnToUpdate.memberId && pt.turnMonthIndex === turnToUpdate.turnMonthIndex) 
+              ? turnToUpdate 
+              : pt
+            )
+          };
+          // Update Firestore
+          updateDoc(doc(db, 'committees', committeeId), { payoutTurns: updatedCommittee.payoutTurns });
+          return updatedCommittee;
+        }
+        return c;
+      }));
+    } catch (error) {
+      console.error('Error updating payout turn in Firestore');
+      // Don't expose sensitive error details
+    }
   };
 
   const unlockApp = async (pin: string) => {

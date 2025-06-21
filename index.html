@@ -34,62 +34,75 @@
     }
   </script>
   
-  <!-- Developer Tools Protection Script -->
+  <!-- Developer Tools Protection Script - SELECTIVE PROTECTION -->
   <script>
-    // Disable right-click context menu
+    // Disable right-click context menu - ONLY when devtools are detected
+    let devtoolsDetected = false;
+    
     document.addEventListener('contextmenu', function(e) {
-      e.preventDefault();
+      if (devtoolsDetected) {
+        e.preventDefault();
+      }
     });
     
-    // Disable keyboard shortcuts for developer tools
+    // Disable keyboard shortcuts for developer tools - SELECTIVE
     document.addEventListener('keydown', function(e) {
-      // F12 key
+      // F12 key - always block
       if (e.key === 'F12') {
         e.preventDefault();
         return false;
       }
       
-      // Ctrl+Shift+I (Windows/Linux) or Cmd+Option+I (Mac)
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'I') {
-        e.preventDefault();
-        return false;
-      }
-      
-      // Ctrl+Shift+C (Windows/Linux) or Cmd+Option+C (Mac)
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
-        e.preventDefault();
-        return false;
-      }
-      
-      // Ctrl+U (View Source)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
-        e.preventDefault();
-        return false;
-      }
-      
-      // Ctrl+Shift+J (Windows/Linux) or Cmd+Option+J (Mac)
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'J') {
-        e.preventDefault();
-        return false;
+      // Only block other shortcuts if devtools are detected
+      if (devtoolsDetected) {
+        // Ctrl+Shift+I (Windows/Linux) or Cmd+Option+I (Mac)
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'I') {
+          e.preventDefault();
+          return false;
+        }
+        
+        // Ctrl+Shift+C (Windows/Linux) or Cmd+Option+C (Mac)
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
+          e.preventDefault();
+          return false;
+        }
+        
+        // Ctrl+U (View Source)
+        if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+          e.preventDefault();
+          return false;
+        }
+        
+        // Ctrl+Shift+J (Windows/Linux) or Cmd+Option+J (Mac)
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'J') {
+          e.preventDefault();
+          return false;
+        }
       }
     });
     
-    // Disable copy functionality
+    // Disable copy functionality - ONLY when devtools are detected
     document.addEventListener('copy', function(e) {
-      e.preventDefault();
-      return false;
+      if (devtoolsDetected) {
+        e.preventDefault();
+        return false;
+      }
     });
     
-    // Disable cut functionality
+    // Disable cut functionality - ONLY when devtools are detected
     document.addEventListener('cut', function(e) {
-      e.preventDefault();
-      return false;
+      if (devtoolsDetected) {
+        e.preventDefault();
+        return false;
+      }
     });
     
-    // Disable paste functionality
+    // Disable paste functionality - ONLY when devtools are detected
     document.addEventListener('paste', function(e) {
-      e.preventDefault();
-      return false;
+      if (devtoolsDetected) {
+        e.preventDefault();
+        return false;
+      }
     });
     
     // Detect developer tools opening
@@ -108,26 +121,23 @@
         if (!devtools.open) {
           devtools.open = true;
           devtools.orientation = widthThreshold ? 'vertical' : 'horizontal';
+          devtoolsDetected = true;
+          // Add CSS class to body for selective protection
+          document.body.classList.add('devtools-detected');
           // Trigger authentication modal (handled by React component)
           window.dispatchEvent(new CustomEvent('devtools-detected'));
         }
       } else {
         devtools.open = false;
         devtools.orientation = null;
+        devtoolsDetected = false;
+        // Remove CSS class from body
+        document.body.classList.remove('devtools-detected');
       }
     }, 1000);
     
-    // Disable console access
-    console.log = function() {};
-    console.warn = function() {};
-    console.error = function() {};
-    console.info = function() {};
-    console.debug = function() {};
-    
-    // Disable alert, confirm, prompt
-    window.alert = function() {};
-    window.confirm = function() { return false; };
-    window.prompt = function() { return null; };
+    // DO NOT disable console access - allow for debugging
+    // DO NOT disable alert, confirm, prompt - allow for normal operations
   </script>
   <style>
     /* Custom scrollbar for better aesthetics */
@@ -154,15 +164,16 @@
       font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif; /* Common Urdu font */
     }
 
-    /* Developer Tools Protection - Disable text selection and copy */
-    * {
+    /* Developer Tools Protection - SELECTIVE text selection and copy protection */
+    /* Only apply when devtools are detected via JavaScript */
+    .devtools-detected * {
       -webkit-user-select: none;
       -moz-user-select: none;
       -ms-user-select: none;
       user-select: none;
     }
     
-    /* Allow text selection in input fields and textareas */
+    /* Always allow text selection in input fields and textareas */
     input, textarea, [contenteditable="true"] {
       -webkit-user-select: text;
       -moz-user-select: text;
@@ -170,8 +181,8 @@
       user-select: text;
     }
     
-    /* Disable copy functionality */
-    * {
+    /* Disable copy functionality only when devtools detected */
+    .devtools-detected * {
       -webkit-touch-callout: none;
       -webkit-user-select: none;
       -khtml-user-select: none;
@@ -180,13 +191,12 @@
       user-select: none;
     }
     
-    /* Disable drag and drop */
-    * {
+    /* Disable drag and drop only when devtools detected */
+    .devtools-detected * {
       -webkit-user-drag: none;
       -khtml-user-drag: none;
       -moz-user-drag: none;
       -o-user-drag: none;
-      user-drag: none;
     }
 
     /* Styles for PDF rendering area (single receipt / installment receipt) */

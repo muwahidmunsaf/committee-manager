@@ -15,7 +15,7 @@ const DevToolsProtection: React.FC<DevToolsProtectionProps> = ({ children }) => 
   const [authError, setAuthError] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Detect developer tools opening
+  // Detect developer tools opening - SELECTIVE PROTECTION
   useEffect(() => {
     let devtools = {
       open: false,
@@ -47,51 +47,46 @@ const DevToolsProtection: React.FC<DevToolsProtectionProps> = ({ children }) => 
       setShowAuthModal(true);
     };
 
-    // Check on key combinations
+    // Check on key combinations - ONLY BLOCK F12, allow other shortcuts for debugging
     const handleKeyDown = (e: KeyboardEvent) => {
-      // F12 key
+      // F12 key - block this
       if (e.key === 'F12') {
         e.preventDefault();
         setIsDevToolsOpen(true);
         setShowAuthModal(true);
       }
       
-      // Ctrl+Shift+I (Windows/Linux) or Cmd+Option+I (Mac)
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'I') {
-        e.preventDefault();
-        setIsDevToolsOpen(true);
-        setShowAuthModal(true);
-      }
-      
-      // Ctrl+Shift+C (Windows/Linux) or Cmd+Option+C (Mac)
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
-        e.preventDefault();
-        setIsDevToolsOpen(true);
-        setShowAuthModal(true);
-      }
-      
-      // Ctrl+U (View Source)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
-        e.preventDefault();
-        setIsDevToolsOpen(true);
-        setShowAuthModal(true);
+      // Allow Ctrl+Shift+I, Ctrl+Shift+C, Ctrl+U for debugging
+      // Only block if user is not authenticated
+      if (!isAuthenticated) {
+        // Ctrl+Shift+I (Windows/Linux) or Cmd+Option+I (Mac)
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'I') {
+          e.preventDefault();
+          setIsDevToolsOpen(true);
+          setShowAuthModal(true);
+        }
+        
+        // Ctrl+Shift+C (Windows/Linux) or Cmd+Option+C (Mac)
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
+          e.preventDefault();
+          setIsDevToolsOpen(true);
+          setShowAuthModal(true);
+        }
+        
+        // Ctrl+U (View Source)
+        if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+          e.preventDefault();
+          setIsDevToolsOpen(true);
+          setShowAuthModal(true);
+        }
       }
     };
 
-    // Check on right-click
+    // Check on right-click - allow right-click for normal operations
     const handleContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
-      setIsDevToolsOpen(true);
-      setShowAuthModal(true);
-    };
-
-    // Check on devtools opening via console
-    const checkConsole = () => {
-      const startTime = new Date();
-      debugger;
-      const endTime = new Date();
-      if (endTime.getTime() - startTime.getTime() > 100) {
-        setIsDevToolsOpen(true);
+      // Only block right-click if devtools are detected and user is not authenticated
+      if (isDevToolsOpen && !isAuthenticated) {
+        e.preventDefault();
         setShowAuthModal(true);
       }
     };
@@ -103,18 +98,14 @@ const DevToolsProtection: React.FC<DevToolsProtectionProps> = ({ children }) => 
     
     // Periodic check for devtools
     const interval = setInterval(checkDevTools, 1000);
-    
-    // Check console access
-    const consoleInterval = setInterval(checkConsole, 2000);
 
     return () => {
       window.removeEventListener('devtools-detected', handleDevToolsDetected);
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('contextmenu', handleContextMenu);
       clearInterval(interval);
-      clearInterval(consoleInterval);
     };
-  }, []);
+  }, [isAuthenticated]);
 
   const handleAuthSubmit = (e: React.FormEvent) => {
     e.preventDefault();

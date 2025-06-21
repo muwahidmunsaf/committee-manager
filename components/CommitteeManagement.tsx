@@ -113,7 +113,12 @@ const CommitteeManagement: React.FC = () => {
   };
 
   const handleDeleteCommitteeWrapper = (committeeId: string) => {
-    if (window.confirm(t('confirmDelete'))) {
+    const committee = committees.find(c => c.id === committeeId);
+    const committeeName = committee?.title || 'this committee';
+    
+    if (window.confirm(language === Language.UR 
+      ? `کیا آپ واقعی "${committeeName}" کو حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں کیا جا سکتا۔`
+      : `Are you sure you want to delete "${committeeName}"? This action cannot be undone.`)) {
       deleteCommittee(committeeId);
     }
   };
@@ -421,6 +426,8 @@ export const CommitteeDetailScreen: React.FC = () => {
         month: string; 
         committeeId?: string;
         memberId?: string;
+        monthIndex?: number; // Add monthIndex for easier deletion
+        paymentId?: string; // Add paymentId for direct deletion
     } | null>(null);
 
     const [selectedMonthForReceipts, setSelectedMonthForReceipts] = useState<number>(0);
@@ -559,6 +566,8 @@ export const CommitteeDetailScreen: React.FC = () => {
         month: getCommitteeMonthName(committee?.startDate ?? '', payment.monthIndex, language),
         committeeId: committee.id,
         memberId: member.id,
+        monthIndex: payment.monthIndex, // Store the actual monthIndex
+        paymentId: payment.id, // Store the payment ID for direct deletion
       });
       setReceiptModalOpen(true);
     };
@@ -623,6 +632,8 @@ export const CommitteeDetailScreen: React.FC = () => {
         amount: number;
         paymentDate: string;
         month: string;
+        monthIndex?: number;
+        paymentId?: string;
       },
       userProfile: { phone?: string; email?: string; address?: string },
       logoBase64: string,
@@ -695,6 +706,8 @@ export const CommitteeDetailScreen: React.FC = () => {
         amount: number;
         paymentDate: string;
         month: string;
+        monthIndex?: number;
+        paymentId?: string;
       },
       userProfile: { phone?: string; email?: string; address?: string },
       logoBase64: string,
@@ -1246,10 +1259,16 @@ export const CommitteeDetailScreen: React.FC = () => {
           return;
         }
 
-        const paymentIndex = committee.payments.findIndex(p => 
-          p.memberId === receiptData.memberId && 
-          p.monthIndex === getCommitteeMonthIndex(receiptData.month, committee.startDate, language)
-        );
+        // Use paymentId if available, otherwise fall back to memberId and monthIndex
+        let paymentIndex = -1;
+        if (receiptData.paymentId) {
+          paymentIndex = committee.payments.findIndex(p => p.id === receiptData.paymentId);
+        } else if (receiptData.memberId && receiptData.monthIndex !== undefined) {
+          paymentIndex = committee.payments.findIndex(p => 
+            p.memberId === receiptData.memberId && 
+            p.monthIndex === receiptData.monthIndex
+          );
+        }
 
         if (paymentIndex === -1) {
           setEditReceiptError(language === Language.UR ? 'ادائیگی نہیں ملی۔' : 'Payment not found.');
@@ -1295,10 +1314,16 @@ export const CommitteeDetailScreen: React.FC = () => {
             return;
           }
 
-          const paymentIndex = committee.payments.findIndex(p => 
-            p.memberId === receiptData.memberId && 
-            p.monthIndex === getCommitteeMonthIndex(receiptData.month, committee.startDate, language)
-          );
+          // Use paymentId if available, otherwise fall back to memberId and monthIndex
+          let paymentIndex = -1;
+          if (receiptData.paymentId) {
+            paymentIndex = committee.payments.findIndex(p => p.id === receiptData.paymentId);
+          } else if (receiptData.memberId && receiptData.monthIndex !== undefined) {
+            paymentIndex = committee.payments.findIndex(p => 
+              p.memberId === receiptData.memberId && 
+              p.monthIndex === receiptData.monthIndex
+            );
+          }
 
           if (paymentIndex === -1) {
             alert(language === Language.UR ? 'ادائیگی نہیں ملی۔' : 'Payment not found.');
