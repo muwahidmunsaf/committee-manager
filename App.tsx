@@ -6,6 +6,7 @@ import DashboardScreen from './components/DashboardScreen';
 import CommitteeManagement, { CommitteeDetailScreen } from './components/CommitteeManagement';
 import UserProfileScreen from './components/UserProfileScreen';
 import SettingsScreen from './components/SettingsScreen'; // Import SettingsScreen
+import DevToolsProtection from './components/DevToolsProtection'; // Import DevToolsProtection
 import { Button, Input, LoadingSpinner, LockClosedIcon } from './components/UIComponents';
 import { Language, AuthMethod } from './types'; 
 import { sendLoginNotification } from './services/emailService';
@@ -429,32 +430,34 @@ const App: React.FC = () => {
   const { language, isLocked, isLoading: appIsLoading } = useAppContext();
 
   return (
-    <BrowserRouter>
-      <div className={`min-h-screen flex flex-col bg-neutral-light dark:bg-neutral-darkest text-neutral-darker dark:text-neutral-light ${language === Language.UR ? 'font-notoNastaliqUrdu' : 'font-inter'}`} dir={language === Language.UR ? 'rtl' : 'ltr'}>
-        {isLocked && <AppLockScreen />}
-        {!isLocked && <Navbar />}
-        <main className={`flex-grow w-full max-w-7xl mx-auto ${isLocked ? 'blur-sm pointer-events-none' : ''}`}>
-          {appIsLoading && !isLocked && ( 
-            <div className="fixed inset-0 bg-white bg-opacity-75 dark:bg-neutral-darkest dark:bg-opacity-75 flex items-center justify-center z-[999]">
-              <LoadingSpinner size="lg" />
-            </div>
+    <DevToolsProtection>
+      <BrowserRouter>
+        <div className={`min-h-screen flex flex-col bg-neutral-light dark:bg-neutral-darkest text-neutral-darker dark:text-neutral-light ${language === Language.UR ? 'font-notoNastaliqUrdu' : 'font-inter'}`} dir={language === Language.UR ? 'rtl' : 'ltr'}>
+          {isLocked && <AppLockScreen />}
+          {!isLocked && <Navbar />}
+          <main className={`flex-grow w-full max-w-7xl mx-auto ${isLocked ? 'blur-sm pointer-events-none' : ''}`}>
+            {appIsLoading && !isLocked && ( 
+              <div className="fixed inset-0 bg-white bg-opacity-75 dark:bg-neutral-darkest dark:bg-opacity-75 flex items-center justify-center z-[999]">
+                <LoadingSpinner size="lg" />
+              </div>
+            )}
+            <Routes>
+              <Route path="/" element={isLocked ? <Navigate to="/" /> : <DashboardScreen />} />
+              <Route path="/committees" element={isLocked ? <Navigate to="/" /> : <CommitteeManagement />} />
+              <Route path="/committees/:committeeId" element={isLocked ? <Navigate to="/" /> : <CommitteeDetailScreen />} />
+              <Route path="/profile" element={isLocked ? <Navigate to="/" /> : <UserProfileScreen />} />
+              <Route path="/settings" element={isLocked ? <Navigate to="/" /> : <SettingsScreen />} /> {/* Add Settings route */}
+              <Route path="*" element={<Navigate to="/" />} /> 
+            </Routes>
+          </main>
+          {!isLocked && (
+            <footer className={`py-4 text-center text-sm text-neutral-DEFAULT dark:text-gray-400 ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>
+              © {new Date().getFullYear()} Asad Mobile's Shop. {language === Language.UR ? "جملہ حقوق محفوظ ہیں." : "All rights reserved."}
+            </footer>
           )}
-          <Routes>
-            <Route path="/" element={isLocked ? <Navigate to="/" /> : <DashboardScreen />} />
-            <Route path="/committees" element={isLocked ? <Navigate to="/" /> : <CommitteeManagement />} />
-            <Route path="/committees/:committeeId" element={isLocked ? <Navigate to="/" /> : <CommitteeDetailScreen />} />
-            <Route path="/profile" element={isLocked ? <Navigate to="/" /> : <UserProfileScreen />} />
-            <Route path="/settings" element={isLocked ? <Navigate to="/" /> : <SettingsScreen />} /> {/* Add Settings route */}
-            <Route path="*" element={<Navigate to="/" />} /> 
-          </Routes>
-        </main>
-        {!isLocked && (
-          <footer className={`py-4 text-center text-sm text-neutral-DEFAULT dark:text-gray-400 ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>
-            © {new Date().getFullYear()} Asad Mobile's Shop. {language === Language.UR ? "جملہ حقوق محفوظ ہیں." : "All rights reserved."}
-          </footer>
-        )}
-      </div>
-    </BrowserRouter>
+        </div>
+      </BrowserRouter>
+    </DevToolsProtection>
   );
 };
 

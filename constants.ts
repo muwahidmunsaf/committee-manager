@@ -13,3 +13,6 @@ export const APP_DATA_STORAGE_KEY = 'AsadMobilesShopData_v1';
 
 export const MAX_DURATION = 60; // Max duration for committees (e.g., 60 months)
 export const MAX_MEMBERS_PER_COMMITTEE = 100;
+
+// Developer Tools Protection
+export const DEV_TOOLS_AUTH_KEY = 'committee2024';
