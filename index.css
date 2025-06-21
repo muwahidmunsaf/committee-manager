@@ -1,0 +1,9 @@
+/* Tailwind @apply rules moved from index.html */
+
+::-webkit-scrollbar-track {
+  @apply dark:bg-neutral-darker;
+}
+ 
+body {
+  @apply bg-neutral-light text-neutral-dark dark:bg-neutral-darkest dark:text-neutral-light;
+} 

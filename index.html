@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Asad Mobile's Shop</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class', // Enable class-based dark mode
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              light: '#67e8f9', // cyan-300
+              DEFAULT: '#06b6d4', // cyan-500
+              dark: '#0e7490', // cyan-700
+            },
+            secondary: {
+              light: '#fde047', // yellow-300
+              DEFAULT: '#facc15', // yellow-500
+              dark: '#eab308', // yellow-600
+            },
+            neutral: {
+              light: '#f3f4f6', // gray-100
+              DEFAULT: '#6b7280', // gray-500 text
+              dark: '#374151', // gray-700 - adjusted for dark mode text on light bg
+              darker: '#1f2937', // gray-800 
+              darkest: '#111827' // gray-900 - for dark backgrounds
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar for better aesthetics */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #06b6d4; /* primary color */
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #0e7490; /* primary-dark color */
+    }
+    /* Basic body styling */
+    body {
+      font-family: 'Inter', sans-serif; /* A nice sans-serif font */
+    }
+    /* For Urdu text */
+    [lang="ur"], html[lang="ur"] body, html[lang="ur"] input, html[lang="ur"] select, html[lang="ur"] textarea, html[lang="ur"] button {
+      font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif; /* Common Urdu font */
+    }
+
+    /* Styles for PDF rendering area (single receipt / installment receipt) */
+    .receipt-render-area { /* Generic class for any receipt */
+      font-family: 'Arial', sans-serif; /* Default for PDF, Urdu will override if lang=ur */
+      padding: 25px;
+      border: 1px solid #dee2e6;
+      background-color: #ffffff;
+      box-shadow: none;
+      width: 100%; 
+      max-width: 500px;
+      margin: auto;
+      color: #343a40; 
+    }
+    .receipt-render-area[dir="ur"] *, .receipt-render-area[dir="rtl"] * { /* Added [dir="rtl"] for robustness */
+        font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
+    }
+    .receipt-render-area h2 {
+      text-align: center;
+      color: #0e7490; 
+      font-size: 1.6em;
+      font-weight: bold;
+      margin-bottom: 25px;
+      border-bottom: 2px solid #06b6d4;
+      padding-bottom: 12px;
+    }
+    .receipt-render-area p {
+      margin-bottom: 10px;
+      line-height: 1.7;
+      font-size: 0.95em;
+      color: #495057;
+    }
+    .receipt-render-area strong {
+      color: #212529; 
+      min-width: 130px; 
+      display: inline-block;
+      font-weight: 600;
+    }
+    .receipt-render-area .signature-area {
+      margin-top: 50px;
+    }
+    .receipt-render-area[dir="ltr"] .signature-area {
+      text-align: right;
+    }
+    .receipt-render-area[dir="rtl"] .signature-area {
+      text-align: left;
+    }
+    .receipt-render-area .signature-area p {
+      font-size: 0.95em;
+      color: #495057;
+    }
+    .receipt-render-area .auto-generated-note {
+      margin-top: 20px;
+      font-size: 0.75em;
+      text-align: center;
+      color: #6c757d;
+    }
+    .modal-action-buttons.print-hide {
+        display: none !important;
+    }
+
+
+    /* Styles for Member History Report PDF & Monthly Receipts (Tables) */
+    .report-render-area { /* Generic class for reports */
+        font-family: 'Arial', sans-serif; /* Default, Urdu will override */
+        padding: 20px;
+        background-color: #fff;
+        color: #333;
+        width: 100%; 
+    }
+     .report-render-area[dir="ur"] *, .report-render-area[dir="rtl"] * { /* Added [dir="rtl"] for robustness */
+        font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
+    }
+    .report-render-area .profile-pic-pdf {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #06b6d4; /* primary color */
+        margin-bottom: 10px;
+    }
+    .report-render-area[dir="rtl"] .profile-pic-pdf {
+        float: left; /* Example for RTL, adjust as needed */
+        margin-left: 15px;
+    }
+    .report-render-area[dir="ltr"] .profile-pic-pdf {
+        float: right; /* Example for LTR */
+        margin-right: 15px;
+    }
+    .report-render-area h1 {
+        font-size: 1.8em; font-weight: bold; text-align: center; color: #0e7490; margin-bottom: 15px; border-bottom: 1px solid #06b6d4; padding-bottom: 10px; clear: both;
+    }
+    .report-render-area h2 {
+        font-size: 1.4em; font-weight: bold; color: #06b6d4; margin-top: 20px; margin-bottom:10px; border-bottom: 1px solid #eee; padding-bottom:5px; clear: both;
+    }
+    .report-render-area h3 {
+        font-size: 1.1em; font-weight: bold; color: #1f2937; margin-top: 15px; margin-bottom:5px;
+    }
+    .report-render-area p {
+        margin-bottom: 8px; font-size: 0.9em; line-height: 1.6;
+    }
+    .report-render-area strong {
+        font-weight: bold; min-width: 100px; display: inline-block;
+    }
+    .report-render-area table {
+        width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 15px; font-size: 0.85em;
+    }
+    .report-render-area th, .report-render-area td {
+        border: 1px solid #ddd; padding: 6px; /* Reduced padding */ text-align: left; /* LTR default */
+        vertical-align: middle; /* Better align text with images if any */
+    }
+    .report-render-area[dir="rtl"] th, .report-render-area[dir="rtl"] td {
+        text-align: right; /* RTL support */
+    }
+    .report-render-area th {
+        background-color: #f0f9ff; /* Light primary background for headers */ color: #0e7490; /* Primary dark text */
+        font-weight: bold;
+    }
+    .report-render-area .paid-status, .report-render-area .installment-cleared { color: #16a34a; } /* Tailwind green-600 */
+    .report-render-area .unpaid-status { color: #dc2626; } /* Tailwind red-600 */
+    .report-render-area .partial-status { color: #f59e0b; } /* Tailwind amber-500 */
+
+
+    /* Print-specific styles */
+    @media print {
+      body {
+        background-color: #fff !important; /* Ensure body bg is white for printing */
+      }
+      body > *:not(.print-this-modal):not(#pdf-render-area-wrapper) {
+        display: none !important;
+      }
+      .print-this-modal, #pdf-render-area-wrapper { 
+        position: static !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow: visible !important;
+        background: white !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        z-index: 9999 !important; 
+      }
+      .print-this-modal > div:first-child, 
+      #pdf-render-area-wrapper > div { 
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        max-height: none !important;
+        box-shadow: none !important;
+        border: none !important;
+        margin: 0 !important;
+        padding: 20px !important; 
+        border-radius: 0 !important;
+      }
+      .print-this-modal .modal-header-print-hide,
+      .print-this-modal .modal-action-buttons,
+      .no-print { 
+        display: none !important;
+      }
+      .receipt-render-area, .report-render-area {
+         margin: 0;
+         padding: 0;
+         border: none;
+         box-shadow: none;
+         color: #000 !important; /* Ensure text is black for print */
+      }
+      .receipt-render-area *, .report-render-area * {
+          color: #000 !important; /* Ensure all child text is black */
+      }
+       .receipt-render-area[dir="ur"] *, .report-render-area[dir="ur"] * {
+        font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
+      }
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+  <!-- If Jameel Noori Nastaleeq is hosted, link it here e.g.,
+  <link href="path/to/jameel-noori-nastaleeq.css" rel="stylesheet">
+  Alternatively, if it's a commonly available system font, the font-family rule will attempt to use it.
+  For this exercise, we assume the font is made available to the browser. -->
+
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.1.0",
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.5.1",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.6.2",
+    "recharts": "https://esm.sh/recharts@^2.15.3",
+    "jspdf": "https://esm.sh/jspdf@2.5.1",
+    "html2canvas": "https://esm.sh/html2canvas@1.4.1",
+    "xlsx": "https://esm.sh/xlsx@0.18.5"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+<link rel="icon" type="image/png" href="assets/logo.png" />
+</head>
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+  <div id="pdf-render-area-wrapper" class="print-only" style="display:none; position:absolute; left: -9999px; top: -9999px; background:white;">
+    {/* This div will be used to temporarily render content for PDF generation */}
+  </div>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
