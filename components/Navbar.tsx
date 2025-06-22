@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
 import { Language, Theme } from '../types';
-import { Button, UserCircleIcon, Cog6ToothIcon, Bars3Icon, XMarkIcon, LanguageIcon, LockClosedIcon, SunIcon, MoonIcon } from './UIComponents';
+import { Button, UserCircleIcon, CogIcon, Bars3Icon, XMarkIcon, GlobeAltIcon, LockClosedIcon, SunIcon, MoonIcon, HomeIcon, UserGroupIcon, CreditCardIcon, BellIcon, ChartBarIcon, FolderIcon, ClockIcon, StarIcon, HeartIcon, TrophyIcon, GiftIcon, FireIcon, RocketLaunchIcon, AcademicCapIcon, BuildingOfficeIcon, HandRaisedIcon, LightBulbIcon, PuzzlePieceIcon, SparklesIcon2 } from './UIComponents';
 
 const Navbar: React.FC = () => {
   const { language, setLanguage, t, userProfile, lockApp, theme, setTheme } = useAppContext();
@@ -61,7 +61,7 @@ const Navbar: React.FC = () => {
                 onClick={() => handleLanguageChange(language === Language.EN ? Language.UR : Language.EN)}
                 aria-label={t('language')}
               >
-                <LanguageIcon className={`h-5 w-5 ${language === Language.UR ? 'ml-1' : 'mr-1'}`} /> {language === Language.EN ? 'اردو' : 'English'}
+                <GlobeAltIcon className={`h-5 w-5 ${language === Language.UR ? 'ml-1' : 'mr-1'}`} /> {language === Language.EN ? 'اردو' : 'English'}
               </button>
             </div>
             <button
@@ -115,7 +115,7 @@ const Navbar: React.FC = () => {
               onClick={() => handleLanguageChange(language === Language.EN ? Language.UR : Language.EN)}
               aria-label={t('language')}
             >
-              <LanguageIcon className={`h-5 w-5 inline ${language === Language.UR ? 'ml-2' : 'mr-2'}`} /> {language === Language.EN ? 'اردو' : 'English'}
+              <GlobeAltIcon className={`h-5 w-5 inline ${language === Language.UR ? 'ml-2' : 'mr-2'}`} /> {language === Language.EN ? 'اردو' : 'English'}
             </button>
           </div>
         </div>

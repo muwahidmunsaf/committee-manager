@@ -3,9 +3,8 @@ import { useAppContext } from '../contexts/AppContext';
 import { Committee, Member, Language, CommitteeType } from '../types';
 import { calculateTotalPool, getMemberName, formatDate, getCommitteeMonthName, getCurrentPeriodIndex, calculateRemainingCollectionForPeriod } from '../utils/appUtils';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell, CartesianGrid } from 'recharts';
-import { ChartPieIcon, UsersIcon, DocumentTextIcon, WalletIcon, CalendarDaysIcon } from './UIComponents';
-import { ClipboardDocumentCheckIcon, CheckCircleIcon, BanknotesIcon, ArrowTrendingUpIcon, ExclamationCircleIcon, UserGroupIcon } from '@heroicons/react/24/outline';
-import { InformationCircleIcon } from '@heroicons/react/24/outline';
+import { ChartPieIcon, UserGroupIcon, DocumentTextIcon, WalletIcon, CalendarDaysIcon, HomeIcon, CreditCardIcon, ClockIcon, StarIcon, HeartIcon, TrophyIcon, GiftIcon, FireIcon, RocketLaunchIcon, AcademicCapIcon, BuildingOfficeIcon, HandRaisedIcon, LightBulbIcon, PuzzlePieceIcon, SparklesIcon2, ChartBarIcon, FolderIcon, BellIcon, ShieldCheckIcon, GlobeAltIcon, PaintBrushIcon } from './UIComponents';
+import { ClipboardDocumentCheckIcon, CheckCircleIcon, BanknotesIcon, ArrowTrendingUpIcon, ExclamationCircleIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 
 const DashboardScreen: React.FC = () => {
   const { t, committees, members, language } = useAppContext();
@@ -104,6 +103,58 @@ const DashboardScreen: React.FC = () => {
     return null;
   };
 
+  // Custom tooltip for PieChart - shows member contribution details without progress bar
+  const PieChartTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0];
+      const memberName = data.name;
+      const memberContribution = data.value;
+      
+      // Find the member to get their total expected amount
+      const member = members.find(m => m.name === memberName);
+      let totalExpected = 0;
+      let totalPaid = memberContribution;
+      
+      if (member) {
+        // Calculate total expected amount for this member across all committees
+        committees.forEach(committee => {
+          if (committee.memberIds.includes(member.id)) {
+            // Count how many shares this member has in this committee
+            const memberShares = committee.memberIds.filter(id => id === member.id).length;
+            // Total expected for this committee
+            const committeeExpected = committee.amountPerMember * memberShares * committee.duration;
+            totalExpected += committeeExpected;
+          }
+        });
+      }
+      
+      const paymentProgress = totalExpected > 0 ? Math.round((totalPaid / totalExpected) * 100) : 0;
+      
+      return (
+        <div className="bg-white dark:bg-neutral-darker p-3 border border-gray-300 dark:border-gray-700 rounded shadow-lg">
+          <p className="font-semibold text-neutral-darker dark:text-neutral-light">{memberName}</p>
+          <p style={{ color: data.color }} className="text-sm">
+            {`Paid: PKR ${totalPaid.toLocaleString()}`}
+          </p>
+          <p className="text-xs text-gray-500">
+            {`Expected: PKR ${totalExpected.toLocaleString()}`}
+          </p>
+          <div className="mt-2">
+            <span className="text-xs text-gray-500">Payment Progress:</span>
+            <div className="w-full h-2 bg-gray-200 dark:bg-neutral-dark rounded mt-1">
+              <div 
+                className="h-2 rounded bg-green-500" 
+                style={{ width: `${Math.min(paymentProgress, 100)}%` }}
+              ></div>
+            </div>
+            <span className="text-xs text-gray-500">{paymentProgress}% paid</span>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   const upcomingPayoutsList = activeCommittees.flatMap(c => 
     c.payoutTurns
       .filter(pt => !pt.paidOut)
@@ -170,7 +221,7 @@ const DashboardScreen: React.FC = () => {
     committeeTitle: c.title,
     memberId: pt.memberId,
     amount: c.amountPerMember * c.memberIds.length,
-    date: pt.payoutDate,
+    date: pt.payoutDate!,
     status: 'Paid',
   }))).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
 
@@ -221,6 +272,7 @@ const DashboardScreen: React.FC = () => {
   const currentMonthRemaining = Math.max(currentMonthExpected - currentMonthCollected, 0);
 
   const [showAlert, setShowAlert] = useState(true);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   return (
     <div className={`p-4 md:p-6 space-y-8 ${language === Language.UR ? 'font-notoNastaliqUrdu text-right' : ''}`}>
@@ -231,25 +283,214 @@ const DashboardScreen: React.FC = () => {
 
       {/* Add alert at the top of the dashboard */}
       {showAlert && (overduePayments.length > 0 || upcomingPayoutsSoon.length > 0) && (
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 rounded relative">
-          <button className="absolute top-2 right-2 text-yellow-700" onClick={() => setShowAlert(false)}>&times;</button>
-          <div className="font-bold mb-1">Attention Needed</div>
-          {overduePayments.length > 0 && (
-            <div className="mb-1">Overdue payments for {overduePayments.length} member(s) in current period.</div>
-          )}
-          {upcomingPayoutsSoon.length > 0 && (
-            <div>Upcoming payouts due in next 7 days for {upcomingPayoutsSoon.length} member(s).</div>
-          )}
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-l-4 border-amber-500 dark:border-amber-400 text-amber-800 dark:text-amber-200 p-6 mb-6 rounded-lg shadow-lg relative overflow-hidden">
+          {/* Background pattern */}
+          <div className="absolute inset-0 opacity-5">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500 rounded-full -translate-y-16 translate-x-16"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-orange-500 rounded-full translate-y-12 -translate-x-12"></div>
+          </div>
+          
+          {/* Close button */}
+          <button 
+            className="absolute top-3 right-3 text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors duration-200 p-1 rounded-full hover:bg-amber-100 dark:hover:bg-amber-800/30"
+            onClick={() => setShowAlert(false)}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          
+          <div className="relative z-10">
+            {/* Header */}
+            <div className="flex items-center mb-3">
+              <div className="flex-shrink-0 mr-3">
+                <div className="w-10 h-10 bg-amber-500 dark:bg-amber-400 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-amber-900 dark:text-amber-100">Attention Needed</h3>
+                <p className="text-sm text-amber-700 dark:text-amber-300">Action required for committee management</p>
+              </div>
+            </div>
+            
+            {/* Content */}
+            <div className="space-y-3">
+              {overduePayments.length > 0 && (
+                <div className="flex items-start space-x-3 rtl:space-x-reverse">
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-amber-800 dark:text-amber-200 font-medium">
+                      <span className="font-bold text-red-600 dark:text-red-400">{overduePayments.length}</span> member(s) have overdue payments for the current period
+                    </p>
+                    <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+                      Review payment status and follow up with members
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {upcomingPayoutsSoon.length > 0 && (
+                <div className="flex items-start space-x-3 rtl:space-x-reverse">
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-amber-800 dark:text-amber-200 font-medium">
+                      <span className="font-bold text-blue-600 dark:text-blue-400">{upcomingPayoutsSoon.length}</span> payout(s) due in the next 7 days
+                    </p>
+                    <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+                      Prepare for upcoming committee payouts
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Action buttons */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button 
+                onClick={() => setShowDetailsModal(true)}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 flex items-center space-x-2 rtl:space-x-reverse"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>View Details</span>
+              </button>
+              <button 
+                onClick={() => setShowAlert(false)}
+                className="px-4 py-2 bg-transparent border border-amber-500 dark:border-amber-400 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-800/30 text-sm font-medium rounded-lg transition-colors duration-200"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Details Modal */}
+      {showDetailsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 dark:bg-opacity-70 p-4">
+          <div className="bg-white dark:bg-neutral-darker rounded-lg shadow-xl p-0 w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-neutral-darker dark:text-neutral-light flex items-center">
+                <svg className="w-6 h-6 text-amber-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                Attention Details
+              </h3>
+              <button 
+                onClick={() => setShowDetailsModal(false)}
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-grow overflow-y-auto p-4 md:p-6">
+              <div className="space-y-6">
+                {/* Overdue Payments Section */}
+                {overduePayments.length > 0 && (
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                    <h4 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-3 flex items-center">
+                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                      Overdue Payments ({overduePayments.length})
+                    </h4>
+                    <div className="space-y-3">
+                      {overduePayments.map((payment, index) => (
+                        <div key={index} className="bg-white dark:bg-neutral-darker p-3 rounded border border-red-200 dark:border-red-800">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium text-neutral-darker dark:text-neutral-light">
+                                {getMemberName(payment.memberId, members)}
+                              </p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Committee: {payment.committeeTitle}
+                              </p>
+                              <p className="text-xs text-red-600 dark:text-red-400">
+                                Period: {payment.period + 1}
+                              </p>
+                            </div>
+                            <span className="text-xs bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 px-2 py-1 rounded-full">
+                              Overdue
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Upcoming Payouts Section */}
+                {upcomingPayoutsSoon.length > 0 && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <h4 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-3 flex items-center">
+                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                      </svg>
+                      Upcoming Payouts ({upcomingPayoutsSoon.length})
+                    </h4>
+                    <div className="space-y-3">
+                      {upcomingPayoutsSoon.map((payout, index) => (
+                        <div key={index} className="bg-white dark:bg-neutral-darker p-3 rounded border border-blue-200 dark:border-blue-800">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium text-neutral-darker dark:text-neutral-light">
+                                {getMemberName(payout.memberId, members)}
+                              </p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Committee: {payout.committeeTitle}
+                              </p>
+                              <p className="text-xs text-blue-600 dark:text-blue-400">
+                                Due in: {payout.daysUntil} day{payout.daysUntil !== 1 ? 's' : ''}
+                              </p>
+                            </div>
+                            <span className="text-xs bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
+                              {payout.daysUntil === 0 ? 'Today' : `${payout.daysUntil} day${payout.daysUntil !== 1 ? 's' : ''}`}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2 rtl:space-x-reverse p-4 md:p-6 border-t border-gray-200 dark:border-gray-700">
+              <button 
+                onClick={() => setShowDetailsModal(false)}
+                className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6">
-        <StatCard title={<span>{t('activeCommittees')} <InfoTooltip text="Committees currently running (not completed)." /></span>} value={activeCommittees.length.toString()} icon={<ClipboardDocumentCheckIcon className="w-7 h-7 text-blue-600"/>} description={t('activeCommitteesDesc')} />
-        <StatCard title={<span>{t('completedCommittees')} <InfoTooltip text="Committees that have finished all payout cycles." /></span>} value={completedCommitteesCount.toString()} icon={<CheckCircleIcon className="w-7 h-7 text-green-500" />} description={t('completedCommitteesDesc')} />
-        <StatCard title={<span>{t('totalCollected')} <InfoTooltip text="Sum of all cleared payments for all committees." /></span>} value={`PKR ${totalCollectedOverall.toLocaleString()}`} icon={<BanknotesIcon className="w-7 h-7 text-emerald-600" />} description={t('totalCollectedDesc')} />
-        <StatCard title={<span>Collected This Month <InfoTooltip text="Sum of all cleared payments for the current period (all committees)." /></span>} value={`PKR ${currentMonthCollected.toLocaleString()}`} icon={<ArrowTrendingUpIcon className="w-7 h-7 text-blue-500" />} description="Amount collected in current month (all committees)" />
-        <StatCard title={<span>Remaining This Month <InfoTooltip text="Expected collection for the current period minus cleared payments (all committees)." /></span>} value={`PKR ${currentMonthRemaining.toLocaleString()}`} icon={<ExclamationCircleIcon className="w-7 h-7 text-orange-500" />} description="Remaining amount in current month (all committees)" />
+        <StatCard title={<span>{t('activeCommittees')} <InfoTooltip text="Committees currently running (not completed)." /></span>} value={activeCommittees.length.toString()} icon={<BuildingOfficeIcon className="w-7 h-7 text-blue-600"/>} description={t('activeCommitteesDesc')} />
+        <StatCard title={<span>{t('completedCommittees')} <InfoTooltip text="Committees that have finished all payout cycles." /></span>} value={completedCommitteesCount.toString()} icon={<TrophyIcon className="w-7 h-7 text-green-500" />} description={t('completedCommitteesDesc')} />
+        <StatCard title={<span>{t('totalCollected')} <InfoTooltip text="Sum of all cleared payments for all committees." /></span>} value={`PKR ${totalCollectedOverall.toLocaleString()}`} icon={<CreditCardIcon className="w-7 h-7 text-emerald-600" />} description={t('totalCollectedDesc')} />
+        <StatCard title={<span>Collected This Month <InfoTooltip text="Sum of all cleared payments for the current period (all committees)." /></span>} value={`PKR ${currentMonthCollected.toLocaleString()}`} icon={<ChartBarIcon className="w-7 h-7 text-blue-500" />} description="Amount collected in current month (all committees)" />
+        <StatCard title={<span>Remaining This Month <InfoTooltip text="Expected collection for the current period minus cleared payments (all committees)." /></span>} value={`PKR ${currentMonthRemaining.toLocaleString()}`} icon={<ClockIcon className="w-7 h-7 text-orange-500" />} description="Remaining amount in current month (all committees)" />
         <StatCard title={<span>{t('overallTotalMembers')} <InfoTooltip text="Total number of unique members across all committees." /></span>} value={members.length.toString()} icon={<UserGroupIcon className="w-7 h-7 text-violet-600" />} description={t('overallTotalMembersDesc')} />
       </div>
 
@@ -302,7 +543,7 @@ const DashboardScreen: React.FC = () => {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<PieChartTooltip />} />
               <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{fontSize: "12px", marginTop: "15px"}}/>
             </PieChart>
           </ResponsiveContainer>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
 import { Committee, Member, CommitteeType, PayoutMethod, CommitteePayment, CommitteeMemberTurn, Language } from '../types'; 
-import { Button, Input, Select, Modal, LoadingSpinner, PlusCircleIcon, TrashIcon, PencilSquareIcon, Textarea, UsersIcon, DocumentTextIcon, ArrowDownTrayIcon, UserCircleIcon as DefaultUserIcon, ArrowLeftIcon, ArrowRightIcon, ArrowDownTrayIcon as DownloadIcon, XMarkIcon } from './UIComponents';
+import { Button, Input, Select, Modal, LoadingSpinner, PlusCircleIcon, TrashIcon, PencilSquareIcon, Textarea, UserGroupIcon, DocumentTextIcon, ArrowDownTrayIcon, UserCircleIcon as DefaultUserIcon, ArrowLeftIcon, ArrowRightIcon, ArrowDownTrayIcon as DownloadIcon, XMarkIcon, HomeIcon, CreditCardIcon, ClockIcon, StarIcon, HeartIcon, TrophyIcon, GiftIcon, FireIcon, RocketLaunchIcon, AcademicCapIcon, BuildingOfficeIcon, HandRaisedIcon, LightBulbIcon, PuzzlePieceIcon, SparklesIcon2, ChartBarIcon, FolderIcon, BellIcon, ShieldCheckIcon, GlobeAltIcon, PaintBrushIcon } from './UIComponents';
 import { isValidPakistaniCnic, isValidPakistaniPhone, formatDate, getCommitteeMonthName, calculateTotalPool, getMemberName, initializePayoutTurns } from '../utils/appUtils';
 import { DEFAULT_PROFILE_PIC } from '../constants';
 import jsPDF from 'jspdf';
@@ -130,7 +130,10 @@ const CommitteeManagement: React.FC = () => {
   return (
     <div className={`p-4 md:p-6 ${language === Language.UR ? 'font-notoNastaliqUrdu text-right' : ''}`}>
       <div className={`flex justify-between items-center mb-6 ${language === Language.UR ? 'flex-row-reverse' : ''}`}>
-        <h1 className="text-2xl md:text-3xl font-bold text-neutral-darker dark:text-neutral-light">{t('committees')}</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-neutral-darker dark:text-neutral-light flex items-center">
+          <BuildingOfficeIcon className="h-8 w-8 mr-3 text-primary" />
+          {t('committees')}
+        </h1>
         <Button onClick={() => handleOpenFormModal()} >
           <PlusCircleIcon className={`h-5 w-5 ${language === Language.UR ? 'ml-2' : 'mr-2'}`} />
           {t('newCommittee')}
@@ -150,7 +153,10 @@ const CommitteeManagement: React.FC = () => {
                 <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-1">{t('totalMembers')}: {committee.memberIds.length}</p>
                 <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-3">{t('totalPool')}: PKR {(committee.amountPerMember * committee.memberIds.length * committee.duration).toLocaleString()}</p>
                 <div className={`mt-auto flex space-x-2 ${language === Language.UR ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                  <Button size="sm" onClick={() => navigate(`/committees/${committee.id}`)} className="flex-grow">{t('viewDetails')}</Button>
+                  <Button size="sm" onClick={() => navigate(`/committees/${committee.id}`)} className="flex-grow flex items-center justify-center">
+                    <FolderIcon className="w-4 h-4 mr-1" />
+                    {t('viewDetails')}
+                  </Button>
                   <Button size="sm" variant="ghost" onClick={() => handleOpenFormModal(committee)} aria-label={t('edit')}>
                     <PencilSquareIcon className="w-5 h-5" />
                   </Button>
@@ -2133,7 +2139,7 @@ export const CommitteeDetailScreen: React.FC = () => {
             <div className="bg-white dark:bg-neutral-darker p-6 rounded-lg shadow-md">
                  <div className={`flex justify-between items-center mb-4 ${language === Language.UR ? 'flex-row-reverse' : ''}`}>
                     <h2 className="text-xl font-semibold text-neutral-darker dark:text-neutral-light flex items-center">
-                        <UsersIcon className={`h-6 w-6 text-primary dark:text-primary-light ${language === Language.UR ? 'ml-2' : 'mr-2'}`} /> {t('committeeMembers')} ({committeeMembersWithShares.length})
+                        <UserGroupIcon className={`h-6 w-6 text-primary dark:text-primary-light ${language === Language.UR ? 'ml-2' : 'mr-2'}`} /> {t('committeeMembers')} ({committeeMembersWithShares.length})
                     </h2>
                     <div className={`flex space-x-2 ${language === Language.UR ? 'space-x-reverse' : ''}`}>
                         <Button size="sm" onClick={() => setIsAddExistingMemberModalOpen(true)}>{t('addExistingMember')}</Button>
@@ -2201,7 +2207,7 @@ export const CommitteeDetailScreen: React.FC = () => {
             <div className="bg-white dark:bg-neutral-darker p-6 rounded-lg shadow-md">
                 <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 ${language === Language.UR ? 'sm:flex-row-reverse' : ''}`}>
                     <h2 className="text-xl font-semibold text-neutral-darker dark:text-neutral-light flex items-center mb-2 sm:mb-0">
-                        <DocumentTextIcon className={`h-6 w-6 text-primary dark:text-primary-light ${language === Language.UR ? 'ml-2' : 'mr-2'}`} /> {t('paymentTracking')}
+                        <CreditCardIcon className={`h-6 w-6 text-primary dark:text-primary-light ${language === Language.UR ? 'ml-2' : 'mr-2'}`} /> {t('paymentTracking')}
                     </h2>
                     {committeeMembersWithShares.length > 0 && committee.duration > 0 && (
                         <div className={`flex items-center space-x-2 ${language === Language.UR ? 'space-x-reverse' : ''} self-start sm:self-center`}>
@@ -2291,13 +2297,16 @@ export const CommitteeDetailScreen: React.FC = () => {
 
             <div className="bg-white dark:bg-neutral-darker p-6 rounded-lg shadow-md">
                 <div className={`flex justify-between items-center mb-4 ${language === Language.UR ? 'flex-row-reverse' : ''}`}>
-                    <h2 className="text-xl font-semibold text-neutral-darker dark:text-neutral-light">{t('payouts')}</h2>
+                    <h2 className="text-xl font-semibold text-neutral-darker dark:text-neutral-light flex items-center">
+                        <TrophyIcon className={`h-6 w-6 text-primary dark:text-primary-light ${language === Language.UR ? 'ml-2' : 'mr-2'}`} /> {t('payouts')}
+                    </h2>
                     {committee?.payoutMethod === PayoutMethod.RANDOM && (
                         <Button 
                             onClick={handleLuckyDraw}
-                            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white flex items-center"
                         >
-                            🎲 {t('luckyDraw')}
+                            <SparklesIcon2 className="h-5 w-5 mr-2" />
+                            {t('luckyDraw')}
                         </Button>
                     )}
                 </div>
