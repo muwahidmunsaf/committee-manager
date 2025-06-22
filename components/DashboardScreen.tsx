@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { Committee, Member, Language, CommitteeType } from '../types';
 import { calculateTotalPool, getMemberName, formatDate, getCommitteeMonthName, getCurrentPeriodIndex, calculateRemainingCollectionForPeriod } from '../utils/appUtils';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell, CartesianGrid } from 'recharts';
-import { ChartPieIcon, UsersIcon, DocumentTextIcon, WalletIcon, CalendarDaysIcon, CurrencyDollarIcon } from './UIComponents'; // Added CurrencyDollarIcon
+import { ChartPieIcon, UsersIcon, DocumentTextIcon, WalletIcon, CalendarDaysIcon } from './UIComponents';
+import { ClipboardDocumentCheckIcon, CheckCircleIcon, BanknotesIcon, ArrowTrendingUpIcon, ExclamationCircleIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { InformationCircleIcon } from '@heroicons/react/24/outline';
 
 const DashboardScreen: React.FC = () => {
   const { t, committees, members, language } = useAppContext();
@@ -33,25 +35,28 @@ const DashboardScreen: React.FC = () => {
   });
   const completedCommitteesCount = committees.length - activeCommittees.length;
 
+  // Calculate total collected and expected pool for all committees
+  const totalExpectedPool = committees.reduce((sum, committee) => {
+    return sum + (committee.amountPerMember * committee.memberIds.length * committee.duration);
+  }, 0);
+
   const totalCollectedOverall = committees.reduce((sum, committee) => {
-    return sum + committee.payments.reduce((committeeSum, payment) => committeeSum + payment.amountPaid, 0);
-  }, 0);
-  
-  const remainingCollectionThisMonth = activeCommittees.reduce((sum, committee) => {
-    const currentPeriod = getCurrentPeriodIndex(committee);
-    if (currentPeriod >= 0 && currentPeriod < committee.duration) { // Ensure committee is active in current period
-        return sum + calculateRemainingCollectionForPeriod(committee, currentPeriod);
-    }
-    return sum;
+    return sum + committee.payments.filter(p => p.status === 'Cleared').reduce((committeeSum, payment) => committeeSum + payment.amountPaid, 0);
   }, 0);
 
+  // Calculate remaining collection for all active committees (all periods)
+  const remainingCollectionOverall = committees.reduce((sum, committee) => {
+    const expected = committee.amountPerMember * committee.memberIds.length * committee.duration;
+    const collected = committee.payments.filter(p => p.status === 'Cleared').reduce((committeeSum, payment) => committeeSum + payment.amountPaid, 0);
+    return sum + Math.max(expected - collected, 0);
+  }, 0);
 
-  // Data for charts
+  // Data for charts (show full pool and collected for each active committee)
   const committeePoolData = activeCommittees.map(c => ({
     name: c.title.substring(0, 15) + (c.title.length > 15 ? '...' : ''),
-    [t('totalPool')]: c.memberIds.length * c.amountPerMember, // Pool for one period
-    [t('totalCollected')]: c.payments.reduce((s, p) => s + p.amountPaid, 0), // Total collected ever for this committee
-  })).slice(0, 7); 
+    [t('totalPool')]: c.memberIds.length * c.amountPerMember * c.duration, // Full pool for all periods
+    [t('totalCollected')]: c.payments.filter(p => p.status === 'Cleared').reduce((s, p) => s + p.amountPaid, 0), // Only cleared payments
+  })).slice(0, 7);
 
   const memberContributionData = members.map(member => {
     let totalContributed = 0;
@@ -67,8 +72,19 @@ const DashboardScreen: React.FC = () => {
 
   const COLORS = ['#06b6d4', '#facc15', '#34d399', '#fb923c', '#818cf8', '#f87171', '#a78bfa'];
 
+  // Add a helper for progress bar
+  const ProgressBar = ({ percent }: { percent: number }) => (
+    <div className="w-full h-2 bg-gray-200 dark:bg-neutral-dark rounded mt-1">
+      <div className="h-2 rounded bg-green-500" style={{ width: `${percent}%` }}></div>
+    </div>
+  );
+
+  // In the BarChart, add a custom tooltip that shows the progress bar
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      const totalPool = payload.find((e: any) => e.name === t('totalPool'))?.value || 0;
+      const totalCollected = payload.find((e: any) => e.name === t('totalCollected'))?.value || 0;
+      const percent = totalPool > 0 ? Math.round((totalCollected / totalPool) * 100) : 0;
       return (
         <div className="bg-white dark:bg-neutral-darker p-3 border border-gray-300 dark:border-gray-700 rounded shadow-lg">
           <p className="font-semibold text-neutral-darker dark:text-neutral-light">{label}</p>
@@ -77,6 +93,11 @@ const DashboardScreen: React.FC = () => {
                 {`${entry.name}: PKR ${entry.value.toLocaleString()}`}
              </p>
           ))}
+          <div className="mt-2">
+            <span className="text-xs text-gray-500">Progress:</span>
+            <ProgressBar percent={percent} />
+            <span className="text-xs text-gray-500">{percent}% collected</span>
+          </div>
         </div>
       );
     }
@@ -90,7 +111,7 @@ const DashboardScreen: React.FC = () => {
         ...pt, 
         committeeTitle: c.title, 
         committeeId: c.id, 
-        amount: c.amountPerMember,
+        amount: c.amountPerMember * c.memberIds.length,
         committeeStartDate: c.startDate, 
       }))
   ).sort((a,b) => { 
@@ -124,6 +145,83 @@ const DashboardScreen: React.FC = () => {
     );
   };
 
+  // Helper for info tooltip
+  const InfoTooltip = ({ text }: { text: string }) => (
+    <span className="relative group inline-block align-middle ml-1">
+      <InformationCircleIcon className="w-4 h-4 text-gray-400 inline cursor-pointer" />
+      <span className="absolute z-10 hidden group-hover:block bg-white dark:bg-neutral-darker text-xs text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700 rounded px-2 py-1 left-1/2 -translate-x-1/2 mt-1 whitespace-nowrap shadow-lg">
+        {text}
+      </span>
+    </span>
+  );
+
+  // Compute recent activity (latest 5 payments and payouts)
+  const recentPayments = committees.flatMap(c => c.payments.map(p => ({
+    type: 'Payment',
+    committeeTitle: c.title,
+    memberId: p.memberId,
+    amount: p.amountPaid,
+    date: p.paymentDate,
+    status: p.status,
+  }))).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+
+  const recentPayouts = committees.flatMap(c => c.payoutTurns.filter(pt => pt.paidOut && pt.payoutDate).map(pt => ({
+    type: 'Payout',
+    committeeTitle: c.title,
+    memberId: pt.memberId,
+    amount: c.amountPerMember * c.memberIds.length,
+    date: pt.payoutDate,
+    status: 'Paid',
+  }))).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+
+  const recentActivity = [...recentPayments, ...recentPayouts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+
+  // Compute overdue payments (for current period)
+  const overduePayments = activeCommittees.flatMap(committee => {
+    const currentPeriod = getCurrentPeriodIndex(committee);
+    if (currentPeriod < 0 || currentPeriod >= committee.duration) return [];
+    return committee.memberIds.filter(memberId => {
+      const paid = committee.payments.some(p => p.memberId === memberId && p.monthIndex === currentPeriod && p.status === 'Cleared');
+      return !paid;
+    }).map(memberId => ({
+      committeeTitle: committee.title,
+      memberId,
+      period: currentPeriod,
+    }));
+  });
+
+  // Compute upcoming payouts (next 7 days)
+  const now = new Date();
+  const upcomingPayoutsSoon = activeCommittees.flatMap(committee =>
+    committee.payoutTurns.filter(pt => !pt.paidOut).map(pt => {
+      const payoutDate = new Date(new Date(committee.startDate).setMonth(new Date(committee.startDate).getMonth() + pt.turnMonthIndex));
+      return {
+        committeeTitle: committee.title,
+        memberId: pt.memberId,
+        payoutDate,
+        daysUntil: Math.ceil((payoutDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+      };
+    }).filter(pt => pt.daysUntil >= 0 && pt.daysUntil <= 7)
+  );
+
+  // Calculate amount collected and remaining in current month (all committees)
+  const currentMonthCollected = activeCommittees.reduce((sum, committee) => {
+    const currentPeriod = getCurrentPeriodIndex(committee);
+    if (currentPeriod < 0 || currentPeriod >= committee.duration) return sum;
+    // Sum cleared payments for this period
+    return sum + committee.payments.filter(p => p.monthIndex === currentPeriod && p.status === 'Cleared').reduce((s, p) => s + p.amountPaid, 0);
+  }, 0);
+
+  const currentMonthExpected = activeCommittees.reduce((sum, committee) => {
+    const currentPeriod = getCurrentPeriodIndex(committee);
+    if (currentPeriod < 0 || currentPeriod >= committee.duration) return sum;
+    return sum + (committee.amountPerMember * committee.memberIds.length);
+  }, 0);
+
+  const currentMonthRemaining = Math.max(currentMonthExpected - currentMonthCollected, 0);
+
+  const [showAlert, setShowAlert] = useState(true);
+
   return (
     <div className={`p-4 md:p-6 space-y-8 ${language === Language.UR ? 'font-notoNastaliqUrdu text-right' : ''}`}>
       {/* <div className="flex justify-center mb-6">
@@ -131,19 +229,34 @@ const DashboardScreen: React.FC = () => {
       </div> */}
       <h1 className="text-2xl md:text-3xl font-bold text-neutral-darker dark:text-neutral-light">{t('financialOverview')}</h1>
 
+      {/* Add alert at the top of the dashboard */}
+      {showAlert && (overduePayments.length > 0 || upcomingPayoutsSoon.length > 0) && (
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 rounded relative">
+          <button className="absolute top-2 right-2 text-yellow-700" onClick={() => setShowAlert(false)}>&times;</button>
+          <div className="font-bold mb-1">Attention Needed</div>
+          {overduePayments.length > 0 && (
+            <div className="mb-1">Overdue payments for {overduePayments.length} member(s) in current period.</div>
+          )}
+          {upcomingPayoutsSoon.length > 0 && (
+            <div>Upcoming payouts due in next 7 days for {upcomingPayoutsSoon.length} member(s).</div>
+          )}
+        </div>
+      )}
+
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6">
-        <StatCard title={t('activeCommittees')} value={activeCommittees.length.toString()} icon={<DocumentTextIcon className="w-7 h-7"/>} description={t('activeCommitteesDesc')} />
-        <StatCard title={t('completedCommittees')} value={completedCommitteesCount.toString()} icon={<DocumentTextIcon className="w-7 h-7 text-green-500" />} description={t('completedCommitteesDesc')} />
-        <StatCard title={t('totalCollected')} value={`PKR ${totalCollectedOverall.toLocaleString()}`} icon={<WalletIcon className="w-7 h-7" />} description={t('totalCollectedDesc')} />
-        <StatCard title={t('overallTotalMembers')} value={members.length.toString()} icon={<UsersIcon className="w-7 h-7" />} description={t('overallTotalMembersDesc')} />
-        <StatCard title={t('remainingCollectionThisMonth')} value={`PKR ${remainingCollectionThisMonth.toLocaleString()}`} icon={<CurrencyDollarIcon className="w-7 h-7 text-orange-500" />} description={t('remainingCollectionThisMonthDesc')} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6">
+        <StatCard title={<span>{t('activeCommittees')} <InfoTooltip text="Committees currently running (not completed)." /></span>} value={activeCommittees.length.toString()} icon={<ClipboardDocumentCheckIcon className="w-7 h-7 text-blue-600"/>} description={t('activeCommitteesDesc')} />
+        <StatCard title={<span>{t('completedCommittees')} <InfoTooltip text="Committees that have finished all payout cycles." /></span>} value={completedCommitteesCount.toString()} icon={<CheckCircleIcon className="w-7 h-7 text-green-500" />} description={t('completedCommitteesDesc')} />
+        <StatCard title={<span>{t('totalCollected')} <InfoTooltip text="Sum of all cleared payments for all committees." /></span>} value={`PKR ${totalCollectedOverall.toLocaleString()}`} icon={<BanknotesIcon className="w-7 h-7 text-emerald-600" />} description={t('totalCollectedDesc')} />
+        <StatCard title={<span>Collected This Month <InfoTooltip text="Sum of all cleared payments for the current period (all committees)." /></span>} value={`PKR ${currentMonthCollected.toLocaleString()}`} icon={<ArrowTrendingUpIcon className="w-7 h-7 text-blue-500" />} description="Amount collected in current month (all committees)" />
+        <StatCard title={<span>Remaining This Month <InfoTooltip text="Expected collection for the current period minus cleared payments (all committees)." /></span>} value={`PKR ${currentMonthRemaining.toLocaleString()}`} icon={<ExclamationCircleIcon className="w-7 h-7 text-orange-500" />} description="Remaining amount in current month (all committees)" />
+        <StatCard title={<span>{t('overallTotalMembers')} <InfoTooltip text="Total number of unique members across all committees." /></span>} value={members.length.toString()} icon={<UserGroupIcon className="w-7 h-7 text-violet-600" />} description={t('overallTotalMembersDesc')} />
       </div>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3 bg-white dark:bg-neutral-darker p-4 md:p-6 rounded-lg shadow-lg">
-          <h2 className="text-lg font-semibold text-neutral-darker dark:text-neutral-light mb-1">{t('committeePoolComparison')}</h2>
+          <h2 className="text-lg font-semibold text-neutral-darker dark:text-neutral-light mb-1">{t('committeePoolComparison')} <InfoTooltip text="Comparison of total expected pool (all periods) vs. total collected for each active committee." /></h2>
           <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-4">{language === Language.UR ? "فعال کمیٹیوں کے فی رکن رقم اور جمع شدہ رقم کا موازنہ۔" : "Comparison of amount per member vs collected amount for active committees."}</p>
           {committeePoolData.length > 0 ? (
             <ResponsiveContainer width="100%" height={350}>
@@ -225,12 +338,45 @@ const DashboardScreen: React.FC = () => {
           )}
         </div>
 
+      {/* Recent Activity Section */}
+      <div className="bg-white dark:bg-neutral-darker p-4 md:p-6 rounded-lg shadow-lg mt-6">
+        <h2 className="text-lg font-semibold text-neutral-darker dark:text-neutral-light mb-4">Recent Activity</h2>
+        {recentActivity.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead>
+                <tr>
+                  <th className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Member</th>
+                  <th className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Committee</th>
+                  <th className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
+                  <th className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Amount</th>
+                  <th className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {recentActivity.map((item, idx) => (
+                  <tr key={idx}>
+                    <td className="px-3 py-2 font-medium text-neutral-darker dark:text-neutral-light">{getMemberName(item.memberId, members)}</td>
+                    <td className="px-3 py-2 text-sm text-gray-500">{item.committeeTitle}</td>
+                    <td className="px-3 py-2 text-xs"><span className={`px-2 py-1 rounded ${item.type === 'Payment' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>{item.type}</span></td>
+                    <td className="px-3 py-2 text-sm font-semibold">PKR {item.amount.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-xs text-gray-400">{formatDate(item.date, language)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-neutral-DEFAULT dark:text-gray-400 py-4 text-center">No recent activity.</p>
+        )}
+      </div>
+
     </div>
   );
 };
 
 interface StatCardProps {
-  title: string;
+  title: React.ReactNode;
   value: string;
   icon: React.ReactNode;
   description: string;

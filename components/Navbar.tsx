@@ -99,20 +99,25 @@ const Navbar: React.FC = () => {
             <NavLink to="/committees" className={mobileNavLinkClasses} onClick={() => setIsMobileMenuOpen(false)}>{t('committees')}</NavLink>
             <NavLink to="/profile" className={mobileNavLinkClasses} onClick={() => setIsMobileMenuOpen(false)}>{t('profile')}</NavLink>
             <NavLink to="/settings" className={mobileNavLinkClasses} onClick={() => setIsMobileMenuOpen(false)}>{t('settings')}</NavLink>
-             <button
-                onClick={() => {
-                  handleLanguageChange(language === Language.EN ? Language.UR : Language.EN);
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`w-full text-left block px-3 py-2 rounded-md text-base font-medium text-neutral-dark dark:text-neutral-light hover:bg-primary-dark dark:hover:bg-primary hover:text-white transition-all duration-200 ${language === Language.UR ? 'font-notoNastaliqUrdu text-right' : ''}`}
-              >
-               <LanguageIcon className={`h-5 w-5 inline ${language === Language.UR ? 'ml-2' : 'mr-2'}`} /> {language === Language.EN ? 'اردو' : 'English'}
-            </button>
             <button
               onClick={() => { lockApp(); setIsMobileMenuOpen(false); }}
               className={`w-full text-left block px-3 py-2 rounded-md text-base font-medium text-neutral-dark dark:text-neutral-light hover:bg-primary-dark dark:hover:bg-primary hover:text-white transition-all duration-200 ${language === Language.UR ? 'text-right' : ''}`}
             >
               <LockClosedIcon className={`h-5 w-5 inline ${language === Language.UR ? 'ml-2' : 'mr-2'}`} /> {t('appLock')}
+            </button>
+            <button
+              onClick={() => { setTheme(theme === Theme.DARK ? Theme.LIGHT : Theme.DARK); setIsMobileMenuOpen(false); }}
+              className={`w-full text-left block px-3 py-2 rounded-md text-base font-medium text-neutral-dark dark:text-neutral-light hover:bg-primary-dark dark:hover:bg-primary hover:text-white transition-all duration-200 ${language === Language.UR ? 'text-right' : ''}`}
+              aria-label={t('theme')}
+            >
+              {theme === Theme.DARK ? <SunIcon className="h-5 w-5 inline mr-2" /> : <MoonIcon className="h-5 w-5 inline mr-2" />} {t('theme')}
+            </button>
+            <button
+              className={`w-full text-left block px-3 py-2 rounded-md text-base font-medium text-neutral-dark dark:text-neutral-light hover:bg-primary-dark dark:hover:bg-primary hover:text-white transition-all duration-200 ${language === Language.UR ? 'text-right' : ''}`}
+              onClick={() => handleLanguageChange(language === Language.EN ? Language.UR : Language.EN)}
+              aria-label={t('language')}
+            >
+              <LanguageIcon className={`h-5 w-5 inline ${language === Language.UR ? 'ml-2' : 'mr-2'}`} /> {language === Language.EN ? 'اردو' : 'English'}
             </button>
           </div>
         </div>

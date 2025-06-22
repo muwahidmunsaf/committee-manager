@@ -151,7 +151,7 @@ const CommitteeManagement: React.FC = () => {
                 <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-1">{t('totalMembers')}: {committee.memberIds.length}</p>
                 <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-3">{t('totalPool')}: PKR {(committee.amountPerMember * committee.memberIds.length * committee.duration).toLocaleString()}</p>
                 <div className={`mt-auto flex space-x-2 ${language === Language.UR ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                  <Button size="sm" onClick={() => navigate(`/committees/${committee.id}`)} className="flex-grow">{t('viewDetails')}</Button>
+                  <Button size="sm" onClick={() => navigate(`/committees/${slugify(committee.title)}`)} className="flex-grow">{t('viewDetails')}</Button>
                   <Button size="sm" variant="ghost" onClick={() => handleOpenFormModal(committee)} aria-label={t('edit')}>
                     <PencilSquareIcon className="w-5 h-5" />
                   </Button>
@@ -410,7 +410,8 @@ export const CommitteeDetailScreen: React.FC = () => {
     } = useAppContext();
     const { committeeId } = useParams<{ committeeId: string }>();
     const navigate = useNavigate();
-    const committee = committees.find(c => c.id === committeeId);
+    // Find committee by slugified title
+    const committee = committees.find(c => slugify(c.title) === committeeId);
     const [isMemberFormModalOpen, setIsMemberFormModalOpen] = useState(false);
     const [editingMember, setEditingMember] = useState<Member | undefined>(undefined);
     const [isAddExistingMemberModalOpen, setIsAddExistingMemberModalOpen] = useState(false);
@@ -1072,7 +1073,12 @@ export const CommitteeDetailScreen: React.FC = () => {
       const summarySection = `
         <div style="margin-bottom: 20px; padding: 15px; background-color: #f0f9ff; border-radius: 8px;">
           <h3 style="color: #0e7490; margin: 0 0 15px 0; font-size: 16px;">${t('summary')}</h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+          <div><strong>${t('committeeName')}:</strong> ${committee.title}</div>
+          <div><strong>${t('type')}:</strong> ${t(committee.type.toLowerCase())}</div>
+          <div><strong>${t('duration')}:</strong> ${committee.duration} ${t(committee.type === CommitteeType.MONTHLY ? 'months' : committee.type === CommitteeType.WEEKLY ? 'weeks' : 'days')}</div>
+          <div><strong>${t('startDate')}:</strong> ${formatDate(committee.startDate, language)}</div>
+          <div><strong>${t('amountPerMember')}:</strong> PKR ${committee.amountPerMember.toLocaleString()}</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 10px;">
             <div style="text-align: center;">
               <div style="font-weight: bold; color: #0e7490;">${t('totalDue')}</div>
               <div style="font-size: 18px; font-weight: bold;">PKR ${totalDue.toLocaleString()}</div>
@@ -1177,7 +1183,7 @@ export const CommitteeDetailScreen: React.FC = () => {
             ${t('monthly')} Report - ${getCommitteeMonthName(committee?.startDate ?? '', monthIndex, language)}
           </h1>
         </div>
-        
+        ${summarySection}
         ${memberPaymentsTable}
         ${payoutHistorySection}
       `;
@@ -1494,7 +1500,7 @@ export const CommitteeDetailScreen: React.FC = () => {
         .map(turn => {
           const member = allMembers.find(m => m.id === turn.memberId);
           const memberShares = committee.memberIds.filter(id => id === turn.memberId).length;
-          // Corrected payout amount
+          // Corrected payout amount (per month)
           const payoutAmount = committee.amountPerMember * committee.memberIds.length;
           return {
             memberName: member?.name || 'Unknown',
@@ -2211,7 +2217,7 @@ export const CommitteeDetailScreen: React.FC = () => {
                                 {committee.payoutTurns.sort((a,b) => a.turnMonthIndex - b.turnMonthIndex).map((turn, idx) => {
                                     const member = allMembers.find(m => m.id === turn.memberId);
                                     const memberShares = committee.memberIds.filter(id => id === turn.memberId).length;
-                                    const payoutAmount = committee.amountPerMember * committee.memberIds.length * committee.duration;
+                                    const payoutAmount = committee.amountPerMember * committee.memberIds.length;
                                     return (
                                     <tr key={`${turn.memberId}-${turn.turnMonthIndex}`}>
                                         <td className="px-4 py-3 whitespace-nowrap text-sm text-center font-medium">{idx + 1}</td>
@@ -2505,5 +2511,15 @@ export const CommitteeDetailScreen: React.FC = () => {
     );
 };
 
+// Helper to slugify committee title for URL
+export function slugify(text: string) {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')           // Replace spaces with -
+    .replace(/[^\w\-]+/g, '')      // Remove all non-word chars
+    .replace(/\-\-+/g, '-');       // Replace multiple - with single -
+}
 
 export default CommitteeManagement;
