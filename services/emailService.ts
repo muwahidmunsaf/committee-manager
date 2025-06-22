@@ -5,7 +5,7 @@ const SERVICE_ID = 'service_fa95lw9';
 const TEMPLATE_ID = 'template_zj5408l';
 const PUBLIC_KEY = 'ZGuAwBOQPE1ug-v0p';
 
-// Initialize EmailJS
+// Initialize EmailJS with proper configuration
 emailjs.init(PUBLIC_KEY);
 
 export const sendLoginNotification = async (
@@ -26,16 +26,17 @@ export const sendLoginNotification = async (
       device_info: deviceInfo || 'Unknown Device'
     };
 
+    // Use the newer API format without passing PUBLIC_KEY as the last parameter
     const response = await emailjs.send(
       SERVICE_ID,
       TEMPLATE_ID,
-      templateParams,
-      PUBLIC_KEY
+      templateParams
     );
 
+    console.log('Email sent successfully:', response);
     return response;
   } catch (error) {
-    console.error('Failed to send login notification');
+    console.error('Failed to send login notification:', error);
     if (error instanceof Error) {
       console.error('Error details:', error.message);
     }
