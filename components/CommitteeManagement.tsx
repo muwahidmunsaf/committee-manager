@@ -2408,7 +2408,7 @@ export const CommitteeDetailScreen: React.FC = () => {
                     <>
                      {/* Header (logo/app name), receipt content, footer as before */}
                      <div className="receipt-header flex flex-col items-center mb-4">
-                        <img src="/logo.png" alt="Logo" className="h-20 w-20 mb-2" />
+                        <img src="/logo.png" alt="Logo" className="h-16 w-16 mb-2" />
                         <div className="text-xl font-bold text-primary mb-1">{t('appName')}</div>
                         <hr className="border-primary w-full mb-2" />
                      </div>
