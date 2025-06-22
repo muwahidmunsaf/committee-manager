@@ -3,8 +3,6 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
 import { Language, Theme } from '../types';
 import { Button, UserCircleIcon, Cog6ToothIcon, Bars3Icon, XMarkIcon, LanguageIcon, LockClosedIcon, SunIcon, MoonIcon } from './UIComponents';
-// @ts-ignore
-import logo from '../assets/logo.png';
 
 const Navbar: React.FC = () => {
   const { language, setLanguage, t, userProfile, lockApp, theme, setTheme } = useAppContext();
@@ -30,7 +28,7 @@ const Navbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className={`flex items-center justify-between h-16 ${language === Language.UR ? 'flex-row-reverse' : ''}`}>
           <div className="flex items-center">
-            <img src={logo} alt="Logo" className="h-10 w-10 mr-2" />
+            <img src='/logo.png' alt="Logo" className="h-10 w-10 mr-2" />
             <NavLink to="/" className={`flex-shrink-0 text-white text-xl font-bold ${language === Language.UR ? 'font-notoNastaliqUrdu ml-4' : 'mr-4'}`}>
               {t('appName')}
             </NavLink>

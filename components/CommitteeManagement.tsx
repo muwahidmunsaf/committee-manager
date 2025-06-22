@@ -7,7 +7,6 @@ import { isValidPakistaniCnic, isValidPakistaniPhone, formatDate, getCommitteeMo
 import { DEFAULT_PROFILE_PIC } from '../constants';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import logo from '../assets/logo.png'; // Import logo for PDF
 import autoTable from 'jspdf-autotable';
 // Import and register the JameelNooriNastaleeq font for jsPDF
 let registerJameelNooriNastaleeq: any = (null as any);
@@ -791,7 +790,7 @@ export const CommitteeDetailScreen: React.FC = () => {
 
     // Helper to get base64 logo for PDF
     const getLogoBase64 = async () => {
-      const response = await fetch(logo || '');
+      const response = await fetch('/logo.png');
       const blob = await response.blob();
       return new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -1237,27 +1236,30 @@ export const CommitteeDetailScreen: React.FC = () => {
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
+      const topMargin = 20;
+      const bottomMargin = 70; // Increased margin
 
-      const hiddenDiv = document.createElement('div');
-      hiddenDiv.style.position = 'absolute';
-      hiddenDiv.style.left = '-9999px';
-      hiddenDiv.style.top = '0';
-      hiddenDiv.style.width = `${pdfWidth}px`;
-      hiddenDiv.style.backgroundColor = 'white';
-      hiddenDiv.style.fontFamily = language === Language.UR ? 'Jameel Noori Nastaleeq, Noto Nastaliq Urdu, serif' : 'Arial, sans-serif';
-      hiddenDiv.style.direction = language === Language.UR ? 'rtl' : 'ltr';
-      hiddenDiv.style.fontSize = '12px';
-      hiddenDiv.style.lineHeight = '1.6';
-      
-      let committeesContent = '';
-      memberCommittees.forEach(committee => {
+      // --- 1. Personal Details + Committee Participation Heading + First Committee ---
+      const firstPageDiv = document.createElement('div');
+      firstPageDiv.style.position = 'absolute';
+      firstPageDiv.style.left = '-9999px';
+      firstPageDiv.style.top = '0';
+      firstPageDiv.style.width = `${pdfWidth}px`;
+      firstPageDiv.style.backgroundColor = 'white';
+      firstPageDiv.style.fontFamily = language === Language.UR ? 'Jameel Noori Nastaleeq, Noto Nastaliq Urdu, serif' : 'Arial, sans-serif';
+      firstPageDiv.style.direction = language === Language.UR ? 'rtl' : 'ltr';
+      firstPageDiv.style.fontSize = '12px';
+      firstPageDiv.style.lineHeight = '1.6';
+
+      // Prepare first committee details (if any)
+      let firstCommitteeContent = '';
+      if (memberCommittees.length > 0) {
+        const committee = memberCommittees[0];
         const paymentsForCommittee = committee.payments.filter(p => p.memberId === member.id && p.status === 'Cleared')
           .sort((a,b) => a.monthIndex - b.monthIndex || new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime());
-        
         const totalContributed = paymentsForCommittee.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
         const totalDue = (committee.amountPerMember || 0) * (committee.duration || 0);
         const remainingAmount = totalDue - totalContributed;
-
         let paymentsTable = '';
         if (paymentsForCommittee.length > 0) {
           paymentsTable = `
@@ -1283,10 +1285,9 @@ export const CommitteeDetailScreen: React.FC = () => {
             </table>
           `;
         }
-
-        const payoutsForCommittee = committee.payoutTurns.filter(pt => pt.memberId === member.id && pt.paidOut)
+        // Payout history: show ALL payout turns (not just paidOut)
+        const payoutsForCommittee = committee.payoutTurns.filter(pt => pt.memberId === member.id)
           .sort((a,b) => a.turnMonthIndex - b.turnMonthIndex);
-
         let payoutHistoryContent = '';
         if (payoutsForCommittee.length > 0) {
           payoutHistoryContent = `
@@ -1298,6 +1299,7 @@ export const CommitteeDetailScreen: React.FC = () => {
                     <th style="border: 1px solid #ddd; padding: 5px;">${t('turnMonth')}</th>
                     <th style="border: 1px solid #ddd; padding: 5px; text-align: ${language === Language.UR ? 'right' : 'left'};">${t('amountPKR')}</th>
                     <th style="border: 1px solid #ddd; padding: 5px;">${t('date')}</th>
+                    <th style="border: 1px solid #ddd; padding: 5px;">${t('status')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1306,6 +1308,7 @@ export const CommitteeDetailScreen: React.FC = () => {
                       <td style="border: 1px solid #ddd; padding: 5px;">${getCommitteeMonthName(committee?.startDate ?? '', pt.turnMonthIndex, language) || ''}</td>
                       <td style="border: 1px solid #ddd; padding: 5px; text-align: ${language === Language.UR ? 'right' : 'left'};">PKR ${(committee.amountPerMember * committee.memberIds.length).toLocaleString()}</td>
                       <td style="border: 1px solid #ddd; padding: 5px;">${pt.payoutDate ? formatDate(pt.payoutDate, language) : 'N/A'}</td>
+                      <td style="border: 1px solid #ddd; padding: 5px; color: ${pt.paidOut ? '#16a34a' : '#dc2626'}; font-weight: bold;">${pt.paidOut ? t('cleared') : t('unpaid')}</td>
                     </tr>
                   `).join('')}
                 </tbody>
@@ -1313,10 +1316,9 @@ export const CommitteeDetailScreen: React.FC = () => {
             </div>
           `;
         } else {
-            payoutHistoryContent = `<div style="margin: 15px 0; color: #666;">${t('noPayoutsReceived')}</div>`
+          payoutHistoryContent = `<div style="margin: 15px 0; color: #666;">${t('noPayoutsReceived')}</div>`;
         }
-
-        committeesContent += `
+        firstCommitteeContent = `
           <div style="margin-bottom: 20px; border: 1px solid #eee; padding: 15px; border-radius: 5px; page-break-inside: avoid;">
             <h3 style="color: #1f2937; margin: 0 0 15px 0; border-bottom: 1px solid #eee; padding-bottom: 5px; font-size: 15px;">
               ${committee.title || ''}
@@ -1335,9 +1337,9 @@ export const CommitteeDetailScreen: React.FC = () => {
             ${payoutHistoryContent}
           </div>
         `;
-      });
+      }
 
-      const memberHistoryContent = `
+      firstPageDiv.innerHTML = `
         <div style="padding: 0 20px;">
           <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 15px;">
             ${logoBase64 ? `<img src="${logoBase64}" style="width: 60px; height: 60px;"/>` : ''}
@@ -1371,45 +1373,150 @@ export const CommitteeDetailScreen: React.FC = () => {
             <h2 style="color: #0e7490; margin: 0 0 15px 0; border-bottom: 1px solid #eee; padding-bottom: 5px; font-size: 16px;">
               ${t('committeeParticipation')}
             </h2>
-            ${memberCommittees.length > 0 ? committeesContent : `<div style="color: #666;">${language === Language.UR ? 'یہ رکن کسی کمیٹی میں شامل نہیں۔' : 'This member is not part of any committees.'}</div>`}
+            ${memberCommittees.length === 0 ? `<div style="color: #666;">${language === Language.UR ? 'یہ رکن کسی کمیٹی میں شامل نہیں۔' : 'This member is not part of any committees.'}</div>` : ''}
+            ${firstCommitteeContent}
           </div>
         </div>
       `;
-      
-      hiddenDiv.innerHTML = memberHistoryContent.replace(/<strong>(.*?)<\/strong>/g, '<span style="font-weight: bold;">$1</span>');
-      document.body.appendChild(hiddenDiv);
+      document.body.appendChild(firstPageDiv);
 
       try {
-        const topMargin = 20;
-        const bottomMargin = 70; // Increased margin
-        const usablePageHeight = pdfHeight - topMargin - bottomMargin;
-
-        const canvas = await html2canvas(hiddenDiv, {
+        // Render first page (summary + heading + first committee)
+        const firstPageCanvas = await html2canvas(firstPageDiv, {
           backgroundColor: '#ffffff',
           scale: 2,
           useCORS: true,
           allowTaint: true,
-          width: hiddenDiv.scrollWidth,
-          height: hiddenDiv.scrollHeight,
+          width: firstPageDiv.scrollWidth,
+          height: firstPageDiv.scrollHeight,
         });
+        const firstPageImgData = firstPageCanvas.toDataURL('image/png');
+        const firstPageImgWidth = pdfWidth;
+        const firstPageImgHeight = (firstPageCanvas.height * firstPageImgWidth) / firstPageCanvas.width;
+        pdf.addImage(firstPageImgData, 'PNG', 0, topMargin, firstPageImgWidth, firstPageImgHeight);
+        pdf.addPage();
 
-        const imgData = canvas.toDataURL('image/png');
-        const imgWidth = pdfWidth;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        
-        let heightLeft = imgHeight;
-        let position = 0;
+        // --- 2. Each subsequent committee as a separate page ---
+        for (let i = 1; i < memberCommittees.length; i++) {
+          const committee = memberCommittees[i];
+          const committeeDiv = document.createElement('div');
+          committeeDiv.style.position = 'absolute';
+          committeeDiv.style.left = '-9999px';
+          committeeDiv.style.top = '0';
+          committeeDiv.style.width = `${pdfWidth}px`;
+          committeeDiv.style.backgroundColor = 'white';
+          committeeDiv.style.fontFamily = language === Language.UR ? 'Jameel Noori Nastaleeq, Noto Nastaliq Urdu, serif' : 'Arial, sans-serif';
+          committeeDiv.style.direction = language === Language.UR ? 'rtl' : 'ltr';
+          committeeDiv.style.fontSize = '12px';
+          committeeDiv.style.lineHeight = '1.6';
 
-        pdf.addImage(imgData, 'PNG', 0, position + topMargin, imgWidth, imgHeight);
-        heightLeft -= usablePageHeight;
-
-        while (heightLeft > 0) {
-          position -= usablePageHeight;
+          // Payment history table
+          const paymentsForCommittee = committee.payments.filter(p => p.memberId === member.id && p.status === 'Cleared')
+            .sort((a,b) => a.monthIndex - b.monthIndex || new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime());
+          const totalContributed = paymentsForCommittee.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
+          const totalDue = (committee.amountPerMember || 0) * (committee.duration || 0);
+          const remainingAmount = totalDue - totalContributed;
+          let paymentsTable = '';
+          if (paymentsForCommittee.length > 0) {
+            paymentsTable = `
+              <table style="width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 11px;">
+                <thead>
+                  <tr style="background-color: #06b6d4; color: white;">
+                    <th style="border: 1px solid #ddd; padding: 5px;">${t('month')}</th>
+                    <th style="border: 1px solid #ddd; padding: 5px; text-align: ${language === Language.UR ? 'right' : 'left'};">${t('installmentAmount')}</th>
+                    <th style="border: 1px solid #ddd; padding: 5px;">${t('paymentDate')}</th>
+                    <th style="border: 1px solid #ddd; padding: 5px;">${t('status')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${paymentsForCommittee.map(p => `
+                    <tr style="page-break-inside: avoid;">
+                      <td style="border: 1px solid #ddd; padding: 5px;">${getCommitteeMonthName(committee?.startDate ?? '', p.monthIndex, language) || ''}</td>
+                      <td style="border: 1px solid #ddd; padding: 5px; text-align: ${language === Language.UR ? 'right' : 'left'};">PKR ${typeof p.amountPaid === 'number' ? p.amountPaid.toLocaleString() : '0'}</td>
+                      <td style="border: 1px solid #ddd; padding: 5px;">${p.paymentDate ? formatDate(p.paymentDate, language) : 'N/A'}</td>
+                      <td style="border: 1px solid #ddd; padding: 5px; color: #16a34a; font-weight: bold;">${t((p.status || '').toLowerCase())}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            `;
+          }
+          // Payout history: show ALL payout turns (not just paidOut)
+          const payoutsForCommittee = committee.payoutTurns.filter(pt => pt.memberId === member.id)
+            .sort((a,b) => a.turnMonthIndex - b.turnMonthIndex);
+          let payoutHistoryContent = '';
+          if (payoutsForCommittee.length > 0) {
+            payoutHistoryContent = `
+              <div style="margin: 20px 0; page-break-inside: avoid;">
+                <h4 style="color: #0e7490; margin: 0 0 10px 0; font-size: 14px;">${t('payoutHistory')}</h4>
+                <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                  <thead>
+                    <tr style="background-color: #06b6d4; color: white;">
+                      <th style="border: 1px solid #ddd; padding: 5px;">${t('turnMonth')}</th>
+                      <th style="border: 1px solid #ddd; padding: 5px; text-align: ${language === Language.UR ? 'right' : 'left'};">${t('amountPKR')}</th>
+                      <th style="border: 1px solid #ddd; padding: 5px;">${t('date')}</th>
+                      <th style="border: 1px solid #ddd; padding: 5px;">${t('status')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${payoutsForCommittee.map(pt => `
+                      <tr style="page-break-inside: avoid;">
+                        <td style="border: 1px solid #ddd; padding: 5px;">${getCommitteeMonthName(committee?.startDate ?? '', pt.turnMonthIndex, language) || ''}</td>
+                        <td style="border: 1px solid #ddd; padding: 5px; text-align: ${language === Language.UR ? 'right' : 'left'};">PKR ${(committee.amountPerMember * committee.memberIds.length).toLocaleString()}</td>
+                        <td style="border: 1px solid #ddd; padding: 5px;">${pt.payoutDate ? formatDate(pt.payoutDate, language) : 'N/A'}</td>
+                        <td style="border: 1px solid #ddd; padding: 5px; color: ${pt.paidOut ? '#16a34a' : '#dc2626'}; font-weight: bold;">${pt.paidOut ? t('cleared') : t('unpaid')}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `;
+          } else {
+            payoutHistoryContent = `<div style="margin: 15px 0; color: #666;">${t('noPayoutsReceived')}</div>`;
+          }
+          committeeDiv.innerHTML = `
+            <div style="margin-bottom: 20px; border: 1px solid #eee; padding: 15px; border-radius: 5px; page-break-inside: avoid;">
+              <h3 style="color: #1f2937; margin: 0 0 15px 0; border-bottom: 1px solid #eee; padding-bottom: 5px; font-size: 15px;">
+                ${committee.title || ''}
+              </h3>
+              <div style="margin-bottom: 10px;"><strong>${t('startDate')}:</strong> ${formatDate(committee.startDate ?? '', language)}</div>
+              <div style="margin-bottom: 10px;"><strong>${t('duration')}:</strong> ${(committee.duration ?? '') + ' ' + t((committee.type?.toLowerCase?.() === 'monthly' ? 'months' : committee.type?.toLowerCase?.() === 'weekly' ? 'weeks' : 'days') ?? 'months')}</div>
+              <div style="margin-bottom: 10px;"><strong>${t('amountPerMember')}:</strong> PKR ${(typeof committee.amountPerMember === 'number' ? committee.amountPerMember.toLocaleString() : '0')}</div>
+              ${paymentsForCommittee.length > 0 ? `
+                <div style="margin: 15px 0; page-break-inside: avoid;">
+                  <h4 style="color: #0e7490; margin: 0 0 10px 0; font-size: 14px;">${t('paymentHistory')}</h4>
+                  ${paymentsTable}
+                  <div style="margin-top: 10px; text-align: ${language === Language.UR ? 'right' : 'left'};"><strong>${t('totalContributedThisCommittee')}:</strong> PKR ${totalContributed.toLocaleString()}</div>
+                  <div style="text-align: ${language === Language.UR ? 'right' : 'left'};"><strong>${t('remainingAmount')}:</strong> PKR ${remainingAmount.toLocaleString()}</div>
+                </div>
+              ` : `<div style="margin: 15px 0; color: #666;">${t('noPaymentsMade')}</div>`}
+              ${payoutHistoryContent}
+            </div>
+          `;
+          document.body.appendChild(committeeDiv);
+          // Render committee page
+          const committeeCanvas = await html2canvas(committeeDiv, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            width: committeeDiv.scrollWidth,
+            height: committeeDiv.scrollHeight,
+          });
+          const committeeImgData = committeeCanvas.toDataURL('image/png');
+          const committeeImgWidth = pdfWidth;
+          const committeeImgHeight = (committeeCanvas.height * committeeImgWidth) / committeeCanvas.width;
+          pdf.addImage(committeeImgData, 'PNG', 0, topMargin, committeeImgWidth, committeeImgHeight);
           pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 0, position + topMargin, imgWidth, imgHeight);
-          heightLeft -= usablePageHeight;
+          document.body.removeChild(committeeDiv);
         }
-        
+
+        // Remove last blank page if any committees were added
+        if (memberCommittees.length > 0) {
+          pdf.deletePage(pdf.getNumberOfPages());
+        }
+
+        // Add footers to all pages
         const pageCount = pdf.internal.getNumberOfPages();
         for (let i = 1; i <= pageCount; i++) {
           pdf.setPage(i);
@@ -1425,7 +1532,7 @@ export const CommitteeDetailScreen: React.FC = () => {
 
         pdf.save(`member_history_${member.name.replace(/\s/g, '_')}.pdf`);
       } finally {
-        document.body.removeChild(hiddenDiv);
+        document.body.removeChild(firstPageDiv);
       }
     };
     
@@ -1790,36 +1897,35 @@ export const CommitteeDetailScreen: React.FC = () => {
       const detailsStartY = currentY;
       
       // Member details (left side)
+      const labelX = margin;
+      const valueX = margin + 120;
       pdf.setFont(undefined, 'bold');
-      pdf.text(t('name') + ':', margin, currentY);
+      pdf.text(t('name') + ':', labelX, currentY);
       pdf.setFont(undefined, 'normal');
-      pdf.text(member.name || '', margin + 70, currentY);
+      pdf.text(member.name || '', valueX, currentY);
       currentY += 20;
-      
       pdf.setFont(undefined, 'bold');
-      pdf.text(t('phone') + ':', margin, currentY);
+      pdf.text(t('phone') + ':', labelX, currentY);
       pdf.setFont(undefined, 'normal');
-      pdf.text(member.phone || '', margin + 70, currentY);
+      pdf.text(member.phone || '', valueX, currentY);
       currentY += 20;
-      
       pdf.setFont(undefined, 'bold');
-      pdf.text(t('cnic') + ':', margin, currentY);
+      pdf.text(t('cnic') + ':', labelX, currentY);
       pdf.setFont(undefined, 'normal');
-      pdf.text(member.cnic || '', margin + 70, currentY);
+      pdf.text(member.cnic || '', valueX, currentY);
       currentY += 20;
-      
       if (member.address) {
         pdf.setFont(undefined, 'bold');
-        pdf.text(t('address') + ':', margin, currentY);
+        pdf.text(t('address') + ':', labelX, currentY);
         pdf.setFont(undefined, 'normal');
-        pdf.text(member.address, margin + 70, currentY);
+        pdf.text(member.address, valueX, currentY);
         currentY += 20;
       }
-      
       pdf.setFont(undefined, 'bold');
-      pdf.text(t('joiningDate') + ':', margin, currentY);
+      pdf.text(t('joiningDate') + ':', labelX, currentY);
       pdf.setFont(undefined, 'normal');
-      pdf.text(formatDate(member.joiningDate ?? '', language), margin + 70, currentY);
+      pdf.text(formatDate(member.joiningDate ?? '', language), valueX, currentY);
+      currentY += 30;
       
       // Add profile picture on the right side
       if (member.profilePictureUrl && member.profilePictureUrl !== DEFAULT_PROFILE_PIC) {
@@ -1865,50 +1971,25 @@ export const CommitteeDetailScreen: React.FC = () => {
         pdf.text(language === Language.UR ? 'یہ رکن کسی کمیٹی میں شامل نہیں۔' : 'This member is not part of any committees.', margin, currentY);
         currentY += 30;
       } else {
-        // Process each committee
+        let committeeIndex = 0;
         for (const committee of memberCommittees) {
-          // Check if we need a new page for committee header
-          checkPageBreak(100);
-          
-          // Committee title
-          pdf.setFontSize(13);
-          pdf.setTextColor('#1f2937');
-          pdf.setFont(undefined, 'bold');
-          pdf.text(`${committee.title || ''}`, margin, currentY);
-          currentY += 20;
-          
-          // Committee details
-          pdf.setFontSize(12);
-          pdf.setTextColor('#222');
-          pdf.setFont(undefined, 'bold');
-          pdf.text(`${t('startDate')}:`, margin, currentY);
-          pdf.setFont(undefined, 'normal');
-          pdf.text(`${formatDate(committee.startDate ?? '', language)}`, margin + 90, currentY);
-          currentY += 16;
-          
-          pdf.setFont(undefined, 'bold');
-          pdf.text(`${t('duration')}:`, margin, currentY);
-          pdf.setFont(undefined, 'normal');
-          const durationLabelWidth = pdf.getTextWidth(`${t('duration')}:`);
-          pdf.text(`${(committee.duration ?? '') + ' ' + t((committee.type?.toLowerCase?.() === 'monthly' ? 'months' : committee.type?.toLowerCase?.() === 'weekly' ? 'weeks' : 'days') ?? 'months')}`,
-            margin + durationLabelWidth + 20, currentY);
-          currentY += 16;
-          
-          pdf.setFont(undefined, 'bold');
-          pdf.text(`${t('amountPerMember')}:`, margin, currentY);
-          pdf.setFont(undefined, 'normal');
-          pdf.text(`PKR ${(typeof committee.amountPerMember === 'number' ? committee.amountPerMember.toLocaleString() : '0')}`, margin + 120, currentY);
-          currentY += 20;
-          
+          committeeIndex++;
+          // Page break for each committee except the first
+          if (committeeIndex > 1) {
+            addNewPage();
+          }
+          // ... existing code ...
           // Payment History
           const paymentsForCommittee = committee.payments.filter(p => p.memberId === member.id && p.status === 'Cleared')
             .sort((a,b) => a.monthIndex - b.monthIndex || new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime());
-          
+          const totalContributed = paymentsForCommittee.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
+          const totalDue = (committee.amountPerMember || 0) * (committee.duration || 0);
+          const remainingAmount = totalDue - totalContributed;
           if (paymentsForCommittee.length > 0) {
-            checkPageBreak(40);
+            checkPageBreak(60 + paymentsForCommittee.length * 20);
             pdf.setFont(undefined, 'bold');
-            pdf.text(t('paymentHistory'), 40, yPosition);
-            yPosition += 20;
+            pdf.text(t('paymentHistory'), 40, currentY);
+            currentY += 20;
             const tableBody = paymentsForCommittee.map(p => [
               getCommitteeMonthName(committee.startDate, p.monthIndex, language),
               `PKR ${p.amountPaid.toLocaleString()}`,
@@ -1916,15 +1997,24 @@ export const CommitteeDetailScreen: React.FC = () => {
               t((p.status || '').toLowerCase())
             ]);
             autoTable(pdf, {
-              startY: yPosition,
+              startY: currentY,
               head: [[t('month'), t('installmentAmount'), t('paymentDate'), t('status')]],
               body: tableBody,
               theme: 'grid',
               headStyles: { fillColor: [6, 182, 212], textColor: 255 },
               styles: { fontSize: 9, cellPadding: 4, font: 'helvetica' },
               margin: { left: 40, right: 40 },
+              pageBreak: 'auto',
             });
-            yPosition = (pdf as any).lastAutoTable.finalY + 15;
+            currentY = (pdf as any).lastAutoTable.finalY + 10;
+            // Add total contributed and remaining
+            pdf.setFont(undefined, 'bold');
+            pdf.setTextColor('#0e7490');
+            pdf.text(`${t('totalContributedThisCommittee')}: PKR ${totalContributed.toLocaleString()}`, 40, currentY);
+            currentY += 16;
+            pdf.text(`${t('remainingAmount')}: PKR ${remainingAmount.toLocaleString()}`, 40, currentY);
+            pdf.setTextColor('#222');
+            currentY += 10;
           } else {
             checkPageBreak(20);
             pdf.setFontSize(12);
@@ -1933,37 +2023,51 @@ export const CommitteeDetailScreen: React.FC = () => {
             pdf.text(t('noPaymentsMade'), margin, currentY);
             currentY += 20;
           }
-          
           // Payout History
-          const payoutsForCommittee = committee.payoutTurns.filter(pt => pt.memberId === member.id && pt.paidOut)
-            .sort((a,b) => a.turnMonthIndex - b.turnMonthIndex);
-          
+          // Count cleared and unpaid payouts
+          const payoutsForCommittee = committee.payoutTurns.filter(pt => pt.memberId === member.id);
+          const clearedPayouts = payoutsForCommittee.filter(pt => pt.paidOut).length;
+          const unpaidPayouts = payoutsForCommittee.length - clearedPayouts;
           if (payoutsForCommittee.length > 0) {
-            checkPageBreak(50);
+            checkPageBreak(50 + payoutsForCommittee.length * 20);
             pdf.setFontSize(12);
             pdf.setTextColor('#0e7490');
             pdf.setFont(undefined, 'bold');
             pdf.text(`${t('payoutHistory')}`, margin, currentY);
             currentY += 15;
-            
+            // Show summary of payouts
+            pdf.setFontSize(10);
+            pdf.setFont(undefined, 'normal');
+            pdf.setTextColor('#16a34a');
+            pdf.text(`${t('clearedPayouts')}: ${clearedPayouts}`, margin, currentY);
+            pdf.setTextColor('#dc2626');
+            pdf.text(`${t('unpaidPayouts')}: ${unpaidPayouts}`, margin + 120, currentY);
+            pdf.setTextColor('#222');
+            currentY += 15;
+            // Table with status coloring
             const payoutTableData = payoutsForCommittee.map(pt => [
               getCommitteeMonthName(committee?.startDate ?? '', pt.turnMonthIndex, language) || '',
               `PKR ${(committee.amountPerMember * committee.memberIds.length).toLocaleString()}`,
-              pt.payoutDate ? formatDate(pt.payoutDate, language) : 'N/A'
+              pt.payoutDate ? formatDate(pt.payoutDate, language) : 'N/A',
+              pt.paidOut ? t('cleared') : t('unpaid')
             ]);
-            
             autoTable(pdf, {
               startY: currentY,
-              head: [[t('turnMonth'), t('amountPKR'), t('date')]],
+              head: [[t('turnMonth'), t('amountPKR'), t('date'), t('status')]],
               body: payoutTableData,
               theme: 'grid',
               headStyles: { fillColor: [6, 182, 212], textColor: 255, fontStyle: 'bold' },
               styles: { fontSize: 10, cellPadding: 4 },
               margin: { left: margin, right: margin },
               pageBreak: 'auto',
+              didParseCell: function (data) {
+                if (data.column.index === 3) {
+                  data.cell.styles.textColor = data.cell.raw === t('cleared') ? [22, 163, 74] : [220, 38, 38];
+                  data.cell.styles.fontStyle = 'bold';
+                }
+              },
             });
-            
-            currentY = pdf.lastAutoTable.finalY + 20;
+            currentY = (pdf as any).lastAutoTable.finalY + 20;
           } else {
             pdf.setFontSize(12);
             pdf.setTextColor('#222');
@@ -1971,7 +2075,6 @@ export const CommitteeDetailScreen: React.FC = () => {
             pdf.text(t('noPayoutsReceived'), margin, currentY);
             currentY += 20;
           }
-          
           currentY += 15; // Space between committees
         }
       }
@@ -2305,7 +2408,7 @@ export const CommitteeDetailScreen: React.FC = () => {
                     <>
                      {/* Header (logo/app name), receipt content, footer as before */}
                      <div className="receipt-header flex flex-col items-center mb-4">
-                        <img src={logo || ''} alt="Logo" className="h-16 w-16 mb-2" />
+                        <img src="/logo.png" alt="Logo" className="h-16 w-16 mb-2" />
                         <div className="text-xl font-bold text-primary mb-1">{t('appName')}</div>
                         <hr className="border-primary w-full mb-2" />
                      </div>

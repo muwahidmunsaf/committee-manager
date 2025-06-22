@@ -3,12 +3,16 @@ import { useAppContext } from '../contexts/AppContext';
 import { Language, Theme, Committee, Member, CommitteePayment, CommitteeMemberTurn, AuthMethod, PinLength } from '../types';
 import { Button, Input, Select, LoadingSpinner } from './UIComponents';
 import * as XLSX from 'xlsx'; // For Excel export
+import { saveAs } from 'file-saver'; // Add this import for file download
+import { db } from '../services/firebaseService';
+import { collection, getDocs, deleteDoc, doc, setDoc } from 'firebase/firestore';
 
 const SettingsScreen: React.FC = () => {
   const { 
     t, language, setLanguage, theme, setTheme, appPin, updateAppPin, 
     committees, members, isLoading, setIsLoading,
-    authMethod, setAuthMethod, pinLength, setPinLength 
+    authMethod, setAuthMethod, pinLength, setPinLength, userProfile, updateUserProfile,
+    deleteMember, deleteCommittee, addMember, addCommittee
   } = useAppContext();
 
   const [currentPin, setCurrentPin] = useState('');
@@ -19,6 +23,12 @@ const SettingsScreen: React.FC = () => {
   const [previousAuthMethod, setPreviousAuthMethod] = useState(authMethod);
   const [selectedPinLength, setSelectedPinLength] = useState(pinLength); // Temporary selection
   const [selectedAuthMethod, setSelectedAuthMethod] = useState(authMethod); // Temporary auth method selection
+  const [backupError, setBackupError] = useState('');
+  const [backupSuccess, setBackupSuccess] = useState('');
+  const [restoreError, setRestoreError] = useState('');
+  const [restoreSuccess, setRestoreSuccess] = useState('');
+  const [isRestoreLoading, setIsRestoreLoading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Update previousAuthMethod when authMethod changes
   useEffect(() => {
@@ -448,6 +458,104 @@ const SettingsScreen: React.FC = () => {
     setIsLoading(false);
   };
 
+  // Backup (JSON export)
+  const handleBackupData = () => {
+    setBackupError('');
+    setBackupSuccess('');
+    setIsLoading(true);
+    try {
+      const data = {
+        committees,
+        members,
+        userProfile,
+        settings: {
+          language,
+          theme,
+          appPin,
+          authMethod,
+          pinLength
+        }
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      saveAs(blob, 'BC_Backup.json');
+      setBackupSuccess(language === Language.UR ? 'ڈیٹا کامیابی سے بیک اپ ہو گیا۔' : 'Backup created successfully.');
+    } catch (err) {
+      setBackupError(language === Language.UR ? 'بیک اپ میں خرابی۔ دوبارہ کوشش کریں۔' : 'Error creating backup. Please try again.');
+    }
+    setIsLoading(false);
+  };
+
+  // Restore (JSON import)
+  const handleRestoreData = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRestoreError('');
+    setRestoreSuccess('');
+    setIsRestoreLoading(true);
+    setIsLoading(true);
+    try {
+      const file = e.target.files?.[0];
+      if (!file) throw new Error('No file selected');
+      const text = await file.text();
+      const data = JSON.parse(text);
+      // Validate structure
+      if (!data.committees || !data.members || !data.userProfile || !data.settings) {
+        throw new Error('Invalid backup file');
+      }
+      // 1. Delete all existing members and committees from Firestore
+      const membersSnapshot = await getDocs(collection(db, 'members'));
+      for (const memberDoc of membersSnapshot.docs) {
+        await deleteDoc(doc(db, 'members', memberDoc.id));
+      }
+      const committeesSnapshot = await getDocs(collection(db, 'committees'));
+      for (const committeeDoc of committeesSnapshot.docs) {
+        await deleteDoc(doc(db, 'committees', committeeDoc.id));
+      }
+      // 2. Add all members and committees from backup using setDoc (preserve IDs)
+      for (const member of data.members) {
+        await setDoc(doc(db, 'members', member.id), member);
+      }
+      for (const committee of data.committees) {
+        await setDoc(doc(db, 'committees', committee.id), committee);
+      }
+      // 3. Restore user profile and settings
+      await setDoc(doc(db, 'settings', 'singleton'), { userProfile: data.userProfile }, { merge: true });
+      await setDoc(doc(db, 'settings', 'app'), {
+        language: data.settings.language,
+        theme: data.settings.theme,
+        appPin: data.settings.appPin,
+        authMethod: data.settings.authMethod,
+        pinLength: data.settings.pinLength,
+      }, { merge: true });
+      setRestoreSuccess(language === Language.UR ? 'ڈیٹا کامیابی سے بحال ہو گیا۔' : 'Data restored successfully.');
+      window.location.reload();
+    } catch (err) {
+      setRestoreError(language === Language.UR ? 'بحالی میں خرابی۔ براہ کرم درست بیک اپ فائل منتخب کریں۔' : 'Error restoring data. Please select a valid backup file.');
+    }
+    setIsRestoreLoading(false);
+    setIsLoading(false);
+  };
+
+  if (isRestoreLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-60">
+        <p className="text-lg text-white font-semibold mb-6">
+          {language === Language.UR ? 'ڈیٹا بحال ہو رہا ہے...' : 'Restoring data...'}
+        </p>
+        <div className="w-64 h-3 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
+          <div className="h-full bg-primary animate-progress-bar" style={{ width: '40%' }}></div>
+        </div>
+        <style>{`
+          @keyframes progress-bar {
+            0% { margin-left: -40%; width: 40%; }
+            50% { margin-left: 30%; width: 60%; }
+            100% { margin-left: 100%; width: 40%; }
+          }
+          .animate-progress-bar {
+            animation: progress-bar 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <div className={`max-w-3xl mx-auto p-4 md:p-6 space-y-8 ${language === Language.UR ? 'font-notoNastaliqUrdu text-right' : ''}`}>
@@ -673,6 +781,33 @@ const SettingsScreen: React.FC = () => {
             </Button>
             <p className="text-xs text-neutral-DEFAULT dark:text-gray-400">
               {language === Language.UR ? "تمام اراکین، کمیٹیوں، ادائیگیوں اور وصولیوں کا ڈیٹا ایکسل فائل میں ایکسپورٹ کریں۔" : "Export all members, committees, payments, and payouts data to an Excel file."}
+            </p>
+            {/* Backup/Restore UI */}
+            <Button onClick={handleBackupData} isLoading={isLoading} className="w-full md:w-auto">
+              {language === Language.UR ? 'ڈیٹا بیک اپ (JSON)' : 'Backup Data (JSON)'}
+            </Button>
+            {backupSuccess && <p className="text-green-500 text-sm">{backupSuccess}</p>}
+            {backupError && <p className="text-red-500 text-sm">{backupError}</p>}
+            <div>
+              <input
+                type="file"
+                accept="application/json"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                onChange={handleRestoreData}
+              />
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                isLoading={isLoading}
+                className="w-full md:w-auto"
+              >
+                {language === Language.UR ? 'ڈیٹا بحال کریں (JSON)' : 'Restore Data (JSON)'}
+              </Button>
+            </div>
+            {restoreSuccess && <p className="text-green-500 text-sm">{restoreSuccess}</p>}
+            {restoreError && <p className="text-red-500 text-sm">{restoreError}</p>}
+            <p className="text-xs text-neutral-DEFAULT dark:text-gray-400">
+              {language === Language.UR ? "اپنے ڈیٹا کا مکمل بیک اپ یا بحالی کے لیے JSON فائل استعمال کریں۔" : "Use JSON file for full backup or restore of your data."}
             </p>
         </div>
       </section>
