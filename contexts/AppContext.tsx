@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { Language, Theme, Translations, Committee, Member, CommitteePayment, UserProfile, PayoutMethod, CommitteeType, AuthMethod, PinLength } from '../types';
+import { Language, Theme, Translations, Committee, Member, CommitteePayment, UserProfile, PayoutMethod, CommitteeType, AuthMethod, PinLength, Notification, NotificationType } from '../types';
 import { APP_DATA_STORAGE_KEY, DEFAULT_PROFILE_PIC, DEFAULT_APP_PIN } from '../constants'; // Added DEFAULT_APP_PIN
 import { generateId, initializePayoutTurns } from '../utils/appUtils';
 import { db } from '../services/firebaseService';
@@ -218,7 +218,17 @@ const initialTranslations: Translations = {
     onePayoutPerMonth: "A payout has already been made for {monthName}. Only one payout is allowed per month.",
     onePayoutPerMonth_ur: "{monthName} کی ادائیگی پہلے ہی ہو چکی ہے۔ ہر مہینے صرف ایک ادائیگی کی اجازت ہے۔",
     luckyDrawOnePayoutPerMonth: "Payout for {monthName} has already been done. Try again next month.",
-    luckyDrawOnePayoutPerMonth_ur: "{monthName} کی ادائیگی پہلے ہی ہو چکی ہے۔ اگلے مہینے کوشش کریں۔"
+    luckyDrawOnePayoutPerMonth_ur: "{monthName} کی ادائیگی پہلے ہی ہو چکی ہے۔ اگلے مہینے کوشش کریں۔",
+    notifications: "Notifications",
+    markAllRead: "Mark all read",
+    noNotifications: "No notifications",
+    paymentOverdue: "Payment Overdue",
+    upcomingPayout: "Upcoming Payout",
+    committeeUpdate: "Committee Update",
+    justNow: "Just now",
+    minutesAgo: "{minutes}m ago",
+    hoursAgo: "{hours}h ago",
+    daysAgo: "{days}d ago"
   },
   [Language.UR]: {
     appName: "اسد موبائل شاپ",
@@ -321,7 +331,7 @@ const initialTranslations: Translations = {
     downloadPdf: "پی ڈی ایف ڈاؤن لوڈ کریں",
     kمیتی: "کمیٹی",
     greeting_ur: "خوش آمدید",
-    paymentDue_ur: "آپ کی قسط واجب الادا ہے۔",
+    paymentDue_ur: "آپ کی قسط واجب الادا ہے",
     latePaymentRisk_ur: "{memberName} کی جانب سے ادائیگی میں تاخیر کا امکان ہے۔",
     summaryReport_ur: "اس ماہ، {count} ممبران کی ادائیگیاں باقی ہیں۔",
     createCommitteeVoice_ur: "نئی کمیٹی بنائیں",
@@ -423,7 +433,17 @@ const initialTranslations: Translations = {
     onePayoutPerMonth: "A payout has already been made for {monthName}. Only one payout is allowed per month.",
     onePayoutPerMonth_ur: "{monthName} کی ادائیگی پہلے ہی ہو چکی ہے۔ ہر مہینے صرف ایک ادائیگی کی اجازت ہے۔",
     luckyDrawOnePayoutPerMonth: "Payout for {monthName} has already been done. Try again next month.",
-    luckyDrawOnePayoutPerMonth_ur: "{monthName} کی ادائیگی پہلے ہی ہو چکی ہے۔ اگلے مہینے کوشش کریں۔"
+    luckyDrawOnePayoutPerMonth_ur: "{monthName} کی ادائیگی پہلے ہی ہو چکی ہے۔ اگلے مہینے کوشش کریں۔",
+    notifications: "Notifications",
+    markAllRead: "Mark all read",
+    noNotifications: "No notifications",
+    paymentOverdue: "Payment Overdue",
+    upcomingPayout: "Upcoming Payout",
+    committeeUpdate: "Committee Update",
+    justNow: "Just now",
+    minutesAgo: "{minutes}m ago",
+    hoursAgo: "{hours}h ago",
+    daysAgo: "{days}d ago"
   },
 };
 
@@ -467,6 +487,14 @@ interface AppContextType {
   isAuthSettingsLoaded: boolean; // New loading state for auth settings
   resetAutoLockTimer: () => void;
   getAutoLockTimeRemaining: () => number;
+  // Notification methods
+  notifications: Notification[];
+  addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'isRead'>) => void;
+  markNotificationAsRead: (notificationId: string) => void;
+  markAllNotificationsAsRead: () => void;
+  deleteNotification: (notificationId: string) => void;
+  clearAllNotifications: () => void;
+  getUnreadNotificationCount: () => number;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -489,6 +517,123 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
   const [committeesState, setCommitteesState] = useState<Committee[]>([]);
   const [membersState, setMembersState] = useState<Member[]>([]);
+
+  // Notification state
+  const [notificationsState, setNotificationsState] = useState<Notification[]>([]);
+
+  // Load notifications from localStorage on mount
+  useEffect(() => {
+    const savedNotifications = localStorage.getItem('notifications');
+    if (savedNotifications) {
+      try {
+        const parsed = JSON.parse(savedNotifications);
+        setNotificationsState(parsed);
+      } catch (error) {
+        console.error('Error loading notifications from localStorage');
+      }
+    }
+  }, []);
+
+  // Save notifications to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('notifications', JSON.stringify(notificationsState));
+  }, [notificationsState]);
+
+  const t = useCallback((key: string, substitutions?: Record<string, string | number>): string => {
+    let translation = initialTranslations[languageState][key as keyof typeof initialTranslations[Language.EN]] || initialTranslations[Language.EN][key as keyof typeof initialTranslations[Language.EN]] || key;
+    if (substitutions) {
+      Object.keys(substitutions).forEach(subKey => {
+        translation = translation.replace(`{${subKey}}`, String(substitutions[subKey]));
+      });
+    }
+    return translation;
+  }, [languageState]);
+
+  // Generate notifications based on committee data
+  const generateNotificationsFromCommittees = useCallback(() => {
+    const newNotifications: Notification[] = [];
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    committeesState.forEach(committee => {
+      const committeeStartDate = new Date(committee.startDate);
+      const currentMonthIndex = Math.floor((now.getTime() - committeeStartDate.getTime()) / (1000 * 60 * 60 * 24 * 30));
+      
+      // Check for overdue payments
+      committee.memberIds.forEach(memberId => {
+        const member = membersState.find(m => m.id === memberId);
+        if (!member) return;
+
+        const paymentsForCurrentMonth = committee.payments.filter(p => 
+          p.memberId === memberId && p.monthIndex === currentMonthIndex
+        );
+        
+        const totalPaidThisMonth = paymentsForCurrentMonth.reduce((sum, p) => sum + p.amountPaid, 0);
+        const expectedAmount = committee.amountPerMember;
+        
+        if (totalPaidThisMonth < expectedAmount) {
+          const dueDate = new Date(committeeStartDate);
+          dueDate.setMonth(dueDate.getMonth() + currentMonthIndex);
+          dueDate.setDate(dueDate.getDate() + 7); // Assume due date is 7 days after month start
+          
+          if (today > dueDate) {
+            // Payment is overdue
+            newNotifications.push({
+              id: generateId(),
+              type: NotificationType.PAYMENT_OVERDUE,
+              title: t('paymentOverdue'),
+              message: `${member.name} ${t('paymentDue_ur')} ${committee.title}`,
+              timestamp: new Date().toISOString(),
+              isRead: false,
+              committeeId: committee.id,
+              memberId: memberId,
+              actionUrl: '/committees'
+            });
+          }
+        }
+      });
+
+      // Check for upcoming payouts
+      const upcomingPayouts = committee.payoutTurns.filter(turn => 
+        !turn.paidOut && turn.turnMonthIndex === currentMonthIndex
+      );
+      
+      if (upcomingPayouts.length > 0) {
+        const payoutDate = new Date(committeeStartDate);
+        payoutDate.setMonth(payoutDate.getMonth() + currentMonthIndex);
+        payoutDate.setDate(payoutDate.getDate() + 15); // Assume payout is on 15th of month
+        
+        const daysUntilPayout = Math.ceil((payoutDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysUntilPayout <= 3 && daysUntilPayout > 0) {
+          newNotifications.push({
+            id: generateId(),
+            type: NotificationType.PAYOUT_UPCOMING,
+            title: t('upcomingPayout'),
+            message: `${committee.title} ${t('payoutUpcoming_ur')} ${daysUntilPayout} ${t('days')}`,
+            timestamp: new Date().toISOString(),
+            isRead: false,
+            committeeId: committee.id,
+            actionUrl: '/committees'
+          });
+        }
+      }
+    });
+
+    // Add new notifications without duplicates
+    setNotificationsState(prev => {
+      const existingIds = new Set(prev.map(n => n.id));
+      const uniqueNewNotifications = newNotifications.filter(n => !existingIds.has(n.id));
+      return [...prev, ...uniqueNewNotifications];
+    });
+  }, [committeesState, membersState, t]);
+
+  // Generate notifications when committees or members change
+  useEffect(() => {
+    if (committeesState.length > 0 && membersState.length > 0) {
+      generateNotificationsFromCommittees();
+    }
+  }, [committeesState, membersState, generateNotificationsFromCommittees]);
 
   // Auto-lock functionality
   const [autoLockTimer, setAutoLockTimer] = useState<NodeJS.Timeout | null>(null);
@@ -638,16 +783,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       throw error;
     }
   };
-
-  const t = useCallback((key: string, substitutions?: Record<string, string | number>): string => {
-    let translation = initialTranslations[languageState][key as keyof typeof initialTranslations[Language.EN]] || initialTranslations[Language.EN][key as keyof typeof initialTranslations[Language.EN]] || key;
-    if (substitutions) {
-      Object.keys(substitutions).forEach(subKey => {
-        translation = translation.replace(`{${subKey}}`, String(substitutions[subKey]));
-      });
-    }
-    return translation;
-  }, [languageState]);
 
   const updateUserProfile = async (profile: UserProfile) => {
     setUserProfileState(profile);
@@ -1110,7 +1245,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setIsLoading: setIsLoadingState,
       isAuthSettingsLoaded,
       resetAutoLockTimer,
-      getAutoLockTimeRemaining
+      getAutoLockTimeRemaining,
+      // Notification methods
+      notifications: notificationsState,
+      addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'isRead'>) => {
+        setNotificationsState((prev: Notification[]) => [...prev, { ...notification, id: generateId(), timestamp: new Date().toISOString(), isRead: false }]);
+      },
+      markNotificationAsRead: (notificationId: string) => {
+        setNotificationsState((prev: Notification[]) => prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n));
+      },
+      markAllNotificationsAsRead: () => {
+        setNotificationsState((prev: Notification[]) => prev.map(n => ({ ...n, isRead: true })));
+      },
+      deleteNotification: (notificationId: string) => {
+        setNotificationsState((prev: Notification[]) => prev.filter(n => n.id !== notificationId));
+      },
+      clearAllNotifications: () => {
+        setNotificationsState([]);
+      },
+      getUnreadNotificationCount: () => notificationsState.filter(n => !n.isRead).length
     }}>
       {children}
     </AppContext.Provider>

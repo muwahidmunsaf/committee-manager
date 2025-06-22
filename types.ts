@@ -136,3 +136,24 @@ export interface SettingsData {
     pinLength: PinLength;
     // Potentially other app-wide settings not directly tied to core data
 }
+
+// Notification types
+export enum NotificationType {
+  PAYMENT_DUE = 'payment_due',
+  PAYMENT_OVERDUE = 'payment_overdue',
+  PAYOUT_UPCOMING = 'payout_upcoming',
+  COMMITTEE_UPDATE = 'committee_update',
+  SYSTEM = 'system'
+}
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  timestamp: string; // ISO Date string
+  isRead: boolean;
+  committeeId?: string;
+  memberId?: string;
+  actionUrl?: string; // URL to navigate to when notification is clicked
+}
