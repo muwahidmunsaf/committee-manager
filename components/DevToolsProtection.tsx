@@ -3,6 +3,12 @@ import { useAppContext } from '../contexts/AppContext';
 import { Button, Input, LockClosedIcon } from './UIComponents';
 import { DEV_TOOLS_AUTH_KEY } from '../constants';
 
+declare global {
+  interface Window {
+    devToolsAuthenticated?: boolean;
+  }
+}
+
 interface DevToolsProtectionProps {
   children: React.ReactNode;
 }
@@ -13,7 +19,10 @@ const DevToolsProtection: React.FC<DevToolsProtectionProps> = ({ children }) => 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authKey, setAuthKey] = useState('');
   const [authError, setAuthError] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    // Check localStorage on mount
+    return localStorage.getItem('devToolsAuthenticated') === 'true';
+  });
   const [timeLeft, setTimeLeft] = useState(10);
   const [redirectTimer, setRedirectTimer] = useState<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -22,6 +31,23 @@ const DevToolsProtection: React.FC<DevToolsProtectionProps> = ({ children }) => 
 
   // Enhanced developer tools detection - CATCH ALL METHODS
   useEffect(() => {
+    if (isAuthenticated) {
+      // If authenticated, clean up all timers and listeners and do not set up again
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
+      }
+      if (redirectTimer) {
+        clearTimeout(redirectTimer);
+        setRedirectTimer(null);
+      }
+      return;
+    }
+
     let devtools = {
       open: false,
       orientation: null as string | null
@@ -31,6 +57,7 @@ const DevToolsProtection: React.FC<DevToolsProtectionProps> = ({ children }) => 
 
     // Method 1: Window size detection
     const checkDevTools = () => {
+      if (isAuthenticated) return;
       const widthThreshold = window.outerWidth - window.innerWidth > threshold;
       const heightThreshold = window.outerHeight - window.innerHeight > threshold;
       
@@ -50,6 +77,7 @@ const DevToolsProtection: React.FC<DevToolsProtectionProps> = ({ children }) => 
 
     // Method 2: Listen for custom event from HTML script
     const handleDevToolsDetected = () => {
+      if (isAuthenticated) return;
       setIsDevToolsOpen(true);
       setShowAuthModal(true);
       startRedirectTimer();
@@ -57,6 +85,7 @@ const DevToolsProtection: React.FC<DevToolsProtectionProps> = ({ children }) => 
 
     // Method 3: Enhanced key combinations - BLOCK ALL DEVTools METHODS
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isAuthenticated) return;
       // F12 key - always block
       if (e.key === 'F12') {
         e.preventDefault();
@@ -106,6 +135,7 @@ const DevToolsProtection: React.FC<DevToolsProtectionProps> = ({ children }) => 
 
     // Method 4: Right-click detection
     const handleContextMenu = (e: MouseEvent) => {
+      if (isAuthenticated) return;
       // Block right-click if devtools are detected and user is not authenticated
       if (isDevToolsOpen && !isAuthenticated) {
         e.preventDefault();
@@ -116,6 +146,7 @@ const DevToolsProtection: React.FC<DevToolsProtectionProps> = ({ children }) => 
 
     // Method 5: Additional console detection (stealthy)
     const checkConsoleAccess = () => {
+      if (isAuthenticated) return;
       try {
         const start = performance.now();
         // Use a stealthy approach that doesn't expose file info
@@ -144,6 +175,7 @@ const DevToolsProtection: React.FC<DevToolsProtectionProps> = ({ children }) => 
 
     // Method 6: Focus/blur detection
     const handleFocusChange = () => {
+      if (isAuthenticated) return;
       // Check if devtools might have opened
       setTimeout(() => {
         const widthThreshold = window.outerWidth - window.innerWidth > threshold;
@@ -161,6 +193,7 @@ const DevToolsProtection: React.FC<DevToolsProtectionProps> = ({ children }) => 
 
     // Method 7: Persistent devtools check - ALWAYS MONITOR
     const persistentCheck = () => {
+      if (isAuthenticated) return;
       const widthThreshold = window.outerWidth - window.innerWidth > threshold;
       const heightThreshold = window.outerHeight - window.innerHeight > threshold;
       
@@ -196,10 +229,11 @@ const DevToolsProtection: React.FC<DevToolsProtectionProps> = ({ children }) => 
       clearInterval(consoleInterval);
       clearInterval(persistentInterval);
     };
-  }, [isAuthenticated, isDevToolsOpen, showAuthModal]);
+  }, [isAuthenticated]);
 
   // Redirect timer functionality - SILENT BACKGROUND TIMER
   const startRedirectTimer = () => {
+    if (isAuthenticated) return; // Prevent timer if already authenticated
     // Clear any existing timers
     if (redirectTimer) {
       clearTimeout(redirectTimer);
@@ -255,6 +289,7 @@ const DevToolsProtection: React.FC<DevToolsProtectionProps> = ({ children }) => 
 
   // Force redirect function
   const forceRedirectToGoogle = () => {
+    if (isAuthenticated) return; // Prevent redirect if already authenticated
     // Clear all timers
     stopRedirectTimer();
     
@@ -307,10 +342,19 @@ const DevToolsProtection: React.FC<DevToolsProtectionProps> = ({ children }) => 
     };
   }, [redirectTimer]);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      window.devToolsAuthenticated = true;
+      localStorage.setItem('devToolsAuthenticated', 'true');
+    } else {
+      window.devToolsAuthenticated = false;
+      localStorage.removeItem('devToolsAuthenticated');
+    }
+  }, [isAuthenticated]);
+
   const handleAuthSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
-
     if (authKey === DEV_TOOLS_AUTH_KEY) {
       setIsAuthenticated(true);
       setShowAuthModal(false);
@@ -333,6 +377,7 @@ const DevToolsProtection: React.FC<DevToolsProtectionProps> = ({ children }) => 
     setAuthKey('');
     setAuthError('');
     stopRedirectTimer();
+    setIsAuthenticated(false); // Clear auth on cancel
   };
 
   // If authenticated or devtools not detected, show normal content

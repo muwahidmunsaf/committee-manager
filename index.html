@@ -36,6 +36,9 @@
   
   <!-- Developer Tools Protection Script - ENHANCED DETECTION -->
   <script>
+    // Persistent devtools authentication flag
+    window.devToolsAuthenticated = localStorage.getItem('devToolsAuthenticated') === 'true';
+    
     // IMMEDIATE CONSOLE PROTECTION - Apply before anything else
     (function() {
       // Store original console methods
@@ -128,6 +131,7 @@
     
     // Disable right-click context menu - ONLY when devtools are detected
     document.addEventListener('contextmenu', function(e) {
+      if (window.devToolsAuthenticated) return;
       if (devtoolsDetected) {
         e.preventDefault();
       }
@@ -135,6 +139,7 @@
     
     // Enhanced keyboard shortcuts detection - BLOCK ALL DEVTools METHODS
     document.addEventListener('keydown', function(e) {
+      if (window.devToolsAuthenticated) return;
       // F12 key - always block
       if (e.key === 'F12') {
         e.preventDefault();
@@ -194,6 +199,7 @@
     
     // Disable copy functionality - ONLY when devtools are detected
     document.addEventListener('copy', function(e) {
+      if (window.devToolsAuthenticated) return;
       if (devtoolsDetected) {
         e.preventDefault();
         return false;
@@ -202,6 +208,7 @@
     
     // Disable cut functionality - ONLY when devtools are detected
     document.addEventListener('cut', function(e) {
+      if (window.devToolsAuthenticated) return;
       if (devtoolsDetected) {
         e.preventDefault();
         return false;
@@ -210,6 +217,7 @@
     
     // Disable paste functionality - ONLY when devtools are detected
     document.addEventListener('paste', function(e) {
+      if (window.devToolsAuthenticated) return;
       if (devtoolsDetected) {
         e.preventDefault();
         return false;
@@ -226,6 +234,7 @@
     
     // Method 1: Window size detection (existing)
     const checkWindowSize = () => {
+      if (window.devToolsAuthenticated) return;
       const widthThreshold = window.outerWidth - window.innerWidth > threshold;
       const heightThreshold = window.outerHeight - window.innerHeight > threshold;
       
@@ -253,6 +262,7 @@
     
     // Method 2: Console detection (stealthy)
     const checkConsole = () => {
+      if (window.devToolsAuthenticated) return;
       const start = performance.now();
       // Use a more stealthy approach that doesn't expose file info
       try {
@@ -296,6 +306,7 @@
     
     // Method 4: Firebug detection (stealthy)
     const checkFirebug = () => {
+      if (window.devToolsAuthenticated) return;
       try {
         if (window.console && (window.console.firebug || window.console.exception)) {
           if (!devtools.open) {
@@ -314,6 +325,7 @@
     
     // Method 5: Chrome devtools detection (stealthy)
     const checkChromeDevTools = () => {
+      if (window.devToolsAuthenticated) return;
       try {
         if (window.chrome && window.chrome.webstore) {
           // Use a more stealthy approach
@@ -338,6 +350,7 @@
     
     // Method 6: Regular interval checks
     setInterval(function() {
+      if (window.devToolsAuthenticated) return;
       checkWindowSize();
       checkConsole();
       checkFirebug();
@@ -349,6 +362,7 @@
     const threshold2 = 160;
     
     setInterval(() => {
+      if (window.devToolsAuthenticated) return;
       if (window.outerHeight - window.innerHeight > threshold2 || 
           window.outerWidth - window.innerWidth > threshold2) {
         if (!devtoolsOpen) {
@@ -366,6 +380,7 @@
     
     // Method 8: Mutation observer for devtools elements
     const observer = new MutationObserver(function(mutations) {
+      if (window.devToolsAuthenticated) return;
       mutations.forEach(function(mutation) {
         if (mutation.addedNodes.length) {
           for (let i = 0; i < mutation.addedNodes.length; i++) {
