@@ -15,7 +15,7 @@ const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
 export const generateCommitteeSummary = async (request: AISummaryRequest): Promise<string> => {
   if (!ai) return "AI Service not available (API Key missing).";
-
+  
   const langPrompt = request.language === Language.UR 
     ? "براہ کرم کمیٹی کا خلاصہ اردو میں فراہم کریں۔" 
     : "Please provide a summary for the committee in English.";
@@ -116,14 +116,14 @@ export const getInfoWithGoogleSearch = async (query: string): Promise<GeminiResp
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: GEMINI_TEXT_MODEL, // Or a model that explicitly supports tools well
       contents: query,
-      config: { 
+      config: {
         tools: [{ googleSearch: {} }],
       },
     });
     
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     
-    return { 
+    return {
       text: response.text,
       candidates: response.candidates,
     };
@@ -145,7 +145,7 @@ export const startOrContinueChat = async (message: string, systemInstruction?: s
       config: { systemInstruction: systemInstruction || "You are a helpful assistant." }
     });
   }
-
+  
   try {
     const response: GenerateContentResponse = await chatInstance.sendMessage({ message });
     return response.text;
@@ -173,8 +173,8 @@ export const generateImageDescription = async (imageUrl: string, promptText: str
     // const contents = { parts: [imagePart, textPart] };
     // model would be like 'gemini-1.5-flash-latest' or similar multimodal model
 
-  try {
-    const response: GenerateContentResponse = await ai.models.generateContent({
+    try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
             model: GEMINI_TEXT_MODEL, // Using text model for this simplified example
             contents: prompt, // Sending URL as text, model will treat it as text
         });

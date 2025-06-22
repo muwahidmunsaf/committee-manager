@@ -115,8 +115,7 @@ export const initializePayoutTurns = (committee: Committee, payoutMethod: Payout
       [memberIdsForTurns[i], memberIdsForTurns[j]] = [memberIdsForTurns[j], memberIdsForTurns[i]];
     }
   }
-  // For PayoutMethod.MANUAL or PayoutMethod.BIDDING, we use sequential assignment.
-  // Actual bidding logic would require a more complex UI for bids. Manual assignment might mean organizer edits turns later.
+  // For PayoutMethod.MANUAL, we use sequential assignment.
 
   return memberIdsForTurns.map((memberId, index) => ({
     memberId,

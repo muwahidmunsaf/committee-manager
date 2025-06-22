@@ -24,7 +24,7 @@ export const Button: React.FC<ButtonProps> = ({
     primary: "bg-primary text-white hover:bg-primary-dark focus:ring-primary dark:bg-primary-dark dark:hover:bg-primary",
     secondary: "bg-secondary text-neutral-darker hover:bg-secondary-dark focus:ring-secondary",
     danger: "bg-red-500 text-white hover:bg-red-700 focus:ring-red-500",
-    ghost: "bg-transparent text-primary dark:text-primary-light hover:bg-primary-light dark:hover:bg-neutral-dark hover:text-primary-dark dark:hover:text-primary focus:ring-primary",
+    ghost: "bg-transparent text-primary dark:text-primary-light hover:bg-primary-light/20 dark:hover:bg-neutral-dark/50 hover:text-primary-dark dark:hover:text-primary focus:ring-primary transition-all duration-200",
   };
 
   const sizeStyles = {

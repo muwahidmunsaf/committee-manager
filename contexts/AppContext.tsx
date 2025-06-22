@@ -114,7 +114,7 @@ const initialTranslations: Translations = {
     close: "Close",
     loading: "Loading...",
     downloadPdf: "Download PDF",
-    kमेटी: "Committee", 
+    kمیتی: "Committee", 
     greeting_ur: "خوش آمدید",
     paymentDue_ur: "آپ کی قسط واجب الادا ہے۔",
     latePaymentRisk_ur: "{memberName} کی جانب سے ادائیگی میں تاخیر کا امکان ہے۔",
@@ -178,7 +178,47 @@ const initialTranslations: Translations = {
     remainingCollectionThisMonthDesc: "Total amount yet to be collected in the current period from active committees.",
     maxInstallmentReached: "Cannot add installment. Total payments for this month would exceed the amount per member (PKR {amount}). Max allowed for this installment: PKR {maxAllowed}.",
     backToAllCommittees: "Back to All Committees",
-    payoutMethodDisplay: "Payout Method: {method}"
+    payoutMethodDisplay: "Payout Method: {method}",
+    luckyDraw: "Lucky Draw",
+    luckyDrawDesc: "Randomly select a member for payout",
+    congratulations: "Congratulations!",
+    winnerSelected: "Winner Selected",
+    luckyWinner: "Lucky Winner",
+    noEligibleMembers: "No eligible members for lucky draw",
+    allMembersPaidOut: "All members have been paid out",
+    clickToDraw: "Click to Draw",
+    drawingInProgress: "Drawing in progress...",
+    partyEffects: "🎉🎊🎈",
+    removeShare: "Remove Share",
+    removeShare_ur: "شیئر ہٹائیں",
+    removeOneShare: "Remove one share",
+    removeOneShare_ur: "ایک شیئر ہٹائیں",
+    summary: "Summary",
+    summary_ur: "خلاصہ",
+    totalDue_ur: "کل واجب",
+    totalCollected_ur: "کل جمع شدہ",
+    totalRemaining: "Total Remaining",
+    totalRemaining_ur: "کل باقی",
+    memberPayments: "Member Payments",
+    memberPayments_ur: "ارکان کی ادائیگیاں",
+    shares: "Shares",
+    shares_ur: "شیئرز",
+    payoutHistory_ur: "ادائیگی کی تاریخ",
+    payoutAmount: "Payout Amount",
+    payoutAmount_ur: "ادائیگی کی رقم",
+    status_ur: "حیثیت",
+    paid_ur: "ادا شدہ",
+    pending_ur: "زیر التوا",
+    payoutDate: "Payout Date",
+    payoutDate_ur: "ادائیگی کی تاریخ",
+    payoutAlreadyDone: "Payout of this month is already done.",
+    payoutAlreadyDone_ur: "اس مہینے کی ادائیگی پہلے ہی ہو چکی ہے۔",
+    payoutAlreadyDoneTryNext: "Payout for this month is already done. Try next month.",
+    payoutAlreadyDoneTryNext_ur: "اس مہینے کی ادائیگی پہلے ہی ہو چکی ہے۔ اگلے مہینے کوشش کریں۔",
+    onePayoutPerMonth: "A payout has already been made for {monthName}. Only one payout is allowed per month.",
+    onePayoutPerMonth_ur: "{monthName} کی ادائیگی پہلے ہی ہو چکی ہے۔ ہر مہینے صرف ایک ادائیگی کی اجازت ہے۔",
+    luckyDrawOnePayoutPerMonth: "Payout for {monthName} has already been done. Try again next month.",
+    luckyDrawOnePayoutPerMonth_ur: "{monthName} کی ادائیگی پہلے ہی ہو چکی ہے۔ اگلے مہینے کوشش کریں۔"
   },
   [Language.UR]: {
     appName: "اسد موبائل شاپ",
@@ -279,7 +319,7 @@ const initialTranslations: Translations = {
     close: "بند کریں",
     loading: "لوڈ ہو رہا ہے۔۔۔",
     downloadPdf: "پی ڈی ایف ڈاؤن لوڈ کریں",
-    kमेटी: "کمیٹی",
+    kمیتی: "کمیٹی",
     greeting_ur: "خوش آمدید",
     paymentDue_ur: "آپ کی قسط واجب الادا ہے۔",
     latePaymentRisk_ur: "{memberName} کی جانب سے ادائیگی میں تاخیر کا امکان ہے۔",
@@ -343,7 +383,47 @@ const initialTranslations: Translations = {
     remainingCollectionThisMonthDesc: "فعال کمیٹیوں سے موجودہ مدت میں جمع کی جانے والی کل بقایا رقم۔",
     maxInstallmentReached: "قسط شامل نہیں کی جا سکتی۔ اس ماہ کی کل ادائیگیاں فی رکن رقم (PKR {amount}) سے تجاوز کر جائیں گی۔ اس قسط کے لیے زیادہ سے زیادہ قابل اجازت رقم: PKR {maxAllowed}۔",
     backToAllCommittees: "تمام کمیٹیوں پر واپس جائیں",
-    payoutMethodDisplay: "ادائیگی کا طریقہ: {method}"
+    payoutMethodDisplay: "ادائیگی کا طریقہ: {method}",
+    luckyDraw: "خوش قسمت ڈرا",
+    luckyDrawDesc: "ادائیگی کے لیے بے ترتیب طور پر رکن منتخب کریں",
+    congratulations: "مبارک ہو!",
+    winnerSelected: "فاتح منتخب",
+    luckyWinner: "خوش قسمت فاتح",
+    noEligibleMembers: "خوش قسمت ڈرا کے لیے کوئی اہل رکن نہیں",
+    allMembersPaidOut: "تمام اراکین کو ادائیگی ہو چکی ہے",
+    clickToDraw: "ڈرا کرنے کے لیے کلک کریں",
+    drawingInProgress: "ڈرا جاری ہے...",
+    partyEffects: "🎉🎊🎈",
+    removeShare: "Remove Share",
+    removeShare_ur: "شیئر ہٹائیں",
+    removeOneShare: "Remove one share",
+    removeOneShare_ur: "ایک شیئر ہٹائیں",
+    summary: "Summary",
+    summary_ur: "خلاصہ",
+    totalDue_ur: "کل واجب",
+    totalCollected_ur: "کل جمع شدہ",
+    totalRemaining: "Total Remaining",
+    totalRemaining_ur: "کل باقی",
+    memberPayments: "Member Payments",
+    memberPayments_ur: "ارکان کی ادائیگیاں",
+    shares: "Shares",
+    shares_ur: "شیئرز",
+    payoutHistory_ur: "ادائیگی کی تاریخ",
+    payoutAmount: "Payout Amount",
+    payoutAmount_ur: "ادائیگی کی رقم",
+    status_ur: "حیثیت",
+    paid_ur: "ادا شدہ",
+    pending_ur: "زیر التوا",
+    payoutDate: "Payout Date",
+    payoutDate_ur: "ادائیگی کی تاریخ",
+    payoutAlreadyDone: "Payout of this month is already done.",
+    payoutAlreadyDone_ur: "اس مہینے کی ادائیگی پہلے ہی ہو چکی ہے۔",
+    payoutAlreadyDoneTryNext: "Payout for this month is already done. Try next month.",
+    payoutAlreadyDoneTryNext_ur: "اس مہینے کی ادائیگی پہلے ہی ہو چکی ہے۔ اگلے مہینے کوشش کریں۔",
+    onePayoutPerMonth: "A payout has already been made for {monthName}. Only one payout is allowed per month.",
+    onePayoutPerMonth_ur: "{monthName} کی ادائیگی پہلے ہی ہو چکی ہے۔ ہر مہینے صرف ایک ادائیگی کی اجازت ہے۔",
+    luckyDrawOnePayoutPerMonth: "Payout for {monthName} has already been done. Try again next month.",
+    luckyDrawOnePayoutPerMonth_ur: "{monthName} کی ادائیگی پہلے ہی ہو چکی ہے۔ اگلے مہینے کوشش کریں۔"
   },
 };
 
@@ -375,6 +455,7 @@ interface AppContextType {
   getMemberById: (memberId: string) => Member | undefined;
   addMemberToCommittee: (committeeId: string, memberId: string) => void;
   removeMemberFromCommittee: (committeeId: string, memberId: string) => void;
+  removeOneShareFromCommittee: (committeeId: string, memberId: string) => void;
   recordPayment: (committeeId: string, paymentDetails: Omit<CommitteePayment, 'id'>) => void;
   getPaymentsForMemberByMonth: (committeeId: string, memberId: string, monthIndex: number) => CommitteePayment[];
   updatePayoutTurn: (committeeId: string, turn: Committee['payoutTurns'][0]) => void;
@@ -609,16 +690,34 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       // Check if payout turns need to be recalculated
       const existingCommittee = committeesState.find(c => c.id === updatedCommittee.id);
       if (existingCommittee && (existingCommittee.payoutMethod !== updatedCommittee.payoutMethod || JSON.stringify(existingCommittee.memberIds.sort()) !== JSON.stringify(updatedCommittee.memberIds.sort()))) {
-        updatedCommittee.payoutTurns = initializePayoutTurns(updatedCommittee, updatedCommittee.payoutMethod);
+        console.log('Payout method or members changed, recalculating payout turns');
+        console.log('Existing payout method:', existingCommittee.payoutMethod);
+        console.log('New payout method:', updatedCommittee.payoutMethod);
+        console.log('Existing payout turns:', existingCommittee.payoutTurns);
+        
+        // If only payout method changed (not members), preserve existing payout turns
+        if (JSON.stringify(existingCommittee.memberIds.sort()) === JSON.stringify(updatedCommittee.memberIds.sort())) {
+          console.log('Only payout method changed, preserving existing payout turns');
+          
+          // Keep the existing payout turns exactly as they are
+          // This preserves all paid out statuses and dates
+          updatedCommittee.payoutTurns = existingCommittee.payoutTurns;
+          console.log('Preserved existing payout turns:', updatedCommittee.payoutTurns);
+        } else {
+          console.log('Members changed, generating new payout turns');
+          // If members changed, use completely new payout turns
+          const newPayoutTurns = initializePayoutTurns(updatedCommittee, updatedCommittee.payoutMethod);
+          updatedCommittee.payoutTurns = newPayoutTurns;
+        }
       }
       
       await updateDoc(doc(db, 'committees', updatedCommittee.id), updatedCommittee as any);
       setCommitteesState((prev: Committee[]) => prev.map((c: Committee) => {
         if (c.id === updatedCommittee.id) {
-          return updatedCommittee;
+            return updatedCommittee;
         }
         return c;
-      }));
+    }));
     } catch (error) {
       console.error('Error updating committee in Firestore');
       // Don't expose sensitive error details
@@ -680,19 +779,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const addMemberToCommittee = async (committeeId: string, memberId: string) => {
     try {
-      setCommitteesState((prev: Committee[]) => prev.map((c: Committee) => {
-        if (c.id === committeeId && !c.memberIds.includes(memberId)) {
-          const updatedCommittee = { ...c, memberIds: [...c.memberIds, memberId] };
-          updatedCommittee.payoutTurns = initializePayoutTurns(updatedCommittee, updatedCommittee.payoutMethod);
-          // Update Firestore
-          updateDoc(doc(db, 'committees', committeeId), {
-            memberIds: updatedCommittee.memberIds,
-            payoutTurns: updatedCommittee.payoutTurns
-          });
-          return updatedCommittee;
-        }
-        return c;
-      }));
+    setCommitteesState((prev: Committee[]) => prev.map((c: Committee) => {
+        if (c.id === committeeId) {
+        const updatedCommittee = { ...c, memberIds: [...c.memberIds, memberId] };
+        updatedCommittee.payoutTurns = initializePayoutTurns(updatedCommittee, updatedCommittee.payoutMethod);
+        // Update Firestore
+        updateDoc(doc(db, 'committees', committeeId), {
+          memberIds: updatedCommittee.memberIds,
+          payoutTurns: updatedCommittee.payoutTurns
+        });
+        return updatedCommittee;
+      }
+      return c;
+    }));
     } catch (error) {
       console.error('Error adding member to committee in Firestore');
       // Don't expose sensitive error details
@@ -702,18 +801,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const removeMemberFromCommittee = async (committeeId: string, memberId: string) => {
     console.log('Attempting to remove member from committee:', { committeeId, memberId });
     try {
-      setCommitteesState(prev => prev.map(c => {
-        if (c.id === committeeId) {
-          const updatedMemberIds = c.memberIds.filter(id => id !== memberId);
-          const updatedPayments = c.payments.filter(p => p.memberId !== memberId);
-          const tempCommitteeForPayoutReinit = { ...c, memberIds: updatedMemberIds };
-          const updatedPayoutTurns = initializePayoutTurns(tempCommitteeForPayoutReinit, c.payoutMethod);
+    setCommitteesState(prev => prev.map(c => {
+      if (c.id === committeeId) {
+        const updatedMemberIds = c.memberIds.filter(id => id !== memberId);
+        const updatedPayments = c.payments.filter(p => p.memberId !== memberId);
+        const tempCommitteeForPayoutReinit = { ...c, memberIds: updatedMemberIds };
+        const updatedPayoutTurns = initializePayoutTurns(tempCommitteeForPayoutReinit, c.payoutMethod);
           const updatedCommittee = {
-            ...c,
-            memberIds: updatedMemberIds,
-            payments: updatedPayments, 
-            payoutTurns: updatedPayoutTurns,
-          };
+          ...c,
+          memberIds: updatedMemberIds,
+          payments: updatedPayments, 
+          payoutTurns: updatedPayoutTurns,
+        };
           
           // Update Firestore
           updateDoc(doc(db, 'committees', committeeId), {
@@ -724,31 +823,71 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           
           console.log('Member removed from committee successfully');
           return updatedCommittee;
-        }
-        return c;
-      }));
+      }
+      return c;
+    }));
     } catch (error) {
       console.error('Error removing member from committee in Firestore:', error);
       // Don't expose sensitive error details
     }
   };
 
-  const recordPayment = async (committeeId: string, paymentDetails: Omit<CommitteePayment, 'id'>) => {
+  const removeOneShareFromCommittee = async (committeeId: string, memberId: string) => {
+    console.log('Attempting to remove one share from committee:', { committeeId, memberId });
     try {
-      setCommitteesState((prev: Committee[]) => prev.map((c: Committee) => {
+      setCommitteesState(prev => prev.map(c => {
         if (c.id === committeeId) {
-          const newPayment: CommitteePayment = {
-            ...paymentDetails,
-            id: generateId(), 
-            status: (paymentDetails.status === 'Cleared' || paymentDetails.status === 'Pending') ? paymentDetails.status : 'Cleared',
+          // Find the first occurrence of the memberId and remove only that one
+          const memberIndex = c.memberIds.indexOf(memberId);
+          if (memberIndex === -1) {
+            console.log('Member not found in committee');
+            return c;
+          }
+          
+          const updatedMemberIds = [...c.memberIds];
+          updatedMemberIds.splice(memberIndex, 1);
+          
+          const tempCommitteeForPayoutReinit = { ...c, memberIds: updatedMemberIds };
+          const updatedPayoutTurns = initializePayoutTurns(tempCommitteeForPayoutReinit, c.payoutMethod);
+          const updatedCommittee = {
+            ...c,
+            memberIds: updatedMemberIds,
+            payoutTurns: updatedPayoutTurns,
           };
-          const updatedCommittee = { ...c, payments: [...c.payments, newPayment] };
+          
           // Update Firestore
-          updateDoc(doc(db, 'committees', committeeId), { payments: updatedCommittee.payments });
+          updateDoc(doc(db, 'committees', committeeId), {
+            memberIds: updatedMemberIds,
+            payoutTurns: updatedPayoutTurns
+          });
+          
+          console.log('One share removed from committee successfully');
           return updatedCommittee;
         }
         return c;
       }));
+    } catch (error) {
+      console.error('Error removing one share from committee in Firestore:', error);
+      // Don't expose sensitive error details
+    }
+  };
+
+  const recordPayment = async (committeeId: string, paymentDetails: Omit<CommitteePayment, 'id'>) => {
+    try {
+    setCommitteesState((prev: Committee[]) => prev.map((c: Committee) => {
+      if (c.id === committeeId) {
+        const newPayment: CommitteePayment = {
+          ...paymentDetails,
+          id: generateId(), 
+          status: (paymentDetails.status === 'Cleared' || paymentDetails.status === 'Pending') ? paymentDetails.status : 'Cleared',
+        };
+        const updatedCommittee = { ...c, payments: [...c.payments, newPayment] };
+        // Update Firestore
+        updateDoc(doc(db, 'committees', committeeId), { payments: updatedCommittee.payments });
+        return updatedCommittee;
+      }
+      return c;
+    }));
     } catch (error) {
       console.error('Error recording payment in Firestore');
       // Don't expose sensitive error details
@@ -763,24 +902,45 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const updatePayoutTurn = async (committeeId: string, turnToUpdate: Committee['payoutTurns'][0]) => {
     try {
-      setCommitteesState((prev: Committee[]) => prev.map((c: Committee) => {
-        if (c.id === committeeId) {
-          const updatedCommittee = {
-            ...c,
-            payoutTurns: c.payoutTurns.map(pt => 
-              (pt.memberId === turnToUpdate.memberId && pt.turnMonthIndex === turnToUpdate.turnMonthIndex) 
-              ? turnToUpdate 
-              : pt
-            )
-          };
-          // Update Firestore
-          updateDoc(doc(db, 'committees', committeeId), { payoutTurns: updatedCommittee.payoutTurns });
-          return updatedCommittee;
-        }
-        return c;
-      }));
+      console.log('Updating payout turn:', turnToUpdate);
+      
+    setCommitteesState((prev: Committee[]) => prev.map((c: Committee) => {
+      if (c.id === committeeId) {
+        const updatedCommittee = {
+          ...c,
+          payoutTurns: c.payoutTurns.map(pt => 
+            (pt.memberId === turnToUpdate.memberId && pt.turnMonthIndex === turnToUpdate.turnMonthIndex) 
+              ? { 
+                  ...pt, 
+                  paidOut: turnToUpdate.paidOut,
+                  ...(turnToUpdate.payoutDate ? { payoutDate: turnToUpdate.payoutDate } : {})
+                }
+            : pt
+          )
+        };
+          
+          // Remove payoutDate property if it's undefined
+          updatedCommittee.payoutTurns = updatedCommittee.payoutTurns.map(pt => {
+            if (pt.memberId === turnToUpdate.memberId && pt.turnMonthIndex === turnToUpdate.turnMonthIndex) {
+              const newPt = { ...pt };
+              if (!turnToUpdate.payoutDate) {
+                delete newPt.payoutDate;
+              }
+              return newPt;
+            }
+            return pt;
+          });
+          
+          console.log('Updated committee payout turns:', updatedCommittee.payoutTurns);
+          
+        // Update Firestore
+        updateDoc(doc(db, 'committees', committeeId), { payoutTurns: updatedCommittee.payoutTurns });
+        return updatedCommittee;
+      }
+      return c;
+    }));
     } catch (error) {
-      console.error('Error updating payout turn in Firestore');
+      console.error('Error updating payout turn in Firestore:', error);
       // Don't expose sensitive error details
     }
   };
@@ -939,6 +1099,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       getMemberById,
       addMemberToCommittee,
       removeMemberFromCommittee,
+      removeOneShareFromCommittee,
       recordPayment,
       getPaymentsForMemberByMonth,
       updatePayoutTurn,

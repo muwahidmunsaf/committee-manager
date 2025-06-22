@@ -80,7 +80,7 @@ const SettingsScreen: React.FC = () => {
 
     try {
       const success = await updateAppPin(currentPin, newPin);
-      if (success) {
+    if (success) {
         // Update authentication method if it was changed
         if (selectedAuthMethod !== authMethod) {
           await setAuthMethod(selectedAuthMethod);
@@ -92,10 +92,10 @@ const SettingsScreen: React.FC = () => {
         setPinSuccess(language === Language.UR 
           ? (selectedAuthMethod === AuthMethod.PIN ? 'پن کامیابی سے تبدیل ہو گیا۔' : 'پاس ورڈ کامیابی سے تبدیل ہو گیا۔')
           : (selectedAuthMethod === AuthMethod.PIN ? 'PIN changed successfully.' : 'Password changed successfully.'));
-        setCurrentPin('');
-        setNewPin('');
-        setConfirmNewPin('');
-      } else {
+      setCurrentPin('');
+      setNewPin('');
+      setConfirmNewPin('');
+    } else {
         setPinError(language === Language.UR 
           ? (previousAuthMethod === AuthMethod.PIN ? 'موجودہ پن درست نہیں ہے۔' : 'موجودہ پاس ورڈ درست نہیں ہے۔')
           : (previousAuthMethod === AuthMethod.PIN ? 'Current PIN is incorrect.' : 'Current password is incorrect.'));

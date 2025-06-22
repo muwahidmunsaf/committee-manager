@@ -34,50 +34,161 @@
     }
   </script>
   
-  <!-- Developer Tools Protection Script - SELECTIVE PROTECTION -->
+  <!-- Developer Tools Protection Script - ENHANCED DETECTION -->
   <script>
-    // Disable right-click context menu - ONLY when devtools are detected
+    // IMMEDIATE CONSOLE PROTECTION - Apply before anything else
+    (function() {
+      // Store original console methods
+      const originalConsole = {
+        log: console.log,
+        warn: console.warn,
+        error: console.error,
+        info: console.info,
+        debug: console.debug,
+        trace: console.trace
+      };
+      
+      // Immediately disable console to prevent file links
+      const noop = function() {};
+      console.log = noop;
+      console.warn = noop;
+      console.error = noop;
+      console.info = noop;
+      console.debug = noop;
+      console.trace = noop;
+      
+      // Override Error constructor to prevent stack traces
+      const OriginalError = Error;
+      Error = function(message) {
+        const error = new OriginalError(message);
+        error.stack = 'Error: [native code]';
+        return error;
+      };
+      Error.prototype = OriginalError.prototype;
+      
+      // Override toString methods immediately
+      const originalToString = Function.prototype.toString;
+      const originalConstructorToString = Object.prototype.constructor.toString;
+      
+      Function.prototype.toString = function() {
+        return 'function() { [native code] }';
+      };
+      
+      Object.prototype.constructor.toString = function() {
+        return 'function Object() { [native code] }';
+      };
+      
+      // Store references for later use
+      window._devToolsProtection = {
+        originalConsole,
+        originalToString,
+        originalConstructorToString,
+        noop
+      };
+    })();
+    
+    // Initialize protection functions first
     let devtoolsDetected = false;
     
+    // Protection functions
+    const disableConsole = () => {
+      if (devtoolsDetected) {
+        console.log = window._devToolsProtection.noop;
+        console.warn = window._devToolsProtection.noop;
+        console.error = window._devToolsProtection.noop;
+        console.info = window._devToolsProtection.noop;
+        console.debug = window._devToolsProtection.noop;
+        console.trace = window._devToolsProtection.noop;
+      }
+    };
+    
+    const enableConsole = () => {
+      if (!devtoolsDetected) {
+        console.log = window._devToolsProtection.originalConsole.log;
+        console.warn = window._devToolsProtection.originalConsole.warn;
+        console.error = window._devToolsProtection.originalConsole.error;
+        console.info = window._devToolsProtection.originalConsole.info;
+        console.debug = window._devToolsProtection.originalConsole.debug;
+        console.trace = window._devToolsProtection.originalConsole.trace;
+      }
+    };
+    
+    const disableSourceInspection = () => {
+      if (devtoolsDetected) {
+        // Already disabled by immediate protection
+      }
+    };
+    
+    const enableSourceInspection = () => {
+      if (!devtoolsDetected) {
+        Function.prototype.toString = window._devToolsProtection.originalToString;
+        Object.prototype.constructor.toString = window._devToolsProtection.originalConstructorToString;
+      }
+    };
+    
+    // Disable right-click context menu - ONLY when devtools are detected
     document.addEventListener('contextmenu', function(e) {
       if (devtoolsDetected) {
         e.preventDefault();
       }
     });
     
-    // Disable keyboard shortcuts for developer tools - SELECTIVE
+    // Enhanced keyboard shortcuts detection - BLOCK ALL DEVTools METHODS
     document.addEventListener('keydown', function(e) {
       // F12 key - always block
       if (e.key === 'F12') {
         e.preventDefault();
+        devtoolsDetected = true;
+        document.body.classList.add('devtools-detected');
+        disableConsole();
+        disableSourceInspection();
+        window.dispatchEvent(new CustomEvent('devtools-detected'));
         return false;
       }
       
-      // Only block other shortcuts if devtools are detected
-      if (devtoolsDetected) {
-        // Ctrl+Shift+I (Windows/Linux) or Cmd+Option+I (Mac)
-        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'I') {
-          e.preventDefault();
-          return false;
-        }
-        
-        // Ctrl+Shift+C (Windows/Linux) or Cmd+Option+C (Mac)
-        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
-          e.preventDefault();
-          return false;
-        }
-        
-        // Ctrl+U (View Source)
-        if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
-          e.preventDefault();
-          return false;
-        }
-        
-        // Ctrl+Shift+J (Windows/Linux) or Cmd+Option+J (Mac)
-        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'J') {
-          e.preventDefault();
-          return false;
-        }
+      // Block all devtools shortcuts regardless of detection state
+      // Ctrl+Shift+I (Windows/Linux) or Cmd+Option+I (Mac)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'I') {
+        e.preventDefault();
+        devtoolsDetected = true;
+        document.body.classList.add('devtools-detected');
+        disableConsole();
+        disableSourceInspection();
+        window.dispatchEvent(new CustomEvent('devtools-detected'));
+        return false;
+      }
+      
+      // Ctrl+Shift+C (Windows/Linux) or Cmd+Option+C (Mac)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
+        e.preventDefault();
+        devtoolsDetected = true;
+        document.body.classList.add('devtools-detected');
+        disableConsole();
+        disableSourceInspection();
+        window.dispatchEvent(new CustomEvent('devtools-detected'));
+        return false;
+      }
+      
+      // Ctrl+U (View Source)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+        e.preventDefault();
+        devtoolsDetected = true;
+        document.body.classList.add('devtools-detected');
+        disableConsole();
+        disableSourceInspection();
+        window.dispatchEvent(new CustomEvent('devtools-detected'));
+        return false;
+      }
+      
+      // Ctrl+Shift+J (Windows/Linux) or Cmd+Option+J (Mac)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'J') {
+        e.preventDefault();
+        devtoolsDetected = true;
+        document.body.classList.add('devtools-detected');
+        disableConsole();
+        disableSourceInspection();
+        window.dispatchEvent(new CustomEvent('devtools-detected'));
+        return false;
       }
     });
     
@@ -105,7 +216,7 @@
       }
     });
     
-    // Detect developer tools opening
+    // ENHANCED Developer tools detection
     let devtools = {
       open: false,
       orientation: null
@@ -113,7 +224,8 @@
     
     const threshold = 160;
     
-    setInterval(function() {
+    // Method 1: Window size detection (existing)
+    const checkWindowSize = () => {
       const widthThreshold = window.outerWidth - window.innerWidth > threshold;
       const heightThreshold = window.outerHeight - window.innerHeight > threshold;
       
@@ -122,22 +234,167 @@
           devtools.open = true;
           devtools.orientation = widthThreshold ? 'vertical' : 'horizontal';
           devtoolsDetected = true;
-          // Add CSS class to body for selective protection
           document.body.classList.add('devtools-detected');
-          // Trigger authentication modal (handled by React component)
+          disableConsole();
+          disableSourceInspection();
           window.dispatchEvent(new CustomEvent('devtools-detected'));
         }
       } else {
         devtools.open = false;
         devtools.orientation = null;
-        devtoolsDetected = false;
-        // Remove CSS class from body
-        document.body.classList.remove('devtools-detected');
+        if (devtoolsDetected) {
+          devtoolsDetected = false;
+          document.body.classList.remove('devtools-detected');
+          enableConsole();
+          enableSourceInspection();
+        }
       }
+    };
+    
+    // Method 2: Console detection (stealthy)
+    const checkConsole = () => {
+      const start = performance.now();
+      // Use a more stealthy approach that doesn't expose file info
+      try {
+        // Create a hidden element to test console access
+        const testElement = document.createElement('div');
+        testElement.style.display = 'none';
+        testElement.id = 'devtools-test';
+        document.body.appendChild(testElement);
+        
+        // Use a different approach that doesn't log to console
+        const test = new Function('return performance.now()');
+        const end = test();
+        
+        document.body.removeChild(testElement);
+        
+        if (end - start > 50) {
+          if (!devtools.open) {
+            devtools.open = true;
+            devtoolsDetected = true;
+            document.body.classList.add('devtools-detected');
+            disableConsole();
+            disableSourceInspection();
+            window.dispatchEvent(new CustomEvent('devtools-detected'));
+          }
+        }
+      } catch (e) {
+        // Silent catch - don't expose any information
+      }
+    };
+    
+    // Method 3: Debugger detection (stealthy)
+    const checkDebugger = () => {
+      try {
+        // Use a more subtle debugger check
+        const test = new Function('debugger;');
+        test();
+      } catch (e) {
+        // Silent catch
+      }
+    };
+    
+    // Method 4: Firebug detection (stealthy)
+    const checkFirebug = () => {
+      try {
+        if (window.console && (window.console.firebug || window.console.exception)) {
+          if (!devtools.open) {
+            devtools.open = true;
+            devtoolsDetected = true;
+            document.body.classList.add('devtools-detected');
+            disableConsole();
+            disableSourceInspection();
+            window.dispatchEvent(new CustomEvent('devtools-detected'));
+          }
+        }
+      } catch (e) {
+        // Silent catch
+      }
+    };
+    
+    // Method 5: Chrome devtools detection (stealthy)
+    const checkChromeDevTools = () => {
+      try {
+        if (window.chrome && window.chrome.webstore) {
+          // Use a more stealthy approach
+          const test = new Function('return window.outerHeight - window.innerHeight');
+          const heightDiff = test();
+          
+          if (heightDiff > threshold) {
+            if (!devtools.open) {
+              devtools.open = true;
+              devtoolsDetected = true;
+              document.body.classList.add('devtools-detected');
+              disableConsole();
+              disableSourceInspection();
+              window.dispatchEvent(new CustomEvent('devtools-detected'));
+            }
+          }
+        }
+      } catch (e) {
+        // Silent catch
+      }
+    };
+    
+    // Method 6: Regular interval checks
+    setInterval(function() {
+      checkWindowSize();
+      checkConsole();
+      checkFirebug();
+      checkChromeDevTools();
     }, 1000);
     
-    // DO NOT disable console access - allow for debugging
-    // DO NOT disable alert, confirm, prompt - allow for normal operations
+    // Method 7: Focus/blur detection for devtools
+    let devtoolsOpen = false;
+    const threshold2 = 160;
+    
+    setInterval(() => {
+      if (window.outerHeight - window.innerHeight > threshold2 || 
+          window.outerWidth - window.innerWidth > threshold2) {
+        if (!devtoolsOpen) {
+          devtoolsOpen = true;
+          devtoolsDetected = true;
+          document.body.classList.add('devtools-detected');
+          disableConsole();
+          disableSourceInspection();
+          window.dispatchEvent(new CustomEvent('devtools-detected'));
+        }
+      } else {
+        devtoolsOpen = false;
+      }
+    }, 500);
+    
+    // Method 8: Mutation observer for devtools elements
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.addedNodes.length) {
+          for (let i = 0; i < mutation.addedNodes.length; i++) {
+            const node = mutation.addedNodes[i];
+            if (node.nodeType === 1) { // Element node
+              const element = node;
+              if (element.id === 'firebug' || 
+                  element.className && element.className.indexOf('firebug') !== -1 ||
+                  element.id === 'firebugConsole' ||
+                  element.id === 'firebugConsolePanel') {
+                if (!devtools.open) {
+                  devtools.open = true;
+                  devtoolsDetected = true;
+                  document.body.classList.add('devtools-detected');
+                  disableConsole();
+                  disableSourceInspection();
+                  window.dispatchEvent(new CustomEvent('devtools-detected'));
+                }
+              }
+            }
+          }
+        }
+      });
+    });
+    
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
   </script>
   <style>
     /* Custom scrollbar for better aesthetics */

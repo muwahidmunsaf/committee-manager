@@ -389,34 +389,39 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
 
 // Committee Detail View
 export const CommitteeDetailScreen: React.FC = () => {
-    const { committeeId } = useParams<{ committeeId: string }>();
     const { 
-        committees, getCommitteeById, members: allMembers, getMemberById, 
-        addMemberToCommittee, removeMemberFromCommittee, 
-        recordPayment, updatePayoutTurn, t, language, isLoading: appIsLoading,
-        setIsLoading: setAppIsLoading, 
-        deleteMember, getPaymentsForMemberByMonth, userProfile,
-        updateCommittee
+        committees, 
+        members: allMembers, 
+        updatePayoutTurn, 
+        updateMultiplePayoutTurns,
+        t, 
+        language, 
+        userProfile, 
+        isLoading: appIsLoading,
+        setIsLoading,
+        removeMemberFromCommittee,
+        removeOneShareFromCommittee,
+        deleteMember,
+        addMemberToCommittee,
+        getPaymentsForMemberByMonth,
+        updateCommittee,
+        recordPayment,
+        getMemberById
     } = useAppContext();
+    const { committeeId } = useParams<{ committeeId: string }>();
     const navigate = useNavigate();
-
-    const [committee, setCommittee] = useState<Committee | null | undefined>(null);
-    const [committeeMembers, setCommitteeMembers] = useState<Member[]>([]);
-    
+    const committee = committees.find(c => c.id === committeeId);
     const [isMemberFormModalOpen, setIsMemberFormModalOpen] = useState(false);
     const [editingMember, setEditingMember] = useState<Member | undefined>(undefined);
-    
     const [isAddExistingMemberModalOpen, setIsAddExistingMemberModalOpen] = useState(false);
-    const [selectedExistingMemberId, setSelectedExistingMemberId] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState('');
-
+    const [selectedExistingMemberId, setSelectedExistingMemberId] = useState('');
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-    const [currentPaymentContext, setCurrentPaymentContext] = useState<{ memberId: string; monthIndex: number } | null>(null);
-    const [installmentAmount, setInstallmentAmount] = useState<number>(0);
-    const [installmentDate, setInstallmentDate] = useState<string>(new Date().toISOString().split('T')[0]);
-    const [paymentError, setPaymentError] = useState<string>('');
-
-
+    const [selectedMemberId, setSelectedMemberId] = useState('');
+    const [selectedMonthIndex, setSelectedMonthIndex] = useState(0);
+    const [installmentAmount, setInstallmentAmount] = useState(0);
+    const [installmentDate, setInstallmentDate] = useState(new Date().toISOString().split('T')[0]);
+    const [paymentError, setPaymentError] = useState('');
     const [receiptModalOpen, setReceiptModalOpen] = useState(false);
     const [receiptData, setReceiptData] = useState<{
         committeeName: string;
@@ -424,52 +429,58 @@ export const CommitteeDetailScreen: React.FC = () => {
         amount: number; 
         paymentDate: string;
         month: string; 
-        committeeId?: string;
-        memberId?: string;
-        monthIndex?: number; // Add monthIndex for easier deletion
-        paymentId?: string; // Add paymentId for direct deletion
+        monthIndex?: number;
+        paymentId?: string;
     } | null>(null);
-
-    const [selectedMonthForReceipts, setSelectedMonthForReceipts] = useState<number>(0);
-
-    // Add state for editing receipt
     const [isEditReceiptModalOpen, setIsEditReceiptModalOpen] = useState(false);
-    const [editReceiptAmount, setEditReceiptAmount] = useState<number>(0);
-    const [editReceiptDate, setEditReceiptDate] = useState<string>('');
-    const [editReceiptError, setEditReceiptError] = useState<string>('');
+    const [editReceiptAmount, setEditReceiptAmount] = useState(0);
+    const [editReceiptDate, setEditReceiptDate] = useState('');
+    const [editReceiptError, setEditReceiptError] = useState('');
+    
+    // Lucky Draw State
+    const [isLuckyDrawModalOpen, setIsLuckyDrawModalOpen] = useState(false);
+    const [luckyDrawWinner, setLuckyDrawWinner] = useState<Member | null>(null);
+    const [winningTurn, setWinningTurn] = useState<CommitteeMemberTurn | null>(null);
+    const [showPartyEffects, setShowPartyEffects] = useState(false);
+    const [isDrawing, setIsDrawing] = useState(false);
+    const soundIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    useEffect(() => {
-        if (committeeId) {
-            const fetchedCommittee = getCommitteeById(committeeId);
-            setCommittee(fetchedCommittee);
-            if (fetchedCommittee) {
-                const membersOfCommittee = fetchedCommittee.memberIds
-                    .map(id => getMemberById(id))
-                    .filter(Boolean) as Member[];
-                setCommitteeMembers(membersOfCommittee);
-                 if (fetchedCommittee.duration > 0 && selectedMonthForReceipts >= fetchedCommittee.duration) {
-                    setSelectedMonthForReceipts(0); 
-                }
-            }
-        } else {
-            navigate('/committees'); 
-        }
-    }, [committeeId, getCommitteeById, getMemberById, allMembers, navigate, committees, selectedMonthForReceipts]);
+    // Additional state for existing functionality
+    const [currentPaymentContext, setCurrentPaymentContext] = useState<{ memberId: string; monthIndex: number } | null>(null);
+    const [selectedMonthForReceipts, setSelectedMonthForReceipts] = useState(0);
 
     const availableMembersForCommittee = allMembers.filter(
-      m => !committee?.memberIds.includes(m.id) && 
-           (m.name.toLowerCase().includes(searchTerm.toLowerCase()) || m.cnic.includes(searchTerm))
+      m => (m.name.toLowerCase().includes(searchTerm.toLowerCase()) || m.cnic.includes(searchTerm))
     );
 
-    useEffect(() => {
-        if (isAddExistingMemberModalOpen && availableMembersForCommittee.length === 1 && !selectedExistingMemberId) {
-            setSelectedExistingMemberId(availableMembersForCommittee[0].id);
+    // Get committee members with share counts
+    const committeeMembersWithShares = committee ? 
+      committee.memberIds.reduce((acc: Array<{ member: Member; shares: number }>, memberId) => {
+        const member = allMembers.find(m => m.id === memberId);
+        if (member) {
+          const existingEntry = acc.find(entry => entry.member.id === memberId);
+          if (existingEntry) {
+            existingEntry.shares += 1;
+          } else {
+            acc.push({ member, shares: 1 });
+          }
         }
-        if (isAddExistingMemberModalOpen && availableMembersForCommittee.length === 0) {
-            setSelectedExistingMemberId(''); // Clear selection if no members match
-        }
-    }, [isAddExistingMemberModalOpen, availableMembersForCommittee, selectedExistingMemberId]);
+        return acc;
+      }, [])
+      : [];
 
+    // Month options for receipts
+    const monthOptions = committee ? 
+      Array.from({ length: committee.duration }, (_, i) => ({
+        value: i.toString(),
+        label: getCommitteeMonthName(committee.startDate, i, language)
+      })) : [];
+
+    // Payment grid header
+    const paymentGridHeader = committee ? 
+      Array.from({ length: committee.duration }, (_, i) => 
+        getCommitteeMonthName(committee.startDate, i, language)
+      ) : [];
 
     const handleOpenMemberForm = (member?: Member) => {
         setEditingMember(member);
@@ -484,92 +495,297 @@ export const CommitteeDetailScreen: React.FC = () => {
     };
 
     const handleRemoveMemberWrapper = (memberId: string) => {
-        if (committeeId && window.confirm(t('confirmDelete') + " " + getMemberName(memberId, allMembers) + " " + (language === Language.UR ? "کو اس کمیٹی سے؟" : "from this committee?"))) {
-            removeMemberFromCommittee(committeeId, memberId);
+      if (!committee) return;
+      
+      const member = getMemberById(memberId);
+      const memberName = member?.name || 'this member';
+      
+      if (window.confirm(language === Language.UR 
+        ? `کیا آپ واقعی "${memberName}" کو اس کمیٹی سے ہٹانا چاہتے ہیں؟`
+        : `Are you sure you want to remove "${memberName}" from this committee?`)) {
+        removeMemberFromCommittee(committee.id, memberId);
+        }
+    };
+    
+    const handleRemoveShare = (memberId: string) => {
+      if (!committee) return;
+      
+      const member = getMemberById(memberId);
+      const memberName = member?.name || 'this member';
+      
+      if (window.confirm(language === Language.UR 
+        ? `کیا آپ واقعی "${memberName}" کی ایک شیئر ہٹانا چاہتے ہیں؟`
+        : `Are you sure you want to remove one share of "${memberName}"?`)) {
+        removeOneShareFromCommittee(committee.id, memberId);
         }
     };
     
     const handleDeleteMemberGloballyWrapper = (memberId: string) => {
-        if (window.confirm(t('confirmDelete') + " " + getMemberName(memberId, allMembers) + " " + (language === Language.UR ? "کو مکمل طور پر؟ اس سے یہ رکن تمام کمیٹیوں سے ہٹا دیا جائے گا۔" : "completely? This will remove the member from ALL committees."))) {
+      const member = getMemberById(memberId);
+      const memberName = member?.name || 'this member';
+      
+      if (window.confirm(language === Language.UR 
+        ? `کیا آپ واقعی "${memberName}" کو مکمل طور پر حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں کیا جا سکتا۔`
+        : `Are you sure you want to permanently delete "${memberName}"? This action cannot be undone.`)) {
             deleteMember(memberId); 
-            // If the current committee detail screen is for a committee this member was in,
-            // the main useEffect will refetch members and update the view.
         }
     };
 
     const handleAddExistingMember = () => {
-        if (committeeId && selectedExistingMemberId) {
-            addMemberToCommittee(committeeId, selectedExistingMemberId);
+      if (!committee || !selectedExistingMemberId) return;
+      addMemberToCommittee(committee.id, selectedExistingMemberId);
             setIsAddExistingMemberModalOpen(false);
             setSelectedExistingMemberId('');
-            setSearchTerm(''); // Reset search term
-        }
     };
     
     const handleOpenPaymentModal = (memberId: string, monthIndex: number) => {
+        setSelectedMemberId(memberId);
+        setSelectedMonthIndex(monthIndex);
         setCurrentPaymentContext({ memberId, monthIndex });
-        setInstallmentAmount(0); 
-        setInstallmentDate(new Date().toISOString().split('T')[0]);
-        setPaymentError('');
         setPaymentModalOpen(true);
     };
 
     const handleRecordInstallment = () => {
-        if (committee && currentPaymentContext && installmentAmount > 0) {
-            const paidInstallmentsThisMonth = getPaymentsForMemberByMonth(committee.id, currentPaymentContext.memberId, currentPaymentContext.monthIndex);
-            const totalAlreadyPaidThisMonth = paidInstallmentsThisMonth.reduce((sum, p) => sum + p.amountPaid, 0);
-            const maxAllowableNewInstallment = committee.amountPerMember - totalAlreadyPaidThisMonth;
-
-            if (installmentAmount > maxAllowableNewInstallment) {
-                setPaymentError(t('maxInstallmentReached', {amount: committee.amountPerMember, maxAllowed: maxAllowableNewInstallment}));
+        if (!committee || !currentPaymentContext) return;
+        
+        const existingPayments = getPaymentsForMemberByMonth(committee.id, currentPaymentContext.memberId, currentPaymentContext.monthIndex);
+        const totalPaid = existingPayments.reduce((sum: number, p: CommitteePayment) => sum + p.amountPaid, 0);
+        
+        // Calculate how many shares this member has
+        const memberShares = committee.memberIds.filter(id => id === currentPaymentContext.memberId).length;
+        const totalAmountDue = committee.amountPerMember * memberShares;
+        const remainingAmount = totalAmountDue - totalPaid;
+        
+        if (installmentAmount > remainingAmount) {
+          setPaymentError(t('maxInstallmentReached', { amount: totalAmountDue, maxAllowed: remainingAmount }));
                 return;
             }
 
-            const paymentDetails: Omit<CommitteePayment, 'id'> = {
+        recordPayment(committee.id, {
                 memberId: currentPaymentContext.memberId,
                 monthIndex: currentPaymentContext.monthIndex,
                 amountPaid: installmentAmount,
                 paymentDate: installmentDate,
-                status: 'Cleared', 
-                receiptGenerated: true, 
-            };
-            recordPayment(committee.id, paymentDetails);
+          status: 'Cleared'
+        });
+        
             setPaymentModalOpen(false);
-            setCurrentPaymentContext(null);
             setInstallmentAmount(0);
+        setInstallmentDate(new Date().toISOString().split('T')[0]);
             setPaymentError('');
-        } else if (installmentAmount <= 0) {
-            setPaymentError(language === Language.UR ? "قسط کی رقم مثبت ہونی چاہیے۔" : "Installment amount must be positive.");
-        }
-    };
-    
-    const handleTogglePayout = (turn: CommitteeMemberTurn) => {
-        if (committee) {
-          updatePayoutTurn(committee.id, { 
-            ...turn, 
-            paidOut: !turn.paidOut,
-            payoutDate: !turn.paidOut ? new Date().toISOString().split('T')[0] : undefined
-          });
-        }
+        setCurrentPaymentContext(null);
     };
 
     const handleGenerateReceiptForInstallment = (payment: CommitteePayment) => {
-      if(!committee) return;
+        if (!committee) return;
+        
       const member = getMemberById(payment.memberId);
-      if(!member) return;
+        if (!member) return;
 
       setReceiptData({
         committeeName: committee.title,
         payerName: member.name,
         amount: payment.amountPaid, 
         paymentDate: payment.paymentDate,
-        month: getCommitteeMonthName(committee?.startDate ?? '', payment.monthIndex, language),
-        committeeId: committee.id,
-        memberId: member.id,
-        monthIndex: payment.monthIndex, // Store the actual monthIndex
-        paymentId: payment.id, // Store the payment ID for direct deletion
+          month: getCommitteeMonthName(committee.startDate, payment.monthIndex, language),
+          monthIndex: payment.monthIndex,
+          paymentId: payment.id
       });
       setReceiptModalOpen(true);
+    };
+
+    const handleTogglePayout = (turn: CommitteeMemberTurn) => {
+        if (!committee) return;
+
+        // If trying to mark as PAID
+        if (!turn.paidOut) {
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+
+            // Check if any other turn was already paid in the current calendar month
+            const paidThisMonth = committee.payoutTurns.find(pt => {
+                if (!pt.paidOut || !pt.payoutDate) return false;
+                const payoutDate = new Date(pt.payoutDate);
+                return payoutDate.getMonth() === currentMonth && payoutDate.getFullYear() === currentYear;
+            });
+
+            if (paidThisMonth) {
+                const monthName = new Date().toLocaleString(language === Language.UR ? 'ur-PK' : 'en-US', { month: 'long' });
+                alert(t('onePayoutPerMonth', { monthName }));
+                return; // Stop the action
+            }
+        }
+
+        // If validation passes or we are un-marking, proceed with the update
+        const updatedTurn = !turn.paidOut
+            ? {
+                ...turn,
+                paidOut: true,
+                payoutDate: new Date().toISOString()
+              }
+            : {
+                ...turn,
+                paidOut: false,
+                payoutDate: undefined
+              };
+
+        updatePayoutTurn(committee.id, updatedTurn);
+    };
+
+    // Lucky Draw Functions
+    const handleLuckyDraw = () => {
+      if (!committee) return;
+
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+
+      // Check if any turn was already paid in the current calendar month
+      const paidThisMonth = committee.payoutTurns.find(pt => {
+          if (!pt.paidOut || !pt.payoutDate) return false;
+          const payoutDate = new Date(pt.payoutDate);
+          return payoutDate.getMonth() === currentMonth && payoutDate.getFullYear() === currentYear;
+      });
+
+      if (paidThisMonth) {
+        const monthName = new Date().toLocaleString(language === Language.UR ? 'ur-PK' : 'en-US', { month: 'long' });
+        alert(t('luckyDrawOnePayoutPerMonth', { monthName }));
+        return;
+      }
+      
+      // Get eligible members (not paid out yet)
+      const eligibleTurns = committee.payoutTurns.filter(turn => !turn.paidOut);
+      
+      if (eligibleTurns.length === 0) {
+        alert(t('allMembersPaidOut'));
+        return;
+      }
+      
+      setIsDrawing(true);
+      setIsLuckyDrawModalOpen(true);
+      
+      // Simulate drawing animation
+      setTimeout(() => {
+        // Randomly select a winner
+        const randomIndex = Math.floor(Math.random() * eligibleTurns.length);
+        const winningTurn = eligibleTurns[randomIndex];
+        const winner = allMembers.find(m => m.id === winningTurn.memberId);
+        
+        if (winner) {
+          setLuckyDrawWinner(winner);
+          setWinningTurn(winningTurn);
+          setShowPartyEffects(true);
+          
+          // Play continuous celebration sound
+          playContinuousSound();
+          
+          // Mark the winner as paid out
+          const updatedTurn = {
+            ...winningTurn,
+            paidOut: true,
+            payoutDate: new Date().toISOString()
+          };
+          
+          updatePayoutTurn(committee.id, updatedTurn);
+        }
+        
+        setIsDrawing(false);
+      }, 2000); // 2 second animation
+    };
+
+    const handleCloseLuckyDrawModal = () => {
+        setIsLuckyDrawModalOpen(false);
+        setLuckyDrawWinner(null);
+        setWinningTurn(null);
+        setShowPartyEffects(false);
+        setIsDrawing(false);
+        stopContinuousSound();
+    };
+
+    // Play winning sound effect
+    const playWinningSound = () => {
+      try {
+        // Create audio context for sound effect
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        
+        // Create a party popper/fire sound effect
+        const oscillator1 = audioContext.createOscillator();
+        const oscillator2 = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator1.connect(gainNode);
+        oscillator2.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // Set up the party popper sound (sharp pop followed by sparkles)
+        oscillator1.frequency.setValueAtTime(200, audioContext.currentTime);
+        oscillator1.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.1);
+        oscillator1.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.2);
+        
+        oscillator2.frequency.setValueAtTime(400, audioContext.currentTime + 0.1);
+        oscillator2.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.2);
+        oscillator2.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.3);
+        
+        gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+        
+        oscillator1.start(audioContext.currentTime);
+        oscillator1.stop(audioContext.currentTime + 0.4);
+        oscillator2.start(audioContext.currentTime + 0.1);
+        oscillator2.stop(audioContext.currentTime + 0.4);
+      } catch (error) {
+        console.log('Sound effect not supported');
+      }
+    };
+
+    // Play continuous celebration sound
+    const playContinuousSound = () => {
+      try {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        
+        const playCelebrationSound = () => {
+          const oscillator1 = audioContext.createOscillator();
+          const oscillator2 = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          
+          oscillator1.connect(gainNode);
+          oscillator2.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          
+          // Celebration sound (higher pitched, more festive)
+          oscillator1.frequency.setValueAtTime(600, audioContext.currentTime);
+          oscillator1.frequency.exponentialRampToValueAtTime(1000, audioContext.currentTime + 0.2);
+          oscillator1.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.4);
+          
+          oscillator2.frequency.setValueAtTime(800, audioContext.currentTime + 0.1);
+          oscillator2.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.3);
+          oscillator2.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.5);
+          
+          gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+          
+          oscillator1.start(audioContext.currentTime);
+          oscillator1.stop(audioContext.currentTime + 0.5);
+          oscillator2.start(audioContext.currentTime + 0.1);
+          oscillator2.stop(audioContext.currentTime + 0.5);
+        };
+        
+        // Play first sound immediately
+        playCelebrationSound();
+        
+        // Set up interval to play sound every 2 seconds
+        soundIntervalRef.current = setInterval(playCelebrationSound, 2000);
+        
+      } catch (error) {
+        console.log('Continuous sound effect not supported');
+      }
+    };
+
+    // Stop continuous sound
+    const stopContinuousSound = () => {
+      if (soundIntervalRef.current) {
+        clearInterval(soundIntervalRef.current);
+        soundIntervalRef.current = null;
+      }
     };
 
     // Helper to get base64 logo for PDF
@@ -813,10 +1029,18 @@ export const CommitteeDetailScreen: React.FC = () => {
     const generateImageBasedMonthlyReceiptsPdf = async (
       committee: Committee,
       monthIndex: number,
-      membersForMonth: Member[],
+      membersWithShares: Array<{ member: Member; shares: number }>,
       memberPaymentsMap: Map<string, number>,
       totalCollected: number,
       totalRemaining: number,
+      totalDue: number,
+      payoutHistory: Array<{
+        memberName: string;
+        shares: number;
+        payoutAmount: number;
+        paidOut: boolean;
+        payoutDate?: string;
+      }>,
       userProfile: { phone?: string; email?: string; address?: string },
       logoBase64: string,
       appName: string,
@@ -837,37 +1061,115 @@ export const CommitteeDetailScreen: React.FC = () => {
       hiddenDiv.style.position = 'absolute';
       hiddenDiv.style.left = '-9999px';
       hiddenDiv.style.top = '-9999px';
-      hiddenDiv.style.width = '600px';
+      hiddenDiv.style.width = '700px';
       hiddenDiv.style.padding = '20px';
       hiddenDiv.style.backgroundColor = 'white';
       hiddenDiv.style.fontFamily = language === Language.UR ? 'Jameel Noori Nastaleeq, Noto Nastaliq Urdu, serif' : 'Arial, sans-serif';
       hiddenDiv.style.direction = language === Language.UR ? 'rtl' : 'ltr';
       hiddenDiv.style.fontSize = '12px';
 
-      // Build table content
-      let tableRows = '';
-      membersForMonth.forEach((member, idx) => {
-        const paid = memberPaymentsMap.get(member.id) || 0;
-        const remaining = committee.amountPerMember - paid;
-        tableRows += `
+      // Build summary section
+      const summarySection = `
+        <div style="margin-bottom: 20px; padding: 15px; background-color: #f0f9ff; border-radius: 8px;">
+          <h3 style="color: #0e7490; margin: 0 0 15px 0; font-size: 16px;">${t('summary')}</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+            <div style="text-align: center;">
+              <div style="font-weight: bold; color: #0e7490;">${t('totalDue')}</div>
+              <div style="font-size: 18px; font-weight: bold;">PKR ${totalDue.toLocaleString()}</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-weight: bold; color: #16a34a;">${t('totalCollected')}</div>
+              <div style="font-size: 18px; font-weight: bold; color: #16a34a;">PKR ${totalCollected.toLocaleString()}</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-weight: bold; color: #dc2626;">${t('totalRemaining')}</div>
+              <div style="font-size: 18px; font-weight: bold; color: #dc2626;">PKR ${totalRemaining.toLocaleString()}</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Build member payments table
+      let memberTableRows = '';
+      membersWithShares.forEach((memberData, idx) => {
+        const paid = memberPaymentsMap.get(memberData.member.id) || 0;
+        const memberTotalDue = committee.amountPerMember * memberData.shares;
+        const remaining = memberTotalDue - paid;
+        memberTableRows += `
           <tr>
             <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${idx + 1}</td>
-            <td style="border: 1px solid #ddd; padding: 8px;">${member.name || ''}</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${memberData.member.name || ''}</td>
+            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${memberData.shares}</td>
+            <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">PKR ${memberTotalDue.toLocaleString()}</td>
             <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">PKR ${paid.toLocaleString()}</td>
             <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">PKR ${remaining.toLocaleString()}</td>
           </tr>
         `;
       });
 
-      // Add totals row
-      tableRows += `
-        <tr style="font-weight: bold; background-color: #f0f9ff;">
-          <td style="border: 1px solid #ddd; padding: 8px;"></td>
-          <td style="border: 1px solid #ddd; padding: 8px;">${t('totalCollected')}</td>
-          <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">PKR ${totalCollected.toLocaleString()}</td>
-          <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">PKR ${totalRemaining.toLocaleString()}</td>
+      const memberPaymentsTable = `
+        <div style="margin-bottom: 20px;">
+          <h3 style="color: #0e7490; margin: 0 0 15px 0; font-size: 16px;">${t('memberPayments')}</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background-color: #06b6d4; color: white;">
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">${t('serialNo') || 'S.No'}</th>
+                <th style="border: 1px solid #ddd; padding: 8px;">${t('memberName')}</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">${t('shares')}</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">${t('totalDue')}</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">${t('amountPaid')}</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">${t('remainingAmount')}</th>
         </tr>
+            </thead>
+            <tbody>
+              ${memberTableRows}
+            </tbody>
+          </table>
+        </div>
       `;
+
+      // Build payout history section
+      let payoutHistorySection = '';
+      if (payoutHistory.length > 0) {
+        let payoutTableRows = '';
+        payoutHistory.forEach((payout, idx) => {
+          payoutTableRows += `
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${idx + 1}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${payout.memberName}</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${payout.shares}</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">PKR ${payout.payoutAmount.toLocaleString()}</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+                <span style="color: ${payout.paidOut ? '#16a34a' : '#dc2626'}; font-weight: bold;">
+                  ${payout.paidOut ? t('paid') : t('pending')}
+                </span>
+              </td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${payout.payoutDate ? formatDate(payout.payoutDate, language) : '-'}</td>
+            </tr>
+          `;
+        });
+
+        payoutHistorySection = `
+          <div style="margin-bottom: 20px;">
+            <h3 style="color: #0e7490; margin: 0 0 15px 0; font-size: 16px;">${t('payoutHistory')}</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="background-color: #06b6d4; color: white;">
+                  <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">S.No</th>
+              <th style="border: 1px solid #ddd; padding: 8px;">${t('memberName')}</th>
+                  <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">${t('shares')}</th>
+                  <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">${t('payoutAmount')}</th>
+                  <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">${t('status')}</th>
+                  <th style="border: 1px solid #ddd; padding: 8px;">${t('payoutDate')}</th>
+            </tr>
+          </thead>
+          <tbody>
+                ${payoutTableRows}
+          </tbody>
+        </table>
+          </div>
+        `;
+      }
 
       const tableContent = `
         <div style="text-align: center; margin-bottom: 30px;">
@@ -876,19 +1178,8 @@ export const CommitteeDetailScreen: React.FC = () => {
           </h1>
         </div>
         
-        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-          <thead>
-            <tr style="background-color: #06b6d4; color: white;">
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">${t('serialNo') || 'S.No'}</th>
-              <th style="border: 1px solid #ddd; padding: 8px;">${t('memberName')}</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">${t('amountPaid')}</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">${t('remainingAmount')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${tableRows}
-          </tbody>
-        </table>
+        ${memberPaymentsTable}
+        ${payoutHistorySection}
       `;
 
       hiddenDiv.innerHTML = tableContent;
@@ -1147,39 +1438,79 @@ export const CommitteeDetailScreen: React.FC = () => {
     // Update handleDownloadMonthlyReceipts to use image-based PDF for Urdu
     const handleDownloadMonthlyReceipts = async () => {
       if (!committee) return;
-      setAppIsLoading(true);
+      setIsLoading(true);
       const monthIndex = selectedMonthForReceipts;
-      const membersForMonth = committee.memberIds.map(id => getMemberById(id)).filter((m): m is Member => Boolean(m));
+      
+      // Get members with their share counts
+      const membersWithShares = committee.memberIds.reduce((acc: Array<{ member: Member; shares: number }>, memberId) => {
+        const member = allMembers.find(m => m.id === memberId);
+        if (member) {
+          const existingEntry = acc.find(entry => entry.member.id === memberId);
+          if (existingEntry) {
+            existingEntry.shares += 1;
+          } else {
+            acc.push({ member, shares: 1 });
+          }
+        }
+        return acc;
+      }, []);
+      
       const paymentsForMonth = committee.payments.filter(p => p.monthIndex === monthIndex && p.status === 'Cleared');
       const memberPaymentsMap = new Map();
-      membersForMonth.forEach(member => {
-        const paid = paymentsForMonth.filter(p => p.memberId === member.id).reduce((sum, p) => sum + p.amountPaid, 0);
-        memberPaymentsMap.set(member.id, paid);
+      
+      // Calculate payments considering shares
+      membersWithShares.forEach(memberData => {
+        const paid = paymentsForMonth.filter(p => p.memberId === memberData.member.id).reduce((sum, p) => sum + p.amountPaid, 0);
+        memberPaymentsMap.set(memberData.member.id, paid);
       });
-      const totalDue = committee.amountPerMember * membersForMonth.length;
+      
+      // Calculate totals considering shares
+      let totalDue = 0;
       let totalCollected = 0;
       let totalRemaining = 0;
-      const tableBody = membersForMonth
-        .filter((member): member is Member => Boolean(member))
-        .map((member, idx) => {
-          const paid = memberPaymentsMap.get(member.id) || 0;
-          const remaining = committee.amountPerMember - paid;
+      
+      const tableBody = membersWithShares.map((memberData, idx) => {
+        const paid = memberPaymentsMap.get(memberData.member.id) || 0;
+        const memberTotalDue = committee.amountPerMember * memberData.shares;
+        const remaining = memberTotalDue - paid;
+        
+        totalDue += memberTotalDue;
           totalCollected += paid;
           totalRemaining += remaining;
+        
           return [
             (idx + 1).toString(),
-            member.name || '',
+          memberData.member.name || '',
+          memberData.shares.toString(),
+          `PKR ${memberTotalDue.toLocaleString()}`,
             `PKR ${paid.toLocaleString()}`,
             `PKR ${remaining.toLocaleString()}`
           ];
+      });
+
+      // Get payout history for this month - ONLY show who was actually paid
+      const payoutHistory = committee.payoutTurns
+        .filter(turn => turn.turnMonthIndex === monthIndex && turn.paidOut)
+        .map(turn => {
+          const member = allMembers.find(m => m.id === turn.memberId);
+          const memberShares = committee.memberIds.filter(id => id === turn.memberId).length;
+          // Corrected payout amount
+          const payoutAmount = committee.amountPerMember * committee.memberIds.length;
+          return {
+            memberName: member?.name || 'Unknown',
+            shares: memberShares,
+            payoutAmount,
+            paidOut: turn.paidOut,
+            payoutDate: turn.payoutDate
+          };
         });
 
       const logoBase64 = await getLogoBase64();
       
       if (language === Language.UR) {
         await generateImageBasedMonthlyReceiptsPdf(
-          committee, monthIndex, membersForMonth, memberPaymentsMap, 
-          totalCollected, totalRemaining, userProfile, logoBase64, 
+          committee, monthIndex, membersWithShares, memberPaymentsMap, 
+          totalCollected, totalRemaining, totalDue, payoutHistory, userProfile, logoBase64, 
           t('appName'), t, language
         );
       } else {
@@ -1191,11 +1522,20 @@ export const CommitteeDetailScreen: React.FC = () => {
       pdf.setFontSize(16);
       pdf.setTextColor('#0e7490');
       pdf.text(`${t('monthly')} Report - ${getCommitteeMonthName(committee?.startDate ?? '', monthIndex, language)}`, pdfWidth/2, 140, { align: 'center' });
+      
+      // Add summary information
       pdf.setFontSize(12);
       pdf.setTextColor('#222');
+      let yPosition = 170;
+      
+      // Member payments table
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Member Payments:', 40, yPosition);
+      yPosition += 20;
+      
       autoTable(pdf, {
-        startY: 170,
-        head: [[t('serialNo') || 'S.No', t('memberName'), t('amountPaid'), t('remainingAmount')]],
+        startY: yPosition,
+        head: [[t('serialNo') || 'S.No', t('memberName'), 'Shares', 'Total Due', t('amountPaid'), t('remainingAmount')]],
           body: tableBody.map(row => row.map(cell => cell || '')),
         theme: 'grid',
         headStyles: { fillColor: [6, 182, 212], textColor: 255, fontStyle: 'bold' },
@@ -1207,16 +1547,46 @@ export const CommitteeDetailScreen: React.FC = () => {
           }
         },
       });
+      
+      // Payout history section
+      if (payoutHistory.length > 0) {
+        const tableEndY = (pdf as any).lastAutoTable.finalY;
+        yPosition = tableEndY + 20;
+        
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Payout History:', 40, yPosition);
+        yPosition += 20;
+        
+        const payoutTableBody = payoutHistory.map((payout, idx) => [
+          (idx + 1).toString(),
+          payout.memberName,
+          payout.shares.toString(),
+          `PKR ${payout.payoutAmount.toLocaleString()}`,
+          payout.paidOut ? 'Paid' : 'Pending',
+          payout.payoutDate ? formatDate(payout.payoutDate, language) : '-'
+        ]);
+        
+        autoTable(pdf, {
+          startY: yPosition,
+          head: [['S.No', t('memberName'), 'Shares', 'Payout Amount', 'Status', 'Payout Date']],
+          body: payoutTableBody,
+          theme: 'grid',
+          headStyles: { fillColor: [6, 182, 212], textColor: 255, fontStyle: 'bold' },
+          styles: { fontSize: 10, cellPadding: 4 },
+          margin: { left: 40, right: 40 },
+        });
+      }
+      
       pdf.save(`monthly_report_${committee.title.replace(/\s/g, '_')}_${getCommitteeMonthName(committee?.startDate ?? '', monthIndex, 'en').replace(/\s/g, '_')}.pdf`);
       }
-      setAppIsLoading(false);
+      setIsLoading(false);
     };
 
     // Update handleDownloadMemberHistory to use image-based PDF for Urdu
     const handleDownloadMemberHistory = async (memberId) => {
       const member = getMemberById(memberId);
       if (!member) return;
-      setAppIsLoading(true);
+      setIsLoading(true);
       const memberCommittees = committees.filter(c => c.memberIds.includes(memberId));
       const logoBase64 = await getLogoBase64();
       
@@ -1225,7 +1595,7 @@ export const CommitteeDetailScreen: React.FC = () => {
       } else {
         await generateTextMemberHistoryPdf(member, memberCommittees, userProfile, logoBase64, t('appName'), t, language);
       }
-      setAppIsLoading(false);
+      setIsLoading(false);
     };
 
     // Add missing receipt editing functions
@@ -1265,9 +1635,9 @@ export const CommitteeDetailScreen: React.FC = () => {
           paymentIndex = committee.payments.findIndex(p => p.id === receiptData.paymentId);
         } else if (receiptData.memberId && receiptData.monthIndex !== undefined) {
           paymentIndex = committee.payments.findIndex(p => 
-            p.memberId === receiptData.memberId && 
+          p.memberId === receiptData.memberId && 
             p.monthIndex === receiptData.monthIndex
-          );
+        );
         }
 
         if (paymentIndex === -1) {
@@ -1320,9 +1690,9 @@ export const CommitteeDetailScreen: React.FC = () => {
             paymentIndex = committee.payments.findIndex(p => p.id === receiptData.paymentId);
           } else if (receiptData.memberId && receiptData.monthIndex !== undefined) {
             paymentIndex = committee.payments.findIndex(p => 
-              p.memberId === receiptData.memberId && 
+            p.memberId === receiptData.memberId && 
               p.monthIndex === receiptData.monthIndex
-            );
+          );
           }
 
           if (paymentIndex === -1) {
@@ -1529,61 +1899,28 @@ export const CommitteeDetailScreen: React.FC = () => {
             .sort((a,b) => a.monthIndex - b.monthIndex || new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime());
           
           if (paymentsForCommittee.length > 0) {
-            checkPageBreak(50);
-            pdf.setFontSize(12);
-            pdf.setTextColor('#0e7490');
+            checkPageBreak(40);
             pdf.setFont(undefined, 'bold');
-            pdf.text(`${t('paymentHistory')}`, margin, currentY);
-            currentY += 15;
-            
-            // Use autoTable with page break handling
-            const tableData = paymentsForCommittee.map(p => [
-              getCommitteeMonthName((committee?.startDate ?? '') as string, p.monthIndex, language) || '',
-              `PKR ${typeof p.amountPaid === 'number' ? p.amountPaid.toLocaleString() : '0'}`,
-              p.paymentDate ? formatDate((p.paymentDate ?? '') as string, language) : 'N/A',
+            pdf.text(t('paymentHistory'), 40, yPosition);
+            yPosition += 20;
+            const tableBody = paymentsForCommittee.map(p => [
+              getCommitteeMonthName(committee.startDate, p.monthIndex, language),
+              `PKR ${p.amountPaid.toLocaleString()}`,
+              formatDate(p.paymentDate, language),
               t((p.status || '').toLowerCase())
             ]);
-            
             autoTable(pdf, {
-              startY: currentY,
+              startY: yPosition,
               head: [[t('month'), t('installmentAmount'), t('paymentDate'), t('status')]],
-              body: tableData,
+              body: tableBody,
               theme: 'grid',
-              headStyles: { fillColor: [6, 182, 212], textColor: 255, fontStyle: 'bold' },
-              styles: { fontSize: 10, cellPadding: 4 },
-              margin: { left: margin, right: margin },
-              pageBreak: 'auto',
-              didParseCell: function (data) {
-                if (data.section === 'body' && data.column.index === 3 && data.cell.raw === t('cleared')) {
-                  data.cell.styles.textColor = [34, 197, 94];
-                  data.cell.styles.fontStyle = 'bold';
-                }
-              },
+              headStyles: { fillColor: [6, 182, 212], textColor: 255 },
+              styles: { fontSize: 9, cellPadding: 4, font: 'helvetica' },
+              margin: { left: 40, right: 40 },
             });
-            
-            currentY = pdf.lastAutoTable.finalY + 20;
-            
-            // Summary after payment table
-            checkPageBreak(50);
-            pdf.setFontSize(11);
-            pdf.setTextColor('#222');
-            pdf.setFont(undefined, 'bold');
-            pdf.text(`${t('totalContributedThisCommittee')}:`, margin, currentY);
-            const contributedLabelWidth = pdf.getTextWidth(`${t('totalContributedThisCommittee')}:`);
-            const totalContributed = paymentsForCommittee.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
-            pdf.setFont(undefined, 'normal');
-            pdf.text(`PKR ${totalContributed.toLocaleString()}`, margin + contributedLabelWidth + 20, currentY);
-            currentY += 16;
-            
-            const totalDue = (committee.amountPerMember || 0) * (committee.duration || 0);
-            const remainingAmount = totalDue - totalContributed;
-            pdf.setFont(undefined, 'bold');
-            pdf.text(`${t('remainingAmount')}:`, margin, currentY);
-            const remainingLabelWidth = pdf.getTextWidth(`${t('remainingAmount')}:`);
-            pdf.setFont(undefined, 'normal');
-            pdf.text(`PKR ${remainingAmount.toLocaleString()}`, margin + remainingLabelWidth + 20, currentY);
-            currentY += 20;
+            yPosition = (pdf as any).lastAutoTable.finalY + 15;
           } else {
+            checkPageBreak(20);
             pdf.setFontSize(12);
             pdf.setTextColor('#222');
             pdf.setFont(undefined, 'normal');
@@ -1657,12 +1994,6 @@ export const CommitteeDetailScreen: React.FC = () => {
     if (!committee) {
         return <div className="p-6 text-center text-red-500">{language === Language.UR ? "کمیٹی نہیں ملی۔" : "Committee not found."}</div>;
     }
-    
-    const paymentGridHeader = Array.from({ length: committee.duration }, (_, i) => getCommitteeMonthName(committee?.startDate ?? '', i, language));
-    const monthOptions = Array.from({ length: committee.duration }, (_, i) => ({
-        value: i,
-        label: getCommitteeMonthName(committee?.startDate ?? '', i, language)
-    }));
 
 
     return (
@@ -1694,14 +2025,14 @@ export const CommitteeDetailScreen: React.FC = () => {
             <div className="bg-white dark:bg-neutral-darker p-6 rounded-lg shadow-md">
                  <div className={`flex justify-between items-center mb-4 ${language === Language.UR ? 'flex-row-reverse' : ''}`}>
                     <h2 className="text-xl font-semibold text-neutral-darker dark:text-neutral-light flex items-center">
-                        <UsersIcon className={`h-6 w-6 text-primary dark:text-primary-light ${language === Language.UR ? 'ml-2' : 'mr-2'}`} /> {t('committeeMembers')} ({committeeMembers.length})
+                        <UsersIcon className={`h-6 w-6 text-primary dark:text-primary-light ${language === Language.UR ? 'ml-2' : 'mr-2'}`} /> {t('committeeMembers')} ({committeeMembersWithShares.length})
                     </h2>
                     <div className={`flex space-x-2 ${language === Language.UR ? 'space-x-reverse' : ''}`}>
                         <Button size="sm" onClick={() => setIsAddExistingMemberModalOpen(true)}>{t('addExistingMember')}</Button>
                         <Button size="sm" onClick={() => handleOpenMemberForm()}>{t('createNewMember')}</Button>
                     </div>
                 </div>
-                {committeeMembers.length === 0 ? (
+                {committeeMembersWithShares.length === 0 ? (
                     <p className="text-center text-neutral-DEFAULT dark:text-gray-400 py-4">{t('noMembers')}</p>
                 ) : (
                     <div className="overflow-x-auto">
@@ -1712,24 +2043,43 @@ export const CommitteeDetailScreen: React.FC = () => {
                                     <th scope="col" className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${language === Language.UR ? 'text-right' : 'text-left'}`}>{t('memberName')}</th>
                                     <th scope="col" className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${language === Language.UR ? 'text-right' : 'text-left'}`}>{t('memberPhone')}</th>
                                     <th scope="col" className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${language === Language.UR ? 'text-right' : 'text-left'}`}>{t('memberCNIC')}</th>
+                                    <th scope="col" className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-center`}>Shares</th>
                                     <th scope="col" className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-center`}>{t('actions')}</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-neutral-darker divide-y divide-gray-200 dark:divide-gray-700">
-                                {committeeMembers.map(member => (
-                                    <tr key={member.id}>
+                                {committeeMembersWithShares.map(member => (
+                                    <tr key={member.member.id}>
                                         <td className="px-2 py-2 whitespace-nowrap">
-                                            <img src={member.profilePictureUrl || DEFAULT_PROFILE_PIC} alt={member.name} className="w-10 h-10 rounded-full object-cover"/>
+                                            <img src={member.member.profilePictureUrl || DEFAULT_PROFILE_PIC} alt={member.member.name} className="w-10 h-10 rounded-full object-cover"/>
                                         </td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-neutral-darker dark:text-neutral-light">{member.name}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{member.phone}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{member.cnic}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-neutral-darker dark:text-neutral-light">{member.member.name}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{member.member.phone}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{member.member.cnic}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                                {member.shares} {member.shares === 1 ? 'Share' : 'Shares'}
+                                            </span>
+                                            {member.shares > 1 && (
+                                                <div className="mt-1">
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        onClick={() => handleRemoveShare(member.member.id)}
+                                                        className="text-xs text-red-600 hover:text-red-800"
+                                                        title={language === Language.UR ? t('removeOneShare_ur') : t('removeOneShare')}
+                                                    >
+                                                        {language === Language.UR ? t('removeShare_ur') : t('removeShare')}
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </td>
                                         <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium text-center`}>
                                             <div className={`flex items-center justify-center space-x-1 ${language === Language.UR ? 'space-x-reverse' : ''}`}>
-                                                <Button variant="ghost" size="sm" onClick={() => handleOpenMemberForm(member)} aria-label={t('edit')} title={t('edit')}><PencilSquareIcon className="w-4 h-4" /></Button>
-                                                <Button variant="ghost" size="sm" onClick={() => handleDownloadMemberHistory(member.id)} aria-label={t('downloadMemberHistory')} title={t('downloadMemberHistory')}><ArrowDownTrayIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" /></Button>
-                                                <Button variant="ghost" size="sm" onClick={() => handleRemoveMemberWrapper(member.id)} aria-label={t('delete')} title={language === Language.UR ? "اس کمیٹی سے ہٹائیں" : "Remove from this committee"}><TrashIcon className="w-4 h-4 text-yellow-600 dark:text-yellow-400" /></Button>
-                                                <Button variant="ghost" size="sm" onClick={() => handleDeleteMemberGloballyWrapper(member.id)} title={language === Language.UR ? "مکمل طور پر حذف کریں" : "Delete Globally"} aria-label={language === Language.UR ? "مکمل طور پر حذف کریں" : "Delete Globally"}><TrashIcon className="w-4 h-4 text-red-600 dark:text-red-400" /></Button>
+                                                <Button variant="ghost" size="sm" onClick={() => handleOpenMemberForm(member.member)} aria-label={t('edit')} title={t('edit')}><PencilSquareIcon className="w-4 h-4" /></Button>
+                                                <Button variant="ghost" size="sm" onClick={() => handleDownloadMemberHistory(member.member.id)} aria-label={t('downloadMemberHistory')} title={t('downloadMemberHistory')}><ArrowDownTrayIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" /></Button>
+                                                <Button variant="ghost" size="sm" onClick={() => handleRemoveMemberWrapper(member.member.id)} aria-label={t('delete')} title={language === Language.UR ? "اس کمیٹی سے ہٹائیں" : "Remove from this committee"}><TrashIcon className="w-4 h-4 text-yellow-600 dark:text-yellow-400" /></Button>
+                                                <Button variant="ghost" size="sm" onClick={() => handleDeleteMemberGloballyWrapper(member.member.id)} title={language === Language.UR ? "مکمل طور پر حذف کریں" : "Delete Globally"} aria-label={language === Language.UR ? "مکمل طور پر حذف کریں" : "Delete Globally"}><TrashIcon className="w-4 h-4 text-red-600 dark:text-red-400" /></Button>
                                             </div>
                                         </td>
                                     </tr>
@@ -1745,7 +2095,7 @@ export const CommitteeDetailScreen: React.FC = () => {
                     <h2 className="text-xl font-semibold text-neutral-darker dark:text-neutral-light flex items-center mb-2 sm:mb-0">
                         <DocumentTextIcon className={`h-6 w-6 text-primary dark:text-primary-light ${language === Language.UR ? 'ml-2' : 'mr-2'}`} /> {t('paymentTracking')}
                     </h2>
-                    {committeeMembers.length > 0 && committee.duration > 0 && (
+                    {committeeMembersWithShares.length > 0 && committee.duration > 0 && (
                         <div className={`flex items-center space-x-2 ${language === Language.UR ? 'space-x-reverse' : ''} self-start sm:self-center`}>
                             <Select 
                                 options={monthOptions}
@@ -1762,7 +2112,7 @@ export const CommitteeDetailScreen: React.FC = () => {
                     )}
                 </div>
 
-                {committeeMembers.length > 0 ? (
+                {committeeMembersWithShares.length > 0 ? (
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700">
                             <thead className="bg-gray-50 dark:bg-neutral-dark">
@@ -1774,16 +2124,19 @@ export const CommitteeDetailScreen: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-neutral-darker divide-y divide-gray-200 dark:divide-gray-700">
-                                {committeeMembers.map(member => {
+                                {committeeMembersWithShares.map(member => {
                                     return (
-                                    <tr key={member.id}>
-                                        <td className={`sticky ${language === Language.UR ? 'right-0' : 'left-0'} bg-white dark:bg-neutral-darker z-10 px-3 py-2 whitespace-nowrap text-sm font-medium text-neutral-darker dark:text-neutral-light border-l border-r border-gray-200 dark:border-gray-700`}>{member.name}</td>
+                                    <tr key={member.member.id}>
+                                        <td className={`sticky ${language === Language.UR ? 'right-0' : 'left-0'} bg-white dark:bg-neutral-darker z-10 px-3 py-2 whitespace-nowrap text-sm font-medium text-neutral-darker dark:text-neutral-light border-l border-r border-gray-200 dark:border-gray-700`}>{member.member.name}</td>
                                         {Array.from({ length: committee.duration }, (_, monthIndex) => {
-                                            const memberInstallmentsForMonth = committee.payments.filter(p => p.memberId === member.id && p.monthIndex === monthIndex && p.status === 'Cleared');
+                                            const memberInstallmentsForMonth = committee.payments.filter(p => p.memberId === member.member.id && p.monthIndex === monthIndex && p.status === 'Cleared');
                                             const totalPaidForMonth = memberInstallmentsForMonth.reduce((sum, p) => sum + p.amountPaid, 0);
                                             
+                                            // Calculate total amount due for this member (considering shares)
+                                            const totalAmountDueForMember = committee.amountPerMember * member.shares;
+                                            
                                             let derivedMonthlyStatus: 'Paid' | 'Unpaid' | 'Partial' = 'Unpaid';
-                                            if (totalPaidForMonth >= committee.amountPerMember) {
+                                            if (totalPaidForMonth >= totalAmountDueForMember) {
                                                 derivedMonthlyStatus = 'Paid';
                                             } else if (totalPaidForMonth > 0) {
                                                 derivedMonthlyStatus = 'Partial';
@@ -1810,7 +2163,7 @@ export const CommitteeDetailScreen: React.FC = () => {
                                                     </span>
                                                     <span className={`text-xs ${statusTextColor}`}>({t(derivedMonthlyStatus.toLowerCase())})</span>
                                                     <div className="mt-1 space-x-1 rtl:space-x-reverse">
-                                                      <Button size="sm" variant="ghost" className="text-xs p-1" onClick={() => handleOpenPaymentModal(member.id, monthIndex)}>{t('addInstallment')}</Button>
+                                                      <Button size="sm" variant="ghost" className="text-xs p-1" onClick={() => handleOpenPaymentModal(member.member.id, monthIndex)}>{t('addInstallment')}</Button>
                                                       {memberInstallmentsForMonth.map(inst => (
                                                         <Button key={inst.id} size="sm" variant="ghost" className="text-xs p-1 text-blue-600 dark:text-blue-400" onClick={() => handleGenerateReceiptForInstallment(inst)}>
                                                           {t('receipt')} (PKR {inst.amountPaid})
@@ -1829,35 +2182,59 @@ export const CommitteeDetailScreen: React.FC = () => {
             </div>
 
             <div className="bg-white dark:bg-neutral-darker p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold text-neutral-darker dark:text-neutral-light mb-4">{t('payouts')}</h2>
+                <div className={`flex justify-between items-center mb-4 ${language === Language.UR ? 'flex-row-reverse' : ''}`}>
+                    <h2 className="text-xl font-semibold text-neutral-darker dark:text-neutral-light">{t('payouts')}</h2>
+                    {committee?.payoutMethod === PayoutMethod.RANDOM && (
+                        <Button 
+                            onClick={handleLuckyDraw}
+                            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                        >
+                            🎲 {t('luckyDraw')}
+                        </Button>
+                    )}
+                </div>
                  {committee.payoutTurns && committee.payoutTurns.length > 0 ? (
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                              <thead className="bg-gray-50 dark:bg-neutral-dark">
                                 <tr>
-                                    <th className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${language === Language.UR ? 'text-right' : 'text-left'}`}>{t('turnMonth')}</th>
+                                    <th className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-center`}>SR NO.</th>
                                     <th className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${language === Language.UR ? 'text-right' : 'text-left'}`}>{t('memberName')}</th>
-                                    <th className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${language === Language.UR ? 'text-right' : 'text-left'}`}>{t('payout Amount')}</th>
-                                    <th className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${language === Language.UR ? 'text-right' : 'text-left'}`}>{t('status')}</th>
-                                    <th className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${language === Language.UR ? 'text-right' : 'text-left'}`}>{t('actions')}</th>
+                                    <th className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-center`}>{t('shares')}</th>
+                                    <th className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-center`}>{t('payoutAmount')}</th>
+                                    <th className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-center`}>{t('status')}</th>
+                                    <th className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-center`}>{t('payoutDate')}</th>
+                                    <th className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-center`}>{t('actions')}</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-neutral-darker divide-y divide-gray-200 dark:divide-gray-700">
-                                {committee.payoutTurns.sort((a,b) => a.turnMonthIndex - b.turnMonthIndex).map(turn => (
+                                {committee.payoutTurns.sort((a,b) => a.turnMonthIndex - b.turnMonthIndex).map((turn, idx) => {
+                                    const member = allMembers.find(m => m.id === turn.memberId);
+                                    const memberShares = committee.memberIds.filter(id => id === turn.memberId).length;
+                                    const payoutAmount = committee.amountPerMember * committee.memberIds.length * committee.duration;
+                                    return (
                                     <tr key={`${turn.memberId}-${turn.turnMonthIndex}`}>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{getCommitteeMonthName(committee?.startDate ?? '', turn.turnMonthIndex, language)}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-neutral-darker dark:text-neutral-light">{getMemberName(turn.memberId, allMembers)}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-neutral-darker dark:text-neutral-light">PKR {(committee.amountPerMember * committee.memberIds.length).toLocaleString()}</td>
-                                        <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${turn.paidOut ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                            {turn.paidOut ? t('paidOut') + (turn.payoutDate ? ` (${formatDate(turn.payoutDate, language)})` : '') : t('pending')}
+                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center font-medium">{idx + 1}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-neutral-darker dark:text-neutral-light">{member?.name || '-'}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center">{memberShares}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center">PKR {payoutAmount.toLocaleString()}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                                            {turn.paidOut ? <span className="text-green-600 font-semibold">{t('paid')}</span> : <span className="text-yellow-600 font-semibold">{t('pending')}</span>}
                                         </td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm">
-                                            <Button size="sm" onClick={() => handleTogglePayout(turn)}>
-                                                {turn.paidOut ? t('markUnpaid') : t('markPaidOut')}
+                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center">{turn.payoutDate ? formatDate(turn.payoutDate, language) : '-'}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleTogglePayout(turn)}
+                                                aria-label={turn.paidOut ? t('markUnpaid') : t('markPaid')}
+                                                title={turn.paidOut ? t('markUnpaid') : t('markPaid')}
+                                            >
+                                                {turn.paidOut ? t('markUnpaid') : t('markPaid')}
                                             </Button>
                                         </td>
                                     </tr>
-                                ))}
+                                )})}
                             </tbody>
                         </table>
                     </div>
@@ -1989,6 +2366,138 @@ export const CommitteeDetailScreen: React.FC = () => {
                 <div className="flex justify-end space-x-2 rtl:space-x-reverse">
                   <Button variant="ghost" onClick={() => setPaymentModalOpen(false)}>{t('cancel')}</Button>
                   <Button onClick={handleRecordInstallment}>{t('pay')}</Button>
+                </div>
+              </div>
+            </Modal>
+            
+            {/* Lucky Draw Modal */}
+            <Modal 
+                isOpen={isLuckyDrawModalOpen} 
+                onClose={handleCloseLuckyDrawModal} 
+                title={isDrawing ? t('drawingInProgress') : t('winnerSelected')}
+                size="lg"
+            >
+                <div className="text-center py-8">
+                    {isDrawing ? (
+                        <div className="space-y-6">
+                            <div className="text-6xl animate-bounce">🎲</div>
+                            <div className="text-2xl font-bold text-primary">{t('drawingInProgress')}</div>
+                            <div className="flex justify-center">
+                                <div className="relative">
+                                    <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                    <div className="absolute inset-0 w-16 h-16 border-4 border-secondary border-b-transparent rounded-full animate-spin" style={{animationDirection: 'reverse', animationDuration: '1.5s'}}></div>
+                                    <div className="absolute inset-2 w-12 h-12 border-4 border-green-500 border-l-transparent rounded-full animate-spin" style={{animationDuration: '2s'}}></div>
+                                </div>
+                            </div>
+                            <div className="text-lg text-neutral-DEFAULT dark:text-gray-400 animate-pulse">
+                                SELECTING WINNER...
+                            </div>
+                        </div>
+                    ) : luckyDrawWinner ? (
+                        <div className={`space-y-6 ${showPartyEffects ? 'animate-pulse' : ''}`}>
+                            {/* Enhanced Party Effects */}
+                            {showPartyEffects && (
+                                <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                                    {/* Confetti-like effects */}
+                                    <div className="absolute top-2 left-4 text-4xl animate-bounce">🎉</div>
+                                    <div className="absolute top-6 right-6 text-3xl animate-bounce" style={{animationDelay: '0.3s'}}>🎊</div>
+                                    <div className="absolute bottom-6 left-6 text-3xl animate-bounce" style={{animationDelay: '0.6s'}}>🎈</div>
+                                    <div className="absolute bottom-2 right-2 text-4xl animate-bounce" style={{animationDelay: '0.9s'}}>✨</div>
+                                    <div className="absolute top-1/3 left-1/4 text-2xl animate-bounce" style={{animationDelay: '0.2s'}}>🌟</div>
+                                    <div className="absolute top-1/3 right-1/4 text-2xl animate-bounce" style={{animationDelay: '0.5s'}}>💫</div>
+                                    <div className="absolute top-2/3 left-1/3 text-3xl animate-bounce" style={{animationDelay: '0.8s'}}>🎆</div>
+                                    <div className="absolute top-2/3 right-1/3 text-3xl animate-bounce" style={{animationDelay: '1.1s'}}>🎇</div>
+                                    
+                                    {/* Floating balloons */}
+                                    <div className="absolute top-4 left-1/2 text-2xl animate-bounce" style={{animationDelay: '0.4s'}}>🎈</div>
+                                    <div className="absolute top-8 right-1/3 text-2xl animate-bounce" style={{animationDelay: '0.7s'}}>🎈</div>
+                                    <div className="absolute bottom-8 left-1/3 text-2xl animate-bounce" style={{animationDelay: '1.0s'}}>🎈</div>
+                                    
+                                    {/* Sparkles */}
+                                    <div className="absolute top-1/4 left-1/6 text-xl animate-ping" style={{animationDelay: '0.1s'}}>✨</div>
+                                    <div className="absolute top-1/4 right-1/6 text-xl animate-ping" style={{animationDelay: '0.3s'}}>✨</div>
+                                    <div className="absolute bottom-1/4 left-1/6 text-xl animate-ping" style={{animationDelay: '0.5s'}}>✨</div>
+                                    <div className="absolute bottom-1/4 right-1/6 text-xl animate-ping" style={{animationDelay: '0.7s'}}>✨</div>
+                                    
+                                    {/* Rotating stars */}
+                                    <div className="absolute top-1/2 left-1/8 text-2xl animate-spin" style={{animationDuration: '3s'}}>⭐</div>
+                                    <div className="absolute top-1/2 right-1/8 text-2xl animate-spin" style={{animationDuration: '3s', animationDelay: '1.5s'}}>⭐</div>
+                                    
+                                    {/* Additional celebration effects */}
+                                    <div className="absolute top-1/6 left-1/6 text-3xl animate-bounce" style={{animationDelay: '0.4s'}}>🎊</div>
+                                    <div className="absolute top-1/6 right-1/6 text-3xl animate-bounce" style={{animationDelay: '0.7s'}}>🎉</div>
+                                    <div className="absolute bottom-1/6 left-1/6 text-3xl animate-bounce" style={{animationDelay: '1.0s'}}>🎊</div>
+                                    <div className="absolute bottom-1/6 right-1/6 text-3xl animate-bounce" style={{animationDelay: '1.3s'}}>🎉</div>
+                                    
+                                    {/* Fireworks effect */}
+                                    <div className="absolute top-1/4 left-1/2 text-4xl animate-ping" style={{animationDelay: '0.2s'}}>🎆</div>
+                                    <div className="absolute top-1/4 right-1/4 text-4xl animate-ping" style={{animationDelay: '0.6s'}}>🎇</div>
+                                    <div className="absolute bottom-1/4 left-1/4 text-4xl animate-ping" style={{animationDelay: '1.0s'}}>🎆</div>
+                                    <div className="absolute bottom-1/4 right-1/2 text-4xl animate-ping" style={{animationDelay: '1.4s'}}>🎇</div>
+                                </div>
+                            )}
+                            
+                            {/* Winner Display */}
+                            <div className="relative z-10">
+                                <div className="text-6xl mb-4 animate-bounce">🏆</div>
+                                <h3 className="text-3xl font-bold text-green-600 mb-2">{t('congratulations')}</h3>
+                                <h4 className="text-xl text-neutral-darker dark:text-neutral-light mb-2">{t('luckyWinner')}</h4>
+                                
+                                {/* Month Information */}
+                                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-700 mb-4">
+                                    <p className="text-lg font-semibold text-blue-700 dark:text-blue-300">
+                                        🎯 Committee Win of {getCommitteeMonthName(committee?.startDate ?? '', winningTurn?.monthIndex ?? 0, language)} 🎯
+                                    </p>
+                                </div>
+                                
+                                {/* Winner Profile */}
+                                <div className="bg-gradient-to-r from-yellow-100 to-orange-100 dark:from-yellow-900 dark:to-orange-900 p-6 rounded-lg border-2 border-yellow-300 dark:border-yellow-600 shadow-lg">
+                                    <div className="flex items-center justify-center mb-4">
+                                        <img 
+                                            src={luckyDrawWinner.profilePictureUrl || DEFAULT_PROFILE_PIC} 
+                                            alt={luckyDrawWinner.name}
+                                            className="w-20 h-20 rounded-full border-4 border-yellow-400 dark:border-yellow-500 object-cover shadow-lg"
+                                        />
+                                    </div>
+                                    <h5 className="text-2xl font-bold text-neutral-darker dark:text-neutral-light mb-2">
+                                        {luckyDrawWinner.name}
+                                    </h5>
+                                    <p className="text-neutral-DEFAULT dark:text-gray-400 mb-2">
+                                        {luckyDrawWinner.phone}
+                                    </p>
+                                    <p className="text-neutral-DEFAULT dark:text-gray-400 mb-4">
+                                        {luckyDrawWinner.cnic}
+                                    </p>
+                                    
+                                    {/* Payout Amount */}
+                                    <div className="bg-white dark:bg-neutral-darker p-4 rounded-lg border border-yellow-300 dark:border-yellow-600 shadow-md">
+                                        <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-1">
+                                            Payout Amount
+                                        </p>
+                                        <p className="text-2xl font-bold text-green-600">
+                                            PKR {(committee?.amountPerMember || 0) * (committee?.memberIds.length || 0) * (committee?.duration || 0)}
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <div className="mt-6 text-sm text-neutral-DEFAULT dark:text-gray-400">
+                                    {t('partyEffects')} {t('partyEffects')} {t('partyEffects')}
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-center">
+                            <div className="text-4xl mb-4">😔</div>
+                            <p className="text-lg text-neutral-DEFAULT dark:text-gray-400">
+                                {t('noEligibleMembers')}
+                            </p>
+                        </div>
+                    )}
+                    
+                    <div className="mt-8">
+                        <Button onClick={handleCloseLuckyDrawModal} className="w-full">
+                            {t('close')}
+                        </Button>
                 </div>
               </div>
             </Modal>

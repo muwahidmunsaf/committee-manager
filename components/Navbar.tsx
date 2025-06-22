@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
-import { Language } from '../types';
+import { Language, Theme } from '../types';
 import { Button, UserCircleIcon, Cog6ToothIcon, Bars3Icon, XMarkIcon, LanguageIcon, LockClosedIcon, SunIcon, MoonIcon } from './UIComponents';
 // @ts-ignore
 import logo from '../assets/logo.png';
@@ -43,32 +43,32 @@ const Navbar: React.FC = () => {
             </div>
           </div>
           <div className="hidden md:flex items-center space-x-3 rtl:space-x-reverse">
-             <Button onClick={() => lockApp()} variant="ghost" size="sm" className="text-white hover:text-secondary">
+             <button
+              onClick={() => lockApp()}
+              className="p-2 rounded-md text-white hover:text-secondary hover:bg-white/10 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white"
+              aria-label={t('appLock')}
+            >
               <LockClosedIcon className="h-5 w-5" />
-            </Button>
-            <Button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              variant="ghost"
-              size="sm"
-              className="text-white hover:text-secondary"
+            </button>
+            <button
+              onClick={() => setTheme(theme === Theme.DARK ? Theme.LIGHT : Theme.DARK)}
+              className="p-2 rounded-md text-white hover:text-secondary hover:bg-white/10 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white"
               aria-label={t('theme')}
             >
-              {theme === 'dark' ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
-            </Button>
+              {theme === Theme.DARK ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
+            </button>
             <div className="relative">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white hover:text-secondary"
+              <button
+                className="p-2 rounded-md text-white hover:text-secondary hover:bg-white/10 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white"
                 onClick={() => handleLanguageChange(language === Language.EN ? Language.UR : Language.EN)}
                 aria-label={t('language')}
               >
                 <LanguageIcon className={`h-5 w-5 ${language === Language.UR ? 'ml-1' : 'mr-1'}`} /> {language === Language.EN ? 'اردو' : 'English'}
-              </Button>
+              </button>
             </div>
             <button
               onClick={() => navigate('/profile')}
-              className="p-1 rounded-full text-white hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-primary-dark focus:ring-white"
+              className="p-1 rounded-full text-white hover:text-secondary hover:bg-white/10 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-primary focus:ring-white"
               aria-label={t('profile')}
             >
               <UserCircleIcon className="h-8 w-8" />
@@ -77,7 +77,7 @@ const Navbar: React.FC = () => {
           <div className="md:hidden flex items-center">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-neutral-light hover:text-white hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+              className="inline-flex items-center justify-center p-2 rounded-md text-white hover:text-secondary hover:bg-white/10 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
               aria-controls="mobile-menu"
               aria-expanded={isMobileMenuOpen}
             >
@@ -104,13 +104,13 @@ const Navbar: React.FC = () => {
                   handleLanguageChange(language === Language.EN ? Language.UR : Language.EN);
                   setIsMobileMenuOpen(false);
                 }}
-                className={`w-full text-left block px-3 py-2 rounded-md text-base font-medium text-neutral-dark dark:text-neutral-light hover:bg-primary-dark dark:hover:bg-primary hover:text-white ${language === Language.UR ? 'font-notoNastaliqUrdu text-right' : ''}`}
+                className={`w-full text-left block px-3 py-2 rounded-md text-base font-medium text-neutral-dark dark:text-neutral-light hover:bg-primary-dark dark:hover:bg-primary hover:text-white transition-all duration-200 ${language === Language.UR ? 'font-notoNastaliqUrdu text-right' : ''}`}
               >
                <LanguageIcon className={`h-5 w-5 inline ${language === Language.UR ? 'ml-2' : 'mr-2'}`} /> {language === Language.EN ? 'اردو' : 'English'}
             </button>
             <button
               onClick={() => { lockApp(); setIsMobileMenuOpen(false); }}
-              className={`w-full text-left block px-3 py-2 rounded-md text-base font-medium text-neutral-dark dark:text-neutral-light hover:bg-primary-dark dark:hover:bg-primary hover:text-white ${language === Language.UR ? 'text-right' : ''}`}
+              className={`w-full text-left block px-3 py-2 rounded-md text-base font-medium text-neutral-dark dark:text-neutral-light hover:bg-primary-dark dark:hover:bg-primary hover:text-white transition-all duration-200 ${language === Language.UR ? 'text-right' : ''}`}
             >
               <LockClosedIcon className={`h-5 w-5 inline ${language === Language.UR ? 'ml-2' : 'mr-2'}`} /> {t('appLock')}
             </button>

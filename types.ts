@@ -49,7 +49,6 @@ export enum CommitteeType {
 export enum PayoutMethod {
   MANUAL = 'Manual',
   RANDOM = 'Random',
-  BIDDING = 'Bidding',
 }
 
 // Represents an individual payment/installment
