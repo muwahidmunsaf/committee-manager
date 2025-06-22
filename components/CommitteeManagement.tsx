@@ -150,7 +150,7 @@ const CommitteeManagement: React.FC = () => {
                 <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-1">{t('totalMembers')}: {committee.memberIds.length}</p>
                 <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-3">{t('totalPool')}: PKR {(committee.amountPerMember * committee.memberIds.length * committee.duration).toLocaleString()}</p>
                 <div className={`mt-auto flex space-x-2 ${language === Language.UR ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                  <Button size="sm" onClick={() => navigate(`/committees/${slugify(committee.title)}`)} className="flex-grow">{t('viewDetails')}</Button>
+                  <Button size="sm" onClick={() => navigate(`/committees/${committee.id}`)} className="flex-grow">{t('viewDetails')}</Button>
                   <Button size="sm" variant="ghost" onClick={() => handleOpenFormModal(committee)} aria-label={t('edit')}>
                     <PencilSquareIcon className="w-5 h-5" />
                   </Button>
@@ -392,7 +392,6 @@ export const CommitteeDetailScreen: React.FC = () => {
         committees, 
         members: allMembers, 
         updatePayoutTurn, 
-        updateMultiplePayoutTurns,
         t, 
         language, 
         userProfile, 
@@ -409,8 +408,8 @@ export const CommitteeDetailScreen: React.FC = () => {
     } = useAppContext();
     const { committeeId } = useParams<{ committeeId: string }>();
     const navigate = useNavigate();
-    // Find committee by slugified title
-    const committee = committees.find(c => slugify(c.title) === committeeId);
+    // Find committee by id (not slugified title)
+    const committee = committees.find(c => c.id === committeeId);
     const [isMemberFormModalOpen, setIsMemberFormModalOpen] = useState(false);
     const [editingMember, setEditingMember] = useState<Member | undefined>(undefined);
     const [isAddExistingMemberModalOpen, setIsAddExistingMemberModalOpen] = useState(false);
@@ -565,8 +564,8 @@ export const CommitteeDetailScreen: React.FC = () => {
                 memberId: currentPaymentContext.memberId,
                 monthIndex: currentPaymentContext.monthIndex,
                 amountPaid: installmentAmount,
-                paymentDate: installmentDate,
-          status: 'Cleared'
+                paymentDate: new Date().toISOString(), // Use full ISO string for recent activity
+                status: 'Cleared'
         });
         
             setPaymentModalOpen(false);
