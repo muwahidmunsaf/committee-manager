@@ -277,7 +277,7 @@ const AppLockScreen: React.FC = () => {
   return (
     <div className="fixed inset-0 bg-primary bg-opacity-95 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
       <div className="bg-white dark:bg-neutral-darker p-8 rounded-xl shadow-2xl w-full max-w-sm text-center">
-        <img src="/logo.png" alt="Asad Mobile's Shop Logo" className="h-16 w-16 mx-auto mb-2" />
+        <img src="/logo.png" alt="Asad Mobile's Shop Logo" className="h-8 w-8 mx-auto mb-2" />
         <LockClosedIcon className="w-16 h-16 text-primary mx-auto mb-2" />
         <h2 className={`text-2xl font-bold text-neutral-darker dark:text-neutral-light mb-2 ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>
           {showForgot 
@@ -441,7 +441,7 @@ const App: React.FC = () => {
                 <img 
                   src="/logo.png" 
                   alt="Asad Mobile's Shop Logo" 
-                  className="h-16 w-16 mx-auto animate-pulse" 
+                  className="h-8 w-8 mx-auto animate-pulse" 
                 />
                 {/* Loading ring around logo */}
                 <div className="absolute inset-0 flex items-center justify-center">
