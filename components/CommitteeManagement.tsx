@@ -129,12 +129,12 @@ const CommitteeManagement: React.FC = () => {
 
   return (
     <div className={`p-4 md:p-6 ${language === Language.UR ? 'font-notoNastaliqUrdu text-right' : ''}`}>
-      <div className={`flex justify-between items-center mb-6 ${language === Language.UR ? 'flex-row-reverse' : ''}`}>
+      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 ${language === Language.UR ? 'sm:flex-row-reverse' : ''}`}>
         <h1 className="text-2xl md:text-3xl font-bold text-neutral-darker dark:text-neutral-light flex items-center">
           <BuildingOfficeIcon className="h-8 w-8 mr-3 text-primary" />
           {t('committees')}
         </h1>
-        <Button onClick={() => handleOpenFormModal()} >
+        <Button onClick={() => handleOpenFormModal()} className="w-full sm:w-auto">
           <PlusCircleIcon className={`h-5 w-5 ${language === Language.UR ? 'ml-2' : 'mr-2'}`} />
           {t('newCommittee')}
         </Button>
@@ -2149,27 +2149,39 @@ export const CommitteeDetailScreen: React.FC = () => {
                 {committeeMembersWithShares.length === 0 ? (
                     <p className="text-center text-neutral-DEFAULT dark:text-gray-400 py-4">{t('noMembers')}</p>
                 ) : (
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto -mx-6 px-6">
                         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead className="bg-gray-50 dark:bg-neutral-dark">
                                 <tr>
-                                    <th className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${language === Language.UR ? 'text-right' : 'text-left'}`}></th> {/* For Pic */}
-                                    <th scope="col" className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${language === Language.UR ? 'text-right' : 'text-left'}`}>{t('memberName')}</th>
-                                    <th scope="col" className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${language === Language.UR ? 'text-right' : 'text-left'}`}>{t('memberPhone')}</th>
-                                    <th scope="col" className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${language === Language.UR ? 'text-right' : 'text-left'}`}>{t('memberCNIC')}</th>
-                                    <th scope="col" className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-center`}>Shares</th>
-                                    <th scope="col" className={`px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-center`}>{t('actions')}</th>
+                                    <th className={`px-3 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-16 ${language === Language.UR ? 'text-right' : 'text-left'}`}></th> {/* For Pic */}
+                                    <th scope="col" className={`px-3 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${language === Language.UR ? 'text-right' : 'text-left'}`}>{t('memberName')}</th>
+                                    <th scope="col" className={`hidden sm:table-cell px-3 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${language === Language.UR ? 'text-right' : 'text-left'}`}>{t('memberPhone')}</th>
+                                    <th scope="col" className={`hidden sm:table-cell px-3 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${language === Language.UR ? 'text-right' : 'text-left'}`}>{t('memberCNIC')}</th>
+                                    <th scope="col" className={`px-3 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-center`}>Shares</th>
+                                    <th scope="col" className={`px-3 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-center`}>{t('actions')}</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-neutral-darker divide-y divide-gray-200 dark:divide-gray-700">
                                 {committeeMembersWithShares.map(member => (
                                     <tr key={member.member.id}>
                                         <td className="px-2 py-2 whitespace-nowrap">
-                                            <img src={member.member.profilePictureUrl || DEFAULT_PROFILE_PIC} alt={member.member.name} className="w-10 h-10 rounded-full object-cover"/>
+                                            <div className="w-12 h-12 sm:w-10 sm:h-10 relative rounded-full overflow-hidden shadow-md border-2 border-primary/20">
+                                                <img 
+                                                    src={member.member.profilePictureUrl || DEFAULT_PROFILE_PIC} 
+                                                    alt={member.member.name} 
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
                                         </td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-neutral-darker dark:text-neutral-light">{member.member.name}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{member.member.phone}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{member.member.cnic}</td>
+                                        <td className="px-3 py-3 whitespace-nowrap">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-medium text-neutral-darker dark:text-neutral-light">{member.member.name}</span>
+                                                <span className="text-xs text-gray-600 dark:text-gray-400 sm:hidden">{member.member.phone}</span>
+                                                <span className="text-xs text-gray-600 dark:text-gray-400 sm:hidden">{member.member.cnic}</span>
+                                            </div>
+                                        </td>
+                                        <td className="hidden sm:table-cell px-3 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{member.member.phone}</td>
+                                        <td className="hidden sm:table-cell px-3 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{member.member.cnic}</td>
                                         <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
                                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                                                 {member.shares} {member.shares === 1 ? 'Share' : 'Shares'}
