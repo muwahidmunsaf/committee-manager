@@ -630,10 +630,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Generate notifications when committees or members change
   useEffect(() => {
-    if (committeesState.length > 0 && membersState.length > 0) {
-      generateNotificationsFromCommittees();
-    }
+    // Generate notifications whenever committees or members change
+    generateNotificationsFromCommittees();
   }, [committeesState, membersState, generateNotificationsFromCommittees]);
+
+  // Add sample notifications if none exist (for testing)
+  useEffect(() => {
+    if (notificationsState.length === 0) {
+      const sampleNotifications: Notification[] = [
+        {
+          id: generateId(),
+          type: NotificationType.COMMITTEE_UPDATE,
+          title: t('committeeUpdate'),
+          message: 'Test notification: Committee system is working!',
+          timestamp: new Date().toISOString(),
+          isRead: false,
+          actionUrl: '/committees'
+        }
+      ];
+      setNotificationsState(sampleNotifications);
+    }
+  }, [notificationsState.length, t]);
 
   // Auto-lock functionality
   const [autoLockTimer, setAutoLockTimer] = useState<NodeJS.Timeout | null>(null);
@@ -813,6 +830,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try {
       await setDoc(doc(db, 'committees', newCommittee.id), newCommittee as any);
       setCommitteesState((prev: Committee[]) => [...prev, newCommittee]);
+      
+      // Add notification for new committee
+      const notification: Notification = {
+        id: generateId(),
+        type: NotificationType.COMMITTEE_UPDATE,
+        title: t('committeeUpdate'),
+        message: `${t('newCommittee')}: ${newCommittee.title}`,
+        timestamp: new Date().toISOString(),
+        isRead: false,
+        committeeId: newCommittee.id,
+        actionUrl: '/committees'
+      };
+      setNotificationsState(prev => [...prev, notification]);
     } catch (error) {
       console.error('Error adding committee to Firestore');
       // Don't expose sensitive error details
@@ -860,14 +890,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
   
   const deleteCommittee = async (committeeId: string) => {
-    console.log('Attempting to delete committee:', committeeId);
     try {
+      const committeeToDelete = committeesState.find(c => c.id === committeeId);
       await deleteDoc(doc(db, 'committees', committeeId));
-      console.log('Committee deleted from Firestore successfully');
-      setCommitteesState((prev: Committee[]) => prev.filter((c: Committee) => c.id !== committeeId));
-      console.log('Committee removed from local state');
+      setCommitteesState((prev: Committee[]) => prev.filter(c => c.id !== committeeId));
+      
+      // Add notification for deleted committee
+      if (committeeToDelete) {
+        const notification: Notification = {
+          id: generateId(),
+          type: NotificationType.COMMITTEE_UPDATE,
+          title: t('committeeUpdate'),
+          message: `${t('delete')}: ${committeeToDelete.title}`,
+          timestamp: new Date().toISOString(),
+          isRead: false,
+          actionUrl: '/committees'
+        };
+        setNotificationsState(prev => [...prev, notification]);
+      }
     } catch (error) {
-      console.error('Error deleting committee from Firestore:', error);
+      console.error('Error deleting committee from Firestore');
       // Don't expose sensitive error details
     }
   };
