@@ -641,10 +641,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [lastActivity, setLastActivity] = useState<number>(Date.now());
   const AUTO_LOCK_DURATION = 10 * 60 * 1000; // 10 minutes in milliseconds
 
-  // Fetch committees, members, and user profile only after unlock
+  // Hybrid data loading: localStorage first, then Firestore
   useEffect(() => {
     if (!isLockedState) {
+      // 1. Load from localStorage for instant UI
+      try {
+        const cachedCommittees = localStorage.getItem('committees');
+        if (cachedCommittees) {
+          setCommitteesState(JSON.parse(cachedCommittees));
+        }
+        const cachedMembers = localStorage.getItem('members');
+        if (cachedMembers) {
+          setMembersState(JSON.parse(cachedMembers));
+        }
+        const cachedProfile = localStorage.getItem('userProfile');
+        if (cachedProfile) {
+          setUserProfileState(JSON.parse(cachedProfile));
+        }
+      } catch (e) {
+        // Ignore cache errors
+      }
       setIsLoadingState(true);
+      // 2. Fetch from Firestore in parallel, then update state and cache
       const fetchData = async () => {
         try {
           const [committeesSnapshot, membersSnapshot, settingsDoc] = await Promise.all([
@@ -654,11 +672,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           ]);
           const committeesData: Committee[] = committeesSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as Omit<Committee, 'id'>) }));
           setCommitteesState(committeesData);
+          localStorage.setItem('committees', JSON.stringify(committeesData));
           const membersData: Member[] = membersSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as Omit<Member, 'id'>) }));
           setMembersState(membersData);
+          localStorage.setItem('members', JSON.stringify(membersData));
           if (settingsDoc.exists()) {
             const data = settingsDoc.data();
-            if (data.userProfile) setUserProfileState(data.userProfile);
+            if (data.userProfile) {
+              setUserProfileState(data.userProfile);
+              localStorage.setItem('userProfile', JSON.stringify(data.userProfile));
+            }
           }
         } catch (error) {
           console.error('Error fetching data from Firestore');
