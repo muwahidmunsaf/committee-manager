@@ -1,8 +1,9 @@
 {
   "name": "Asad Mobile's Shop",
-  "short_name": "Asad Shop",
+  "short_name": "Asad Mobile's Shop",
   "description": "Committee management app for Asad Mobile's Shop.",
-  "start_url": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#fff8e1",
   "theme_color": "#f59e42",
