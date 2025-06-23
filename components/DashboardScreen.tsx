@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { Committee, Member, Language, CommitteeType } from '../types';
 import { calculateTotalPool, getMemberName, formatDate, getCommitteeMonthName, getCurrentPeriodIndex, calculateRemainingCollectionForPeriod } from '../utils/appUtils';
@@ -274,6 +274,19 @@ const DashboardScreen: React.FC = () => {
   const [showAlert, setShowAlert] = useState(true);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
+  // Persist alert dismissed state in localStorage
+  useEffect(() => {
+    const dismissed = localStorage.getItem('dashboardAlertDismissed');
+    if (dismissed === 'true') {
+      setShowAlert(false);
+    }
+  }, []);
+
+  const handleDismissAlert = () => {
+    setShowAlert(false);
+    localStorage.setItem('dashboardAlertDismissed', 'true');
+  };
+
   return (
     <div className={`p-4 md:p-6 space-y-8 ${language === Language.UR ? 'font-notoNastaliqUrdu text-right' : ''}`}>
       {/* <div className="flex justify-center mb-6">
@@ -293,7 +306,7 @@ const DashboardScreen: React.FC = () => {
           {/* Close button */}
           <button 
             className="absolute top-3 right-3 text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors duration-200 p-1 rounded-full hover:bg-amber-100 dark:hover:bg-amber-800/30"
-            onClick={() => setShowAlert(false)}
+            onClick={handleDismissAlert}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -371,7 +384,7 @@ const DashboardScreen: React.FC = () => {
                 <span>View Details</span>
               </button>
               <button 
-                onClick={() => setShowAlert(false)}
+                onClick={handleDismissAlert}
                 className="px-4 py-2 bg-transparent border border-amber-500 dark:border-amber-400 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-800/30 text-sm font-medium rounded-lg transition-colors duration-200"
               >
                 Dismiss
