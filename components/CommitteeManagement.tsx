@@ -1651,8 +1651,8 @@ export const CommitteeDetailScreen: React.FC = () => {
       const footer = (data) => {
         const pageCount = pdf.internal.getNumberOfPages();
         const page = pdf.internal.getCurrentPageInfo().pageNumber;
-        // Move page number 0.4cm (11.3pt) further down and center it
-        const footerY = pdfHeight - 30 + 11.3; // previously -30
+        // Move page number 0.7cm (19.8pt) further down and center it
+        const footerY = pdfHeight - 30 + 11.3 + 8.5; // previously -30 + 11.3, now +8.5pt more
         pdf.setFontSize(10);
         pdf.setTextColor('#666');
         pdf.setFont(undefined, 'normal');
