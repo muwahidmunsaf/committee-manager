@@ -12,7 +12,8 @@ const SettingsScreen: React.FC = () => {
     t, language, setLanguage, theme, setTheme, appPin, updateAppPin, 
     committees, members, isLoading, setIsLoading,
     authMethod, setAuthMethod, pinLength, setPinLength, userProfile, updateUserProfile,
-    deleteMember, deleteCommittee, addMember, addCommittee
+    deleteMember, deleteCommittee, addMember, addCommittee,
+    setCommittees, setMembers, clearAllNotifications
   } = useAppContext();
 
   const [currentPin, setCurrentPin] = useState('');
@@ -29,6 +30,7 @@ const SettingsScreen: React.FC = () => {
   const [restoreSuccess, setRestoreSuccess] = useState('');
   const [isRestoreLoading, setIsRestoreLoading] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Update previousAuthMethod when authMethod changes
   useEffect(() => {
@@ -534,6 +536,17 @@ const SettingsScreen: React.FC = () => {
     setIsLoading(false);
   };
 
+  function handleResetApp() {
+    setCommittees([]);
+    setMembers([]);
+    clearAllNotifications();
+    localStorage.removeItem('committees');
+    localStorage.removeItem('members');
+    localStorage.removeItem('notifications');
+    localStorage.removeItem('dashboardAlertDismissed');
+    setShowResetConfirm(false);
+  }
+
   if (isRestoreLoading) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-60">
@@ -809,6 +822,36 @@ const SettingsScreen: React.FC = () => {
             <p className="text-xs text-neutral-DEFAULT dark:text-gray-400">
               {language === Language.UR ? "اپنے ڈیٹا کا مکمل بیک اپ یا بحالی کے لیے JSON فائل استعمال کریں۔" : "Use JSON file for full backup or restore of your data."}
             </p>
+            <Button
+              onClick={() => setShowResetConfirm(true)}
+              className="w-full md:w-auto bg-red-600 hover:bg-red-700 text-white"
+            >
+              {language === Language.UR ? 'ایپلیکیشن ری سیٹ کریں' : 'Reset Application'}
+            </Button>
+            {showResetConfirm && (
+              <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+                <div className="bg-white dark:bg-neutral-dark p-6 rounded shadow-lg max-w-sm w-full">
+                  <h2 className="text-lg font-bold mb-4">{language === Language.UR ? 'ایپلیکیشن ری سیٹ کریں؟' : 'Reset Application?'}</h2>
+                  <p className="mb-4">{language === Language.UR
+                    ? 'یہ تمام کمیٹیوں، اراکین، ادائیگیوں اور نوٹیفکیشنز کو حذف کر دے گا۔ آپ کی پروفائل اور پن متاثر نہیں ہوں گے۔ کیا آپ واقعی ری سیٹ کرنا چاہتے ہیں؟'
+                    : 'This will delete all committees, members, payments, and notifications. Your profile and PIN will NOT be affected. Are you sure?'}</p>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      className="px-4 py-2 bg-gray-200 rounded"
+                      onClick={() => setShowResetConfirm(false)}
+                    >
+                      {language === Language.UR ? 'منسوخ کریں' : 'Cancel'}
+                    </button>
+                    <button
+                      className="px-4 py-2 bg-red-600 text-white rounded"
+                      onClick={handleResetApp}
+                    >
+                      {language === Language.UR ? 'ہاں، ری سیٹ کریں' : 'Yes, Reset'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
         </div>
       </section>
     </div>

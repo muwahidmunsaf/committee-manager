@@ -495,6 +495,8 @@ interface AppContextType {
   deleteNotification: (notificationId: string) => void;
   clearAllNotifications: () => void;
   getUnreadNotificationCount: () => number;
+  setCommittees: (committees: Committee[]) => void;
+  setMembers: (members: Member[]) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -1366,22 +1368,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       getAutoLockTimeRemaining,
       // Notification methods
       notifications: notificationsState,
-      addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'isRead'>) => {
+      addNotification: (notification) => {
         setNotificationsState((prev: Notification[]) => [...prev, { ...notification, id: generateId(), timestamp: new Date().toISOString(), isRead: false }]);
       },
-      markNotificationAsRead: (notificationId: string) => {
-        setNotificationsState((prev: Notification[]) => prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n));
+      markNotificationAsRead: (id) => {
+        setNotificationsState((prev: Notification[]) => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
       },
       markAllNotificationsAsRead: () => {
         setNotificationsState((prev: Notification[]) => prev.map(n => ({ ...n, isRead: true })));
       },
-      deleteNotification: (notificationId: string) => {
-        setNotificationsState((prev: Notification[]) => prev.filter(n => n.id !== notificationId));
+      deleteNotification: (id) => {
+        setNotificationsState((prev: Notification[]) => prev.filter(n => n.id !== id));
       },
-      clearAllNotifications: () => {
-        setNotificationsState([]);
-      },
-      getUnreadNotificationCount: () => notificationsState.filter(n => !n.isRead).length
+      clearAllNotifications: () => setNotificationsState([]),
+      getUnreadNotificationCount: () => notificationsState.filter(n => !n.isRead).length,
+      setCommittees: setCommitteesState,
+      setMembers: setMembersState,
     }}>
       {children}
     </AppContext.Provider>
