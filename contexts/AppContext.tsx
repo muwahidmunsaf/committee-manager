@@ -579,7 +579,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           if (today > dueDate) {
             // Payment is overdue
             newNotifications.push({
-              id: generateId(),
+              id: `overdue-${committee.id}-${memberId}-${currentMonthIndex}`,
               type: NotificationType.PAYMENT_OVERDUE,
               title: t('paymentOverdue'),
               message: `${member.name} ${t('paymentDue_ur')} ${committee.title}`,
@@ -607,7 +607,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         
         if (daysUntilPayout <= 3 && daysUntilPayout > 0) {
           newNotifications.push({
-            id: generateId(),
+            id: `payout-${committee.id}-${currentMonthIndex}`,
             type: NotificationType.PAYOUT_UPCOMING,
             title: t('upcomingPayout'),
             message: `${committee.title} ${t('payoutUpcoming_ur')} ${daysUntilPayout} ${t('days')}`,
@@ -633,24 +633,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // Generate notifications whenever committees or members change
     generateNotificationsFromCommittees();
   }, [committeesState, membersState, generateNotificationsFromCommittees]);
-
-  // Add sample notifications if none exist (for testing)
-  useEffect(() => {
-    if (notificationsState.length === 0) {
-      const sampleNotifications: Notification[] = [
-        {
-          id: generateId(),
-          type: NotificationType.COMMITTEE_UPDATE,
-          title: t('committeeUpdate'),
-          message: 'Test notification: Committee system is working!',
-          timestamp: new Date().toISOString(),
-          isRead: false,
-          actionUrl: '/committees'
-        }
-      ];
-      setNotificationsState(sampleNotifications);
-    }
-  }, [notificationsState.length, t]);
 
   // Auto-lock functionality
   const [autoLockTimer, setAutoLockTimer] = useState<NodeJS.Timeout | null>(null);
@@ -965,6 +947,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           memberIds: updatedCommittee.memberIds,
           payoutTurns: updatedCommittee.payoutTurns
         });
+
+        // Add notification for new member
+        const member = membersState.find(m => m.id === memberId);
+        if (member) {
+            const notification: Notification = {
+                id: generateId(),
+                type: NotificationType.COMMITTEE_UPDATE,
+                title: t('committeeUpdate'),
+                message: `${member.name} was added to committee: ${c.title}`,
+                timestamp: new Date().toISOString(),
+                isRead: false,
+                committeeId: c.id,
+                memberId: member.id,
+                actionUrl: `/committees/manage/${c.id}`
+            };
+            setNotificationsState(prev => [...prev, notification]);
+        }
+
         return updatedCommittee;
       }
       return c;
@@ -999,6 +999,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           });
           
           console.log('Member removed from committee successfully');
+          
+          // Add notification for removed member
+            const member = membersState.find(m => m.id === memberId);
+            if (member) {
+                const notification: Notification = {
+                    id: generateId(),
+                    type: NotificationType.COMMITTEE_UPDATE,
+                    title: t('committeeUpdate'),
+                    message: `${member.name} was removed from committee: ${c.title}`,
+                    timestamp: new Date().toISOString(),
+                    isRead: false,
+                    committeeId: c.id,
+                    memberId: member.id,
+                    actionUrl: `/committees/manage/${c.id}`
+                };
+                setNotificationsState(prev => [...prev, notification]);
+            }
+          
           return updatedCommittee;
       }
       return c;
@@ -1039,6 +1057,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           });
           
           console.log('One share removed from committee successfully');
+          
+          // Add notification for payout
+          if (updatedPayoutTurns.some(turn => turn.memberId === memberId && turn.paidOut)) {
+            const member = membersState.find(m => m.id === memberId);
+            if (member) {
+              const notification: Notification = {
+                id: generateId(),
+                type: NotificationType.COMMITTEE_UPDATE,
+                title: t('payoutHistory'),
+                message: `Payout of ${c.amountPerMember * c.memberIds.length} made to ${member.name} for committee: ${c.title}`,
+                timestamp: new Date().toISOString(),
+                isRead: false,
+                committeeId: c.id,
+                memberId: member.id,
+                actionUrl: `/committees/manage/${c.id}`
+              };
+              setNotificationsState(prev => [...prev, notification]);
+            }
+          }
+          
           return updatedCommittee;
         }
         return c;
@@ -1061,6 +1099,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const updatedCommittee = { ...c, payments: [...c.payments, newPayment] };
         // Update Firestore
         updateDoc(doc(db, 'committees', committeeId), { payments: updatedCommittee.payments });
+        
+        // Add notification for new payment
+        const member = membersState.find(m => m.id === newPayment.memberId);
+        if (member) {
+            const notification: Notification = {
+                id: generateId(),
+                type: NotificationType.COMMITTEE_UPDATE,
+                title: t('paymentHistory'),
+                message: `Payment of ${newPayment.amountPaid} by ${member.name} for: ${c.title}`,
+                timestamp: new Date().toISOString(),
+                isRead: false,
+                committeeId: c.id,
+                memberId: newPayment.memberId,
+                actionUrl: `/committees/manage/${c.id}`
+            };
+            setNotificationsState(prev => [...prev, notification]);
+        }
+        
         return updatedCommittee;
       }
       return c;
@@ -1112,6 +1168,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           
         // Update Firestore
         updateDoc(doc(db, 'committees', committeeId), { payoutTurns: updatedCommittee.payoutTurns });
+        
+        // Add notification for payout
+        if (turnToUpdate.paidOut) {
+          const member = membersState.find(m => m.id === turnToUpdate.memberId);
+          if (member) {
+            const notification: Notification = {
+              id: generateId(),
+              type: NotificationType.COMMITTEE_UPDATE,
+              title: t('payoutHistory'),
+              message: `Payout of ${c.amountPerMember * c.memberIds.length} made to ${member.name} for committee: ${c.title}`,
+              timestamp: new Date().toISOString(),
+              isRead: false,
+              committeeId: c.id,
+              memberId: member.id,
+              actionUrl: `/committees/manage/${c.id}`
+            };
+            setNotificationsState(prev => [...prev, notification]);
+          }
+        }
+        
         return updatedCommittee;
       }
       return c;

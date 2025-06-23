@@ -223,7 +223,7 @@ const Navbar: React.FC = () => {
               
               {/* Notification Dropdown for Mobile */}
               {isNotificationDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-neutral-darker rounded-lg shadow-lg border border-gray-200 dark:border-neutral-dark z-50">
+                <div className="absolute mt-2 w-72 -right-6 rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5 dark:bg-neutral-darker dark:ring-neutral-dark z-50">
                   <div className="p-4 border-b border-gray-200 dark:border-neutral-dark">
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('notifications')}</h3>
