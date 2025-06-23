@@ -271,20 +271,11 @@ const DashboardScreen: React.FC = () => {
 
   const currentMonthRemaining = Math.max(currentMonthExpected - currentMonthCollected, 0);
 
-  const [showAlert, setShowAlert] = useState(true);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-
-  // Persist alert dismissed state in localStorage
-  useEffect(() => {
-    const dismissed = localStorage.getItem('dashboardAlertDismissed');
-    if (dismissed === 'true') {
-      setShowAlert(false);
-    }
-  }, []);
+  const { showDashboardAlert, setShowDashboardAlert } = useAppContext();
 
   const handleDismissAlert = () => {
-    setShowAlert(false);
-    localStorage.setItem('dashboardAlertDismissed', 'true');
+    setShowDashboardAlert(false);
   };
 
   return (
@@ -294,8 +285,8 @@ const DashboardScreen: React.FC = () => {
       </div> */}
       <h1 className="text-2xl md:text-3xl font-bold text-neutral-darker dark:text-neutral-light">{t('financialOverview')}</h1>
 
-      {/* Add alert at the top of the dashboard */}
-      {showAlert && (overduePayments.length > 0 || upcomingPayoutsSoon.length > 0) && (
+      {/* Alert Section */}
+      {showDashboardAlert && (overduePayments.length > 0 || upcomingPayoutsSoon.length > 0) && (
         <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-l-4 border-amber-500 dark:border-amber-400 text-amber-800 dark:text-amber-200 p-6 mb-6 rounded-lg shadow-lg relative overflow-hidden">
           {/* Background pattern */}
           <div className="absolute inset-0 opacity-5">
@@ -417,7 +408,7 @@ const DashboardScreen: React.FC = () => {
             <div className="flex-grow overflow-y-auto p-4 md:p-6">
               <div className="space-y-6">
                 {/* Overdue Payments Section */}
-                {overduePayments.length > 0 && (
+          {overduePayments.length > 0 && (
                   <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
                     <h4 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-3 flex items-center">
                       <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -451,7 +442,7 @@ const DashboardScreen: React.FC = () => {
                 )}
 
                 {/* Upcoming Payouts Section */}
-                {upcomingPayoutsSoon.length > 0 && (
+          {upcomingPayoutsSoon.length > 0 && (
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                     <h4 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-3 flex items-center">
                       <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
