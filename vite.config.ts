@@ -10,6 +10,9 @@ export default defineConfig(({ mode }) => {
           registerType: 'autoUpdate',
           manifest: require('./manifest.json'),
           includeAssets: ['assets/logo-192.png', 'assets/logo-512.png', 'assets/logo.png'],
+          workbox: {
+            maximumFileSizeToCacheInBytes: 25 * 1024 * 1024, // 25 MB
+          },
         })
       ],
       define: {
