@@ -1225,7 +1225,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         // Check against the latest PIN from Firestore
         if (pin === currentPin) {
-          setIsLockedState(false);
+      setIsLockedState(false);
           setShowDashboardAlertState(true); // Reset alert state on successful login
           
           // Reset auto-lock timer immediately after successful unlock
@@ -1233,14 +1233,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             resetAutoLockTimer();
           }, 100);
           
-          return true;
-        }
+      return true;
+    }
       }
       return false;
     } catch (error) {
       console.error('Error checking PIN');
       // Don't expose sensitive error details
-      return false;
+    return false;
     }
   };
   const lockApp = () => setIsLockedState(true);

@@ -571,7 +571,7 @@ export const CommitteeDetailScreen: React.FC = () => {
                 monthIndex: currentPaymentContext.monthIndex,
                 amountPaid: installmentAmount,
                 paymentDate: new Date().toISOString(), // Use full ISO string for recent activity
-                status: 'Cleared'
+          status: 'Cleared'
         });
         
             setPaymentModalOpen(false);
@@ -820,17 +820,17 @@ export const CommitteeDetailScreen: React.FC = () => {
       }
       // Header
       if (logoBase64) {
-        pdf.addImage(logoBase64, 'PNG', pdfWidth/2-30, 20, 60, 60);
+        pdf.addImage(logoBase64, 'PNG', pdfWidth/2-30, language === Language.EN ? 20 + 11.3 : 20, 60, 60);
       }
       pdf.setFontSize(18);
       pdf.setTextColor('#0e7490');
       if (language === Language.UR) {
         pdf.setFont('JameelNooriNastaleeq', 'normal');
       }
-      pdf.text(appName, pdfWidth/2, 95, { align: 'center' });
+      pdf.text(appName, pdfWidth/2, language === Language.EN ? 95 + 11.3 : 95, { align: 'center' });
       pdf.setDrawColor('#06b6d4');
       pdf.setLineWidth(1);
-      pdf.line(40, 110, pdfWidth-40, 110);
+      pdf.line(40, language === Language.EN ? 110 + 11.3 : 110, pdfWidth-40, language === Language.EN ? 110 + 11.3 : 110);
       // Footer
       const footerY = pdfHeight-40;
       pdf.setFillColor('#06b6d4');
@@ -1059,6 +1059,10 @@ export const CommitteeDetailScreen: React.FC = () => {
       // Add header with logo
       if (logoBase64) {
         pdf.addImage(logoBase64, 'PNG', pdfWidth/2-30, 20, 60, 60);
+        pdf.setFontSize(16);
+        pdf.setTextColor('#0e7490');
+        pdf.setFont(undefined, 'bold');
+        pdf.text("Asad Mobile's Shop", pdfWidth/2, 110, { align: 'center' });
       }
 
       // Create hidden div for table rendering
@@ -1636,65 +1640,110 @@ export const CommitteeDetailScreen: React.FC = () => {
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      drawTextLetterhead(pdf, pdfWidth, pdfHeight, userProfile, logoBase64, t('appName'));
-      pdf.setFontSize(16);
-      pdf.setTextColor('#0e7490');
-      pdf.text(`${t('monthly')} Report - ${getCommitteeMonthName(committee?.startDate ?? '', monthIndex, language)}`, pdfWidth/2, 140, { align: 'center' });
-      
-      // Add summary information
+
+      const header = (data) => {
+        drawTextLetterhead(pdf, pdfWidth, pdfHeight, userProfile, logoBase64, t('appName'));
+        pdf.setFontSize(16);
+        pdf.setTextColor('#0e7490');
+        pdf.text(`${t('monthly')} Report - ${getCommitteeMonthName(committee?.startDate ?? '', monthIndex, language)}`, pdfWidth/2, 140 + 11.3, { align: 'center' });
+      };
+
+      const footer = (data) => {
+        const pageCount = pdf.internal.getNumberOfPages();
+        const page = pdf.internal.getCurrentPageInfo().pageNumber;
+        // Move page number 0.4cm (11.3pt) further down and center it
+        const footerY = pdfHeight - 30 + 11.3; // previously -30
+        pdf.setFontSize(10);
+        pdf.setTextColor('#666');
+        pdf.setFont(undefined, 'normal');
+        const pageText = `Page ${page} of ${pageCount}`;
+        const pageTextWidth = pdf.getTextWidth(pageText);
+        const centerX = (pdfWidth - pageTextWidth) / 2;
+        pdf.text(pageText, centerX, footerY);
+      };
+
+      // Add committee details (summary)
       pdf.setFontSize(12);
       pdf.setTextColor('#222');
-      let yPosition = 170;
-      
+      // Move content down by 0.4cm (11.3pt)
+      let yPosition = 170 + 11.3;
+      pdf.setFont(undefined, 'bold');
+      pdf.text(capitalizeWords(t('committeeName')) + ':', 40, yPosition);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(capitalizeWords(committee.title || ''), 220, yPosition);
+      yPosition += 18;
+      pdf.setFont(undefined, 'bold');
+      pdf.text(capitalizeWords(t('type')) + ':', 40, yPosition);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(capitalizeWords(t(committee.type?.toLowerCase() || '') || ''), 220, yPosition);
+      yPosition += 18;
+      pdf.setFont(undefined, 'bold');
+      pdf.text(capitalizeWords(t('duration')) + ':', 40, yPosition);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(` ${committee.duration} ${capitalizeWords(t(committee.type === CommitteeType.MONTHLY ? 'months' : committee.type === CommitteeType.WEEKLY ? 'weeks' : 'days'))}` || '', 220, yPosition);
+      yPosition += 18;
+      pdf.setFont(undefined, 'bold');
+      pdf.text(capitalizeWords(t('startDate')) + ':', 40, yPosition);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(capitalizeWords(formatDate(committee.startDate || '', language) || ''), 220, yPosition);
+      yPosition += 18;
+      pdf.setFont(undefined, 'bold');
+      pdf.text(capitalizeWords(t('amountPerMember')) + ':', 40, yPosition);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(`PKR ${committee.amountPerMember?.toLocaleString() || '0'}`, 220, yPosition);
+      yPosition += 18;
+      pdf.setFont(undefined, 'bold');
+      pdf.text(capitalizeWords(t('totalCollected')) + ':', 40, yPosition);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(`PKR ${totalCollected?.toLocaleString() || '0'}`, 220, yPosition);
+      yPosition += 18;
+      pdf.setFont(undefined, 'bold');
+      pdf.text(capitalizeWords(t('totalRemaining')) + ':', 40, yPosition);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(`PKR ${totalRemaining?.toLocaleString() || '0'}`, 220, yPosition);
+      yPosition += 18;
+
       // Member payments table
       pdf.setFont(undefined, 'bold');
-      pdf.text('Member Payments:', 40, yPosition);
+      pdf.text(t('memberPayments') + ':', 40, yPosition);
       yPosition += 20;
-      
       autoTable(pdf, {
         startY: yPosition,
         head: [[t('serialNo') || 'S.No', t('memberName'), 'Shares', 'Total Due', t('amountPaid'), t('remainingAmount')]],
-          body: tableBody.map(row => row.map(cell => cell || '')),
+        body: tableBody.map(row => row.map(cell => cell || '')),
         theme: 'grid',
         headStyles: { fillColor: [6, 182, 212], textColor: 255, fontStyle: 'bold' },
         styles: { fontSize: 10, cellPadding: 4 },
         margin: { left: 40, right: 40 },
-        didParseCell: function (data) {
-          if (data.row.index === tableBody.length - 1) {
-            data.cell.styles.fontStyle = 'bold';
-          }
-        },
+        didDrawPage: function (data) { header(data); footer(data); },
       });
-      
+
       // Payout history section
       if (payoutHistory.length > 0) {
         const tableEndY = (pdf as any).lastAutoTable.finalY;
         yPosition = tableEndY + 20;
-        
         pdf.setFont(undefined, 'bold');
-        pdf.text('Payout History:', 40, yPosition);
+        pdf.text(t('payoutHistory') + ':', 40, yPosition);
         yPosition += 20;
-        
         const payoutTableBody = payoutHistory.map((payout, idx) => [
           (idx + 1).toString(),
           payout.memberName,
           payout.shares.toString(),
           `PKR ${payout.payoutAmount.toLocaleString()}`,
-          payout.paidOut ? 'Paid' : 'Pending',
+          payout.paidOut ? t('paid') : t('pending'),
           payout.payoutDate ? formatDate(payout.payoutDate, language) : '-'
         ]);
-        
         autoTable(pdf, {
           startY: yPosition,
-          head: [['S.No', t('memberName'), 'Shares', 'Payout Amount', 'Status', 'Payout Date']],
+          head: [['S.No', t('memberName'), 'Shares', t('payoutAmount'), t('status'), t('payoutDate')]],
           body: payoutTableBody,
           theme: 'grid',
           headStyles: { fillColor: [6, 182, 212], textColor: 255, fontStyle: 'bold' },
           styles: { fontSize: 10, cellPadding: 4 },
           margin: { left: 40, right: 40 },
+          didDrawPage: function (data) { header(data); footer(data); },
         });
       }
-      
       pdf.save(`monthly_report_${committee.title.replace(/\s/g, '_')}_${getCommitteeMonthName(committee?.startDate ?? '', monthIndex, 'en').replace(/\s/g, '_')}.pdf`);
       }
       setIsLoading(false);
@@ -2088,7 +2137,8 @@ export const CommitteeDetailScreen: React.FC = () => {
       const pageCount = pdf.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         pdf.setPage(i);
-        const pageNumberY = pdfHeight - 8; // Moved down by 3pt (0.1cm) from -11 to -8
+        // Move page number 0.4cm (11.3pt) further down and center it
+        const pageNumberY = pdfHeight - 9; // previously -8
         pdf.setFontSize(10);
         pdf.setTextColor('#666');
         pdf.setFont(undefined, 'normal');
@@ -2643,6 +2693,10 @@ export function slugify(text: string) {
     .replace(/\s+/g, '-')           // Replace spaces with -
     .replace(/[^\w\-]+/g, '')      // Remove all non-word chars
     .replace(/\-\-+/g, '-');       // Replace multiple - with single -
+}
+
+function capitalizeWords(str) {
+  return (str || '').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 export default CommitteeManagement;
