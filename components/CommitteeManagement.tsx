@@ -2032,18 +2032,34 @@ export const CommitteeDetailScreen: React.FC = () => {
           if (committeeIndex > 1) {
             addNewPage();
           }
-          // ... existing code ...
+          // Committee Section Header
+          pdf.setFontSize(13);
+          pdf.setTextColor('#0e7490');
+          pdf.setFont(undefined, 'bold');
+          pdf.text(`${t('committeeName')}: ${committee.title || ''}`, margin, currentY);
+          currentY += 18;
+          pdf.setFontSize(11);
+          pdf.setTextColor('#222');
+          pdf.setFont(undefined, 'normal');
+          pdf.text(`${t('startDate')}: ${formatDate(committee.startDate ?? '', language)}`, margin, currentY);
+          currentY += 14;
+          pdf.text(`${t('duration')}: ${(committee.duration ?? '') + ' ' + t((committee.type?.toLowerCase?.() === 'monthly' ? 'months' : committee.type?.toLowerCase?.() === 'weekly' ? 'weeks' : 'days') ?? 'months')}`, margin, currentY);
+          currentY += 14;
+          pdf.text(`${t('amountPerMember')}: PKR ${(typeof committee.amountPerMember === 'number' ? committee.amountPerMember.toLocaleString() : '0')}`, margin, currentY);
+          currentY += 18;
           // Payment History
           const paymentsForCommittee = committee.payments.filter(p => p.memberId === member.id && p.status === 'Cleared')
             .sort((a,b) => a.monthIndex - b.monthIndex || new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime());
           const totalContributed = paymentsForCommittee.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
           const totalDue = (committee.amountPerMember || 0) * (committee.duration || 0);
           const remainingAmount = totalDue - totalContributed;
+          pdf.setFontSize(12);
+          pdf.setTextColor('#0e7490');
+          pdf.setFont(undefined, 'bold');
+          pdf.text(t('paymentHistory'), margin, currentY);
+          currentY += 16;
           if (paymentsForCommittee.length > 0) {
             checkPageBreak(60 + paymentsForCommittee.length * 20);
-            pdf.setFont(undefined, 'bold');
-            pdf.text(t('paymentHistory'), 40, currentY);
-            currentY += 20;
             const tableBody = paymentsForCommittee.map(p => [
               getCommitteeMonthName(committee.startDate, p.monthIndex, language),
               `PKR ${p.amountPaid.toLocaleString()}`,
@@ -2060,15 +2076,15 @@ export const CommitteeDetailScreen: React.FC = () => {
               margin: { left: 40, right: 40 },
               pageBreak: 'auto',
             });
-            currentY = (pdf as any).lastAutoTable.finalY + 10;
+            currentY = (pdf as any).lastAutoTable.finalY + 20; // add more space after table
             // Add total contributed and remaining
             pdf.setFont(undefined, 'bold');
             pdf.setTextColor('#0e7490');
-            pdf.text(`${t('totalContributedThisCommittee')}: PKR ${totalContributed.toLocaleString()}`, 40, currentY);
-            currentY += 16;
-            pdf.text(`${t('remainingAmount')}: PKR ${remainingAmount.toLocaleString()}`, 40, currentY);
+            pdf.text(`${t('totalContributedThisCommittee')}: PKR ${totalContributed.toLocaleString()}`, margin, currentY);
+            currentY += 14;
+            pdf.text(`${t('remainingAmount')}: PKR ${remainingAmount.toLocaleString()}`, margin, currentY);
             pdf.setTextColor('#222');
-            currentY += 10;
+            currentY += 16; // extra space before payout history
           } else {
             checkPageBreak(20);
             pdf.setFontSize(12);
@@ -2078,26 +2094,8 @@ export const CommitteeDetailScreen: React.FC = () => {
             currentY += 20;
           }
           // Payout History
-          // Count cleared and unpaid payouts
           const payoutsForCommittee = committee.payoutTurns.filter(pt => pt.memberId === member.id);
-          const clearedPayouts = payoutsForCommittee.filter(pt => pt.paidOut).length;
-          const unpaidPayouts = payoutsForCommittee.length - clearedPayouts;
           if (payoutsForCommittee.length > 0) {
-            checkPageBreak(50 + payoutsForCommittee.length * 20);
-            pdf.setFontSize(12);
-            pdf.setTextColor('#0e7490');
-            pdf.setFont(undefined, 'bold');
-            pdf.text(`${t('payoutHistory')}`, margin, currentY);
-            currentY += 15;
-            // Show summary of payouts
-            pdf.setFontSize(10);
-            pdf.setFont(undefined, 'normal');
-            pdf.setTextColor('#16a34a');
-            pdf.text(`${t('clearedPayouts')}: ${clearedPayouts}`, margin, currentY);
-            pdf.setTextColor('#dc2626');
-            pdf.text(`${t('unpaidPayouts')}: ${unpaidPayouts}`, margin + 120, currentY);
-            pdf.setTextColor('#222');
-            currentY += 15;
             // Table with status coloring
             const payoutTableData = payoutsForCommittee.map(pt => [
               getCommitteeMonthName(committee?.startDate ?? '', pt.turnMonthIndex, language) || '',
@@ -2129,7 +2127,13 @@ export const CommitteeDetailScreen: React.FC = () => {
             pdf.text(t('noPayoutsReceived'), margin, currentY);
             currentY += 20;
           }
-          currentY += 15; // Space between committees
+          // Add a separator line between committees (except last)
+          if (committeeIndex < memberCommittees.length) {
+            pdf.setDrawColor('#06b6d4');
+            pdf.setLineWidth(0.5);
+            pdf.line(margin, currentY, pdfWidth - margin, currentY);
+            currentY += 10;
+          }
         }
       }
       
@@ -2137,8 +2141,11 @@ export const CommitteeDetailScreen: React.FC = () => {
       const pageCount = pdf.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         pdf.setPage(i);
-        // Move page number 0.4cm (11.3pt) further down and center it
-        const pageNumberY = pdfHeight - 9; // previously -8
+        // For Urdu, move page number and footer up if needed
+        let pageNumberY = pdfHeight - 9;
+        if (language === 'ur' || language === 'UR' || language === 'Urdu') {
+          pageNumberY = pdfHeight - 30; // move up to avoid overlap
+        }
         pdf.setFontSize(10);
         pdf.setTextColor('#666');
         pdf.setFont(undefined, 'normal');
