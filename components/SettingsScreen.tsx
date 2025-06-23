@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { Language, Theme, Committee, Member, CommitteePayment, CommitteeMemberTurn, AuthMethod, PinLength } from '../types';
-import { Button, Input, Select, LoadingSpinner } from './UIComponents';
+import { Button, Input, Select, LoadingSpinner, ProgressBar } from './UIComponents';
 import * as XLSX from 'xlsx'; // For Excel export
 import { saveAs } from 'file-saver'; // Add this import for file download
 import { db } from '../services/firebaseService';
@@ -32,6 +32,9 @@ const SettingsScreen: React.FC = () => {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
+  const [restoreProgress, setRestoreProgress] = useState(0);
+  const [resetProgress, setResetProgress] = useState(0);
+  const [backupProgress, setBackupProgress] = useState(0);
 
   // Update previousAuthMethod when authMethod changes
   useEffect(() => {
@@ -465,8 +468,10 @@ const SettingsScreen: React.FC = () => {
   const handleBackupData = () => {
     setBackupError('');
     setBackupSuccess('');
+    setBackupProgress(0);
     setIsLoading(true);
     try {
+      setBackupProgress(20);
       const data = {
         committees,
         members,
@@ -479,45 +484,64 @@ const SettingsScreen: React.FC = () => {
           pinLength
         }
       };
+      setBackupProgress(60);
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      setBackupProgress(80);
       saveAs(blob, 'BC_Backup.json');
+      setBackupProgress(100);
       setBackupSuccess(language === Language.UR ? 'ڈیٹا کامیابی سے بیک اپ ہو گیا۔' : 'Backup created successfully.');
     } catch (err) {
       setBackupError(language === Language.UR ? 'بیک اپ میں خرابی۔ دوبارہ کوشش کریں۔' : 'Error creating backup. Please try again.');
     }
-    setIsLoading(false);
+    setTimeout(() => setIsLoading(false), 500);
   };
 
   // Restore (JSON import)
   const handleRestoreData = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setRestoreError('');
     setRestoreSuccess('');
+    setRestoreProgress(0);
     setIsRestoreLoading(true);
     setIsLoading(true);
     try {
+      setRestoreProgress(5);
       const file = e.target.files?.[0];
       if (!file) throw new Error('No file selected');
       const text = await file.text();
+      setRestoreProgress(15);
       const data = JSON.parse(text);
       // Validate structure
       if (!data.committees || !data.members || !data.userProfile || !data.settings) {
         throw new Error('Invalid backup file');
       }
+      setRestoreProgress(25);
       // 1. Delete all existing members and committees from Firestore
       const membersSnapshot = await getDocs(collection(db, 'members'));
+      let totalSteps = membersSnapshot.docs.length + 1; // +1 for committees
+      let currentStep = 0;
       for (const memberDoc of membersSnapshot.docs) {
         await deleteDoc(doc(db, 'members', memberDoc.id));
+        currentStep++;
+        setRestoreProgress(25 + (currentStep / totalSteps) * 25);
       }
       const committeesSnapshot = await getDocs(collection(db, 'committees'));
+      totalSteps += committeesSnapshot.docs.length;
       for (const committeeDoc of committeesSnapshot.docs) {
         await deleteDoc(doc(db, 'committees', committeeDoc.id));
+        currentStep++;
+        setRestoreProgress(25 + (currentStep / totalSteps) * 25);
       }
       // 2. Add all members and committees from backup using setDoc (preserve IDs)
+      totalSteps += data.members.length + data.committees.length;
       for (const member of data.members) {
         await setDoc(doc(db, 'members', member.id), member);
+        currentStep++;
+        setRestoreProgress(50 + (currentStep / totalSteps) * 30);
       }
       for (const committee of data.committees) {
         await setDoc(doc(db, 'committees', committee.id), committee);
+        currentStep++;
+        setRestoreProgress(50 + (currentStep / totalSteps) * 30);
       }
       // 3. Restore user profile and settings
       await setDoc(doc(db, 'settings', 'singleton'), { userProfile: data.userProfile }, { merge: true });
@@ -528,10 +552,13 @@ const SettingsScreen: React.FC = () => {
         authMethod: data.settings.authMethod,
         pinLength: data.settings.pinLength,
       }, { merge: true });
+      setRestoreProgress(95);
       setRestoreSuccess(language === Language.UR ? 'ڈیٹا کامیابی سے بحال ہو گیا۔' : 'Data restored successfully.');
-      window.location.reload();
+      setRestoreProgress(100);
+      setTimeout(() => window.location.reload(), 1000);
     } catch (err) {
       setRestoreError(language === Language.UR ? 'بحالی میں خرابی۔ براہ کرم درست بیک اپ فائل منتخب کریں۔' : 'Error restoring data. Please select a valid backup file.');
+      setRestoreProgress(0);
     }
     setIsRestoreLoading(false);
     setIsLoading(false);
@@ -539,19 +566,25 @@ const SettingsScreen: React.FC = () => {
 
   async function handleResetApp() {
     setIsLoading(true);
+    setResetProgress(0);
     try {
       // 1. Delete all members from Firestore
       const membersSnapshot = await getDocs(collection(db, 'members'));
+      let totalSteps = membersSnapshot.docs.length + 1; // +1 for committees
+      let currentStep = 0;
       for (const memberDoc of membersSnapshot.docs) {
         await deleteDoc(doc(db, 'members', memberDoc.id));
+        currentStep++;
+        setResetProgress((currentStep / totalSteps) * 40);
       }
-
       // 2. Delete all committees from Firestore
       const committeesSnapshot = await getDocs(collection(db, 'committees'));
+      totalSteps += committeesSnapshot.docs.length;
       for (const committeeDoc of committeesSnapshot.docs) {
         await deleteDoc(doc(db, 'committees', committeeDoc.id));
+        currentStep++;
+        setResetProgress(40 + (currentStep / totalSteps) * 40);
       }
-
       // 3. Clear local state and storage
       setCommittees([]);
       setMembers([]);
@@ -560,19 +593,19 @@ const SettingsScreen: React.FC = () => {
       localStorage.removeItem('members');
       localStorage.removeItem('notifications');
       localStorage.removeItem('dashboardAlertDismissed');
-      
       setShowResetConfirm(false);
       setResetSuccess(true);
-      
-      // 4. Reload the page to ensure clean state
+      setResetProgress(90);
       setTimeout(() => {
+        setResetProgress(100);
         window.location.reload();
-      }, 1500);
+      }, 1000);
     } catch (error) {
       console.error('Error resetting app:', error);
       alert(language === Language.UR 
         ? 'ایپلیکیشن ری سیٹ کرنے میں خرابی۔ دوبارہ کوشش کریں۔'
         : 'Error resetting application. Please try again.');
+      setResetProgress(0);
     } finally {
       setIsLoading(false);
     }
@@ -588,23 +621,32 @@ const SettingsScreen: React.FC = () => {
 
   if (isRestoreLoading) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-60">
-        <p className="text-lg text-white font-semibold mb-6">
-          {language === Language.UR ? 'ڈیٹا بحال ہو رہا ہے...' : 'Restoring data...'}
-        </p>
-        <div className="w-64 h-3 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
-          <div className="h-full bg-primary animate-progress-bar" style={{ width: '40%' }}></div>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+        <div className="bg-white dark:bg-neutral-darker rounded-lg shadow-lg px-8 py-8 flex flex-col items-center min-w-[280px]">
+          <p className="text-lg font-semibold text-neutral-darker dark:text-neutral-light mb-6 text-center">
+            {language === Language.UR ? 'ڈیٹا بحال ہو رہا ہے...' : 'Restoring data...'}
+          </p>
+          <div className="w-64 relative mb-2">
+            <ProgressBar percent={restoreProgress} />
+          </div>
+          <p className="text-primary-dark dark:text-primary-light text-sm font-bold">{restoreProgress}%</p>
         </div>
-        <style>{`
-          @keyframes progress-bar {
-            0% { margin-left: -40%; width: 40%; }
-            50% { margin-left: 30%; width: 60%; }
-            100% { margin-left: 100%; width: 40%; }
-          }
-          .animate-progress-bar {
-            animation: progress-bar 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-          }
-        `}</style>
+      </div>
+    );
+  }
+
+  if (resetProgress > 0 && resetProgress < 100) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+        <div className="bg-white dark:bg-neutral-darker rounded-lg shadow-lg px-8 py-8 flex flex-col items-center min-w-[280px]">
+          <p className="text-lg font-semibold text-neutral-darker dark:text-neutral-light mb-6 text-center">
+            {language === Language.UR ? 'ایپ ری سیٹ ہو رہی ہے...' : 'Resetting app...'}
+          </p>
+          <div className="w-64 relative mb-2">
+            <ProgressBar percent={resetProgress} />
+          </div>
+          <p className="text-primary-dark dark:text-primary-light text-sm font-bold">{resetProgress}%</p>
+        </div>
       </div>
     );
   }
