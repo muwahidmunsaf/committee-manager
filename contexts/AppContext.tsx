@@ -641,33 +641,34 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [lastActivity, setLastActivity] = useState<number>(Date.now());
   const AUTO_LOCK_DURATION = 10 * 60 * 1000; // 10 minutes in milliseconds
 
+  // Fetch committees, members, and user profile only after unlock
   useEffect(() => {
-    setIsLoadingState(true);
-    const fetchData = async () => {
-      try {
-        // Fetch committees
-        const committeesSnapshot = await getDocs(collection(db, 'committees'));
-        const committeesData: Committee[] = committeesSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as Omit<Committee, 'id'>) }));
-        setCommitteesState(committeesData);
-        // Fetch members
-        const membersSnapshot = await getDocs(collection(db, 'members'));
-        const membersData: Member[] = membersSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as Omit<Member, 'id'>) }));
-        setMembersState(membersData);
-        // Fetch user profile
-        const settingsDoc = await getDoc(doc(db, 'settings', USER_SETTINGS_DOC_ID));
-        if (settingsDoc.exists()) {
-          const data = settingsDoc.data();
-          if (data.userProfile) setUserProfileState(data.userProfile);
+    if (!isLockedState) {
+      setIsLoadingState(true);
+      const fetchData = async () => {
+        try {
+          const [committeesSnapshot, membersSnapshot, settingsDoc] = await Promise.all([
+            getDocs(collection(db, 'committees')),
+            getDocs(collection(db, 'members')),
+            getDoc(doc(db, 'settings', USER_SETTINGS_DOC_ID)),
+          ]);
+          const committeesData: Committee[] = committeesSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as Omit<Committee, 'id'>) }));
+          setCommitteesState(committeesData);
+          const membersData: Member[] = membersSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as Omit<Member, 'id'>) }));
+          setMembersState(membersData);
+          if (settingsDoc.exists()) {
+            const data = settingsDoc.data();
+            if (data.userProfile) setUserProfileState(data.userProfile);
+          }
+        } catch (error) {
+          console.error('Error fetching data from Firestore');
+        } finally {
+          setIsLoadingState(false);
         }
-      } catch (error) {
-        console.error('Error fetching data from Firestore');
-        // Don't expose sensitive error details
-      } finally {
-        setIsLoadingState(false);
-      }
-    };
-    fetchData();
-  }, []);
+      };
+      fetchData();
+    }
+  }, [isLockedState]);
 
   // Separate useEffect for auth settings to prevent flash
   useEffect(() => {
@@ -1200,44 +1201,44 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  // Add a ref to track if settings have been loaded this session
+  const settingsLoadedRef = React.useRef(false);
+
   const unlockApp = async (pin: string) => {
     try {
-      // Get the latest settings from Firestore
-      const settingsDoc = await getDoc(doc(db, 'settings', 'app'));
-      if (settingsDoc.exists()) {
-        const data = settingsDoc.data();
-        const currentPin = data.appPin || DEFAULT_APP_PIN;
-        const currentAuthMethod = data.authMethod || AuthMethod.PIN;
-        const currentPinLength = data.pinLength || PinLength.FOUR;
-        
-        // Update local states if different
-        if (currentAuthMethod !== authMethodState) {
-          setAuthMethodState(currentAuthMethod);
+      // Only fetch from Firestore if settings not loaded this session
+      if (!settingsLoadedRef.current) {
+        const settingsDoc = await getDoc(doc(db, 'settings', 'app'));
+        if (settingsDoc.exists()) {
+          const data = settingsDoc.data();
+          const currentPin = data.appPin || DEFAULT_APP_PIN;
+          const currentAuthMethod = data.authMethod || AuthMethod.PIN;
+          const currentPinLength = data.pinLength || PinLength.FOUR;
+          // Update local states if different
+          if (currentAuthMethod !== authMethodState) {
+            setAuthMethodState(currentAuthMethod);
+          }
+          if (currentPinLength !== pinLengthState) {
+            setPinLengthState(currentPinLength);
+          }
+          if (currentPin !== appPinState) {
+            setAppPinState(currentPin);
+          }
+          settingsLoadedRef.current = true;
         }
-        if (currentPinLength !== pinLengthState) {
-          setPinLengthState(currentPinLength);
-        }
-        if (currentPin !== appPinState) {
-          setAppPinState(currentPin);
-        }
-
-        // Check against the latest PIN from Firestore
-        if (pin === currentPin) {
-      setIsLockedState(false);
-          
-          // Reset auto-lock timer immediately after successful unlock
-          setTimeout(() => {
-            resetAutoLockTimer();
-          }, 100);
-          
-      return true;
-    }
+      }
+      // Check against the latest PIN from state
+      if (pin === appPinState) {
+        setIsLockedState(false);
+        setTimeout(() => {
+          resetAutoLockTimer();
+        }, 100);
+        return true;
       }
       return false;
     } catch (error) {
       console.error('Error checking PIN');
-      // Don't expose sensitive error details
-    return false;
+      return false;
     }
   };
   const lockApp = () => setIsLockedState(true);
