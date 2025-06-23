@@ -32,7 +32,6 @@ const SettingsScreen: React.FC = () => {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
 
   // Update previousAuthMethod when authMethod changes
   useEffect(() => {
@@ -539,28 +538,21 @@ const SettingsScreen: React.FC = () => {
   };
 
   async function handleResetApp() {
-    setIsResetting(true);
+    setIsLoading(true);
     try {
-      // Delete all committees
-      const committeesSnapshot = await getDocs(collection(db, 'committees'));
-      for (const committeeDoc of committeesSnapshot.docs) {
-        await deleteDoc(doc(db, 'committees', committeeDoc.id));
-      }
-      // Delete all members
+      // 1. Delete all members from Firestore
       const membersSnapshot = await getDocs(collection(db, 'members'));
       for (const memberDoc of membersSnapshot.docs) {
         await deleteDoc(doc(db, 'members', memberDoc.id));
       }
-      // Delete all payments
-      const paymentsSnapshot = await getDocs(collection(db, 'payments'));
-      for (const paymentDoc of paymentsSnapshot.docs) {
-        await deleteDoc(doc(db, 'payments', paymentDoc.id));
+
+      // 2. Delete all committees from Firestore
+      const committeesSnapshot = await getDocs(collection(db, 'committees'));
+      for (const committeeDoc of committeesSnapshot.docs) {
+        await deleteDoc(doc(db, 'committees', committeeDoc.id));
       }
-      // Delete all notifications
-      const notificationsSnapshot = await getDocs(collection(db, 'notifications'));
-      for (const notificationDoc of notificationsSnapshot.docs) {
-        await deleteDoc(doc(db, 'notifications', notificationDoc.id));
-      }
+
+      // 3. Clear local state and storage
       setCommittees([]);
       setMembers([]);
       clearAllNotifications();
@@ -568,12 +560,21 @@ const SettingsScreen: React.FC = () => {
       localStorage.removeItem('members');
       localStorage.removeItem('notifications');
       localStorage.removeItem('dashboardAlertDismissed');
+      
       setShowResetConfirm(false);
       setResetSuccess(true);
+      
+      // 4. Reload the page to ensure clean state
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (error) {
-      alert('Error resetting application data. Please try again.');
+      console.error('Error resetting app:', error);
+      alert(language === Language.UR 
+        ? 'ایپلیکیشن ری سیٹ کرنے میں خرابی۔ دوبارہ کوشش کریں۔'
+        : 'Error resetting application. Please try again.');
     } finally {
-      setIsResetting(false);
+      setIsLoading(false);
     }
   }
 
@@ -590,29 +591,6 @@ const SettingsScreen: React.FC = () => {
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-60">
         <p className="text-lg text-white font-semibold mb-6">
           {language === Language.UR ? 'ڈیٹا بحال ہو رہا ہے...' : 'Restoring data...'}
-        </p>
-        <div className="w-64 h-3 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
-          <div className="h-full bg-primary animate-progress-bar" style={{ width: '40%' }}></div>
-        </div>
-        <style>{`
-          @keyframes progress-bar {
-            0% { margin-left: -40%; width: 40%; }
-            50% { margin-left: 30%; width: 60%; }
-            100% { margin-left: 100%; width: 40%; }
-          }
-          .animate-progress-bar {
-            animation: progress-bar 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-          }
-        `}</style>
-      </div>
-    );
-  }
-
-  if (isResetting) {
-    return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-60">
-        <p className="text-lg text-white font-semibold mb-6">
-          {language === Language.UR ? 'ایپلیکیشن ری سیٹ ہو رہی ہے...' : 'Resetting application...'}
         </p>
         <div className="w-64 h-3 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
           <div className="h-full bg-primary animate-progress-bar" style={{ width: '40%' }}></div>
