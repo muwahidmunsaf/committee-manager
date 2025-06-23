@@ -31,6 +31,7 @@ const SettingsScreen: React.FC = () => {
   const [isRestoreLoading, setIsRestoreLoading] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
 
   // Update previousAuthMethod when authMethod changes
   useEffect(() => {
@@ -545,7 +546,16 @@ const SettingsScreen: React.FC = () => {
     localStorage.removeItem('notifications');
     localStorage.removeItem('dashboardAlertDismissed');
     setShowResetConfirm(false);
+    setResetSuccess(true);
   }
+
+  // Auto-hide reset success message after 3 seconds
+  useEffect(() => {
+    if (resetSuccess) {
+      const timer = setTimeout(() => setResetSuccess(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [resetSuccess]);
 
   if (isRestoreLoading) {
     return (
@@ -850,6 +860,11 @@ const SettingsScreen: React.FC = () => {
                     </button>
                   </div>
                 </div>
+              </div>
+            )}
+            {resetSuccess && (
+              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-2" role="alert">
+                <span className="block sm:inline">{language === Language.UR ? 'ایپلیکیشن کامیابی سے ری سیٹ ہو گئی!' : 'Application reset successfully!'}</span>
               </div>
             )}
         </div>
