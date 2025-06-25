@@ -517,7 +517,31 @@ const InstallmentManagement: React.FC = () => {
         name="search"
         label={t('searchInstallments')}
         value={search}
-        onChange={e => setSearch(e.target.value)}
+        onChange={e => {
+          let value = e.target.value;
+          // Phone formatting: starts with 03
+          if (value.startsWith('03')) {
+            const digits = value.replace(/\D/g, '');
+            if (digits.length <= 4) {
+              value = digits;
+            } else {
+              value = `${digits.slice(0,4)}-${digits.slice(4,11)}`;
+            }
+            value = value.slice(0, 12);
+          } else if (/^\d{5,}/.test(value)) {
+            // CNIC formatting: 5-7-1
+            const digits = value.replace(/\D/g, '');
+            if (digits.length <= 5) {
+              value = digits;
+            } else if (digits.length <= 12) {
+              value = `${digits.slice(0, 5)}-${digits.slice(5)}`;
+            } else {
+              value = `${digits.slice(0, 5)}-${digits.slice(5, 12)}-${digits.slice(12, 13)}`;
+            }
+            value = value.slice(0, 15);
+          }
+          setSearch(value);
+        }}
         className="mb-4 max-w-md"
       />
       {isLoading ? (
