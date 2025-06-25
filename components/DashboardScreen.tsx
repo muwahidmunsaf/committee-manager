@@ -110,8 +110,8 @@ const DashboardScreen: React.FC = () => {
     const totalPaid = inst.payments.filter(p => p.status === 'Paid').reduce((sum, p) => sum + p.amountPaid, 0);
     const collected = (inst.advancePayment || 0) + totalPaid;
     return {
-      name: inst.buyerName.substring(0, 15) + (inst.buyerName.length > 15 ? '...' : ''),
-      'Total Value': inst.totalPayment,
+    name: inst.buyerName.substring(0, 15) + (inst.buyerName.length > 15 ? '...' : ''),
+    'Total Value': inst.totalPayment,
       'Collected': collected,
       'ProgressPercent': inst.totalPayment > 0 ? Math.round((collected / inst.totalPayment) * 100) : 0,
     };

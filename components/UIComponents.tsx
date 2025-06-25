@@ -83,9 +83,8 @@ export const Input: React.FC<InputProps> = ({
         <input
           type={showPassword ? 'text' : type}
           className={`
-            w-full rounded-lg border
-            ${error ? 'border-red-500 dark:border-red-400' : 'border-neutral-light dark:border-neutral-dark'}
-            bg-white dark:bg-neutral-darker
+            w-full rounded-lg border border-gray-300 bg-white dark:border-gray-600 dark:bg-neutral-dark
+            ${error ? 'border-red-500 dark:border-red-400' : ''}
             text-neutral-darker dark:text-neutral-light
             focus:ring-2 focus:ring-primary focus:ring-opacity-50 focus:border-primary
             disabled:bg-neutral-lightest dark:disabled:bg-neutral-dark disabled:cursor-not-allowed

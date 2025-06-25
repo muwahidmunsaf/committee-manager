@@ -2201,7 +2201,7 @@ export const CommitteeDetailScreen: React.FC = () => {
                           {/* Type */}
                           <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-4 flex items-center gap-3 shadow-sm">
                             <BuildingOfficeIcon className="h-7 w-7 text-blue-500" />
-                            <div>
+                    <div>
                               <div className="text-xs text-blue-700 dark:text-blue-200 font-semibold">{t('committeeType')}</div>
                               <div className="text-base font-bold text-neutral-darker dark:text-neutral-light">{t(committee.type.toLowerCase())}</div>
                             </div>

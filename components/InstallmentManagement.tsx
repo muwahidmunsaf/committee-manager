@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Installment, Language } from '../types';
+import { Installment, Language, Committee } from '../types';
 import { Button, Input, Modal, PlusCircleIcon, FolderIcon, PencilSquareIcon, TrashIcon, CreditCardIcon } from './UIComponents';
 import { useAppContext } from '../contexts/AppContext';
 import { DEFAULT_PROFILE_PIC } from '../constants';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
+import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: () => void; onSuccess: (installment: Installment) => void; }> = ({ initialData, onClose, onSuccess }) => {
   const { t, language } = useAppContext();
@@ -34,6 +35,7 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
   const [photoType, setPhotoType] = useState<'profile' | 'cnic' | null>(null);
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const { addInstallment, updateInstallment } = useAppContext();
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const overlayAspect = 1.6; // ATM card aspect ratio (width:height)
   const overlayWidth = 320; // px
@@ -199,9 +201,18 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
           src={formData.profilePictureUrl || DEFAULT_PROFILE_PIC}
           alt="Buyer Picture"
           className="w-24 h-24 rounded-full object-cover border-2 border-primary-light dark:border-primary-dark cursor-pointer"
-          onClick={() => { setShowProfilePhotoMenu(true); setShowCnicPhotoMenu(false); }}
+          onClick={() => {
+            if (formData.profilePictureUrl && formData.profilePictureUrl !== DEFAULT_PROFILE_PIC) {
+              setPreviewImage(formData.profilePictureUrl as string);
+            }
+          }}
         />
-        <div className="text-xs text-gray-500 mt-1">{t('uploadPhoto')}</div>
+        <div
+          className="text-xs text-primary mt-1 cursor-pointer underline hover:text-primary-dark"
+          onClick={() => { setShowProfilePhotoMenu(true); setShowCnicPhotoMenu(false); }}
+        >
+          {t('uploadPhoto')}
+        </div>
         {showProfilePhotoMenu && (
           <div className="absolute top-24 left-1/2 transform -translate-x-1/2 bg-white dark:bg-neutral-dark border border-gray-200 dark:border-gray-700 rounded shadow-lg z-20 p-2 flex flex-col space-y-1">
             <button type="button" className="text-sm text-primary hover:underline text-left px-4 py-2" onClick={() => { setShowProfilePhotoMenu(false); document.getElementById('buyerProfilePicUpload')?.click(); }}>
@@ -250,7 +261,9 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
           src={formData.cnicImageUrl || ''}
           alt="CNIC"
           className="w-24 h-16 object-cover border-2 border-primary-light dark:border-primary-dark cursor-pointer"
-          onClick={() => { setShowCnicPhotoMenu(true); setShowProfilePhotoMenu(false); }}
+          onClick={() => {
+            if (formData.cnicImageUrl) setPreviewImage(formData.cnicImageUrl as string);
+          }}
           style={{ display: formData.cnicImageUrl ? 'block' : 'none' }}
         />
         <Button type="button" size="sm" onClick={() => { setShowCnicPhotoMenu(true); setShowProfilePhotoMenu(false); }}>
@@ -301,6 +314,14 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
           </div>
         </div>
       )}
+      {previewImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
+          <div className="bg-white dark:bg-neutral-dark rounded-lg shadow-lg p-4 flex flex-col items-center relative">
+            <img src={previewImage || ''} alt="Preview" className="max-w-xs max-h-[70vh] rounded" />
+            <Button type="button" className="mt-4" onClick={() => setPreviewImage(null)}>{t('cancel')}</Button>
+          </div>
+        </div>
+      )}
       <div className="flex justify-end space-x-2 rtl:space-x-reverse pt-4">
         <Button type="button" variant="ghost" onClick={onClose}>{t('cancel')}</Button>
         <Button type="submit">{formData.id ? t('saveChanges') : t('createInstallment')}</Button>
@@ -313,8 +334,9 @@ const InstallmentManagement: React.FC = () => {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingInstallment, setEditingInstallment] = useState<Installment | undefined>(undefined);
   const [search, setSearch] = useState('');
-  const { installments, deleteInstallment, isLoading, t, language } = useAppContext();
+  const { installments, deleteInstallment, isLoading, t, language, committees, members } = useAppContext();
   const navigate = useNavigate();
+  const [openReportModal, setOpenReportModal] = useState<null | { installment: Installment, memberCommittees: Committee[] }>(null);
 
   const handleOpenFormModal = (installment?: Installment) => {
     setEditingInstallment(installment);
@@ -416,7 +438,7 @@ const InstallmentManagement: React.FC = () => {
         'Buyer Name', 'CNIC', 'Phone', 'Product Name', 'Total Amount', 'Advance', 'Collected Amount', 'Remaining Amount', 'Duration', 'Remaining Installments', 'Account Status'
       ];
     }
-    pdf.text(heading, pdfWidth/2, y + 30, { align: 'center' });
+    pdf.text(String(heading || ''), pdfWidth/2, y + 30, { align: 'center' });
     y += 50;
     // Table rows
     const rows = installments.map(inst => {
@@ -437,10 +459,10 @@ const InstallmentManagement: React.FC = () => {
       }
       if (language === Language.UR) {
         return [
-          inst.buyerName,
-          inst.cnic,
-          inst.phone,
-          inst.mobileName,
+          inst.buyerName || '',
+          inst.cnic || '',
+          inst.phone || '',
+          inst.mobileName || '',
           `PKR ${(inst.totalPayment || 0).toLocaleString()}`,
           `PKR ${(inst.advancePayment || 0).toLocaleString()}`,
           `PKR ${collectedAmount.toLocaleString()}`,
@@ -451,10 +473,10 @@ const InstallmentManagement: React.FC = () => {
         ];
       } else {
         return [
-          inst.buyerName,
-          inst.cnic,
-          inst.phone,
-          inst.mobileName,
+          inst.buyerName || '',
+          inst.cnic || '',
+          inst.phone || '',
+          inst.mobileName || '',
           `PKR ${(inst.totalPayment || 0).toLocaleString()}`,
           `PKR ${(inst.advancePayment || 0).toLocaleString()}`,
           `PKR ${collectedAmount.toLocaleString()}`,
@@ -497,161 +519,198 @@ const InstallmentManagement: React.FC = () => {
     pdf.save('overall_installments_report.pdf');
   };
 
+  // Handler for dropdown actions
+  const handleDownloadDropdown = async (type: 'overall' | 'installment' | 'committee', installment: Installment, committee?: any) => {
+    if (type === 'overall') {
+      await handleDownloadAllBuyersPDF();
+    } else if (type === 'installment') {
+      alert(`Download report for ${(installment.buyerName || '')} - ${(installment.mobileName || '')}`);
+    } else if (type === 'committee' && committee) {
+      alert(`Download report for committee: ${committee.title}`);
+    }
+  };
+
   return (
-    <div className="p-4 md:p-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h1 className="text-2xl md:text-3xl font-bold text-neutral-darker dark:text-neutral-light flex items-center">
-          <CreditCardIcon className="h-8 w-8 mr-3 text-primary" />
-          {t('installments')}
-        </h1>
-        <Button onClick={handleDownloadAllBuyersPDF} className="w-full sm:w-auto font-bold border-2 border-primary bg-primary text-white hover:bg-primary-dark hover:text-white transition" variant="primary">
-          <FolderIcon className="h-5 w-5 mr-2" />
-          Download Overall Report
-        </Button>
-        <Button onClick={() => handleOpenFormModal()} className="w-full sm:w-auto">
-          <PlusCircleIcon className="h-5 w-5 mr-2" />
-          {t('createInstallment')}
-        </Button>
-      </div>
-      <Input
-        name="search"
-        label={t('searchInstallments')}
-        value={search}
-        onChange={e => {
-          let value = e.target.value;
-          // Phone formatting: starts with 03
-          if (value.startsWith('03')) {
-            const digits = value.replace(/\D/g, '');
-            if (digits.length <= 4) {
-              value = digits;
-            } else {
-              value = `${digits.slice(0,4)}-${digits.slice(4,11)}`;
+    <>
+      <div className="p-4 md:p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <h1 className="text-2xl md:text-3xl font-bold text-neutral-darker dark:text-neutral-light flex items-center">
+            <CreditCardIcon className="h-8 w-8 mr-3 text-primary" />
+            {t('installments')}
+          </h1>
+          <Button onClick={handleDownloadAllBuyersPDF} className="w-full sm:w-auto font-bold border-2 border-primary bg-primary text-white hover:bg-primary-dark hover:text-white transition" variant="primary">
+            <FolderIcon className="h-5 w-5 mr-2" />
+            Download Overall Report
+          </Button>
+          <Button onClick={() => handleOpenFormModal()} className="w-full sm:w-auto">
+            <PlusCircleIcon className="h-5 w-5 mr-2" />
+            {t('createInstallment')}
+          </Button>
+        </div>
+        <Input
+          name="search"
+          label={t('searchInstallments')}
+          value={search}
+          onChange={e => {
+            let value = e.target.value;
+            // Phone formatting: starts with 03
+            if (value.startsWith('03')) {
+              const digits = value.replace(/\D/g, '');
+              if (digits.length <= 4) {
+                value = digits;
+              } else {
+                value = `${digits.slice(0,4)}-${digits.slice(4,11)}`;
+              }
+              value = value.slice(0, 12);
+            } else if (/^\d{5,}/.test(value)) {
+              // CNIC formatting: 5-7-1
+              const digits = value.replace(/\D/g, '');
+              if (digits.length <= 5) {
+                value = digits;
+              } else if (digits.length <= 12) {
+                value = `${digits.slice(0, 5)}-${digits.slice(5)}`;
+              } else {
+                value = `${digits.slice(0, 5)}-${digits.slice(5, 12)}-${digits.slice(12, 13)}`;
+              }
+              value = value.slice(0, 15);
             }
-            value = value.slice(0, 12);
-          } else if (/^\d{5,}/.test(value)) {
-            // CNIC formatting: 5-7-1
-            const digits = value.replace(/\D/g, '');
-            if (digits.length <= 5) {
-              value = digits;
-            } else if (digits.length <= 12) {
-              value = `${digits.slice(0, 5)}-${digits.slice(5)}`;
-            } else {
-              value = `${digits.slice(0, 5)}-${digits.slice(5, 12)}-${digits.slice(12, 13)}`;
-            }
-            value = value.slice(0, 15);
-          }
-          setSearch(value);
-        }}
-        className="mb-4 max-w-md"
-      />
-      {isLoading ? (
-        <div className="flex justify-center items-center h-64">{t('loading')}</div>
-      ) : filtered.length === 0 ? (
-        <p className="text-center text-neutral-DEFAULT dark:text-gray-400 py-8">{t('noInstallmentsFound')}</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map(installment => {
-            const totalPaid = installment.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
-            const remainingAmount = (installment.totalPayment || 0) - (installment.advancePayment || 0) - totalPaid;
-            const status = remainingAmount <= 0 ? 'Closed' : 'Open';
-            return (
-              <div key={installment.id} className="bg-white dark:bg-neutral-darker rounded-lg shadow-lg overflow-hidden transition-all hover:shadow-xl flex flex-col">
-                <div className="p-5 flex flex-col flex-grow">
-                  <h2 className="text-xl font-semibold text-primary dark:text-primary-light mb-2 truncate">{installment.buyerName}</h2>
-                  <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-1">{t('mobile')}: {installment.mobileName}</p>
-                  <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-1">{t('phone')}: {installment.phone}</p>
-                  <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-1">{t('cnic')}: {installment.cnic}</p>
-                  <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-3">{t('total')}: PKR {installment.totalPayment.toLocaleString()}</p>
-                  <p className="text-sm font-semibold mb-2">
-                    Account Status: <span className={status === 'Closed' ? 'text-red-600' : 'text-green-600'}>{status}</span>
-                  </p>
-                  <div className="mt-auto flex space-x-2">
-                    <Button size="sm" onClick={() => navigate(`/installments/${installment.id}`)} className="flex-grow flex items-center justify-center">
-                      <FolderIcon className="w-4 h-4 mr-1" />
-                      {t('details')}
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => handleOpenFormModal(installment)} aria-label="Edit">
-                      <PencilSquareIcon className="w-5 h-5" />
-                    </Button>
-                    <Button size="sm" variant="danger" onClick={() => handleDeleteInstallment(installment.id)} aria-label="Delete">
-                      <TrashIcon className="w-5 h-5" />
-                    </Button>
+            setSearch(value);
+          }}
+          className="mb-4 max-w-md"
+        />
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">{t('loading')}</div>
+        ) : filtered.length === 0 ? (
+          <p className="text-center text-neutral-DEFAULT dark:text-gray-400 py-8">{t('noInstallmentsFound')}</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filtered.map(installment => {
+              // Find the member by CNIC or phone (assuming unique)
+              const member = members.find(m => m.cnic === installment.cnic || m.phone === installment.phone);
+              // Find all committees this member is part of
+              const memberCommittees = member ? committees.filter(c => c.memberIds.includes(member.id)) : [];
+              const totalPaid = installment.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
+              const remainingAmount = (installment.totalPayment || 0) - (installment.advancePayment || 0) - totalPaid;
+              const status = remainingAmount <= 0 ? 'Closed' : 'Open';
+              return (
+                <div key={installment.id} className="bg-white dark:bg-neutral-darker rounded-lg shadow-lg overflow-hidden transition-all hover:shadow-xl flex flex-col">
+                  <div className="p-5 flex flex-col flex-grow">
+                    <h2 className="text-xl font-semibold text-primary dark:text-primary-light mb-2 truncate">{installment.buyerName || ''}</h2>
+                    <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-1">{t('mobile')}: {installment.mobileName || ''}</p>
+                    <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-1">{t('phone')}: {installment.phone || ''}</p>
+                    <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-1">{t('cnic')}: {installment.cnic || ''}</p>
+                    <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-3">{t('total')}: PKR {installment.totalPayment.toLocaleString()}</p>
+                    <p className="text-sm font-semibold mb-2">
+                      Account Status: <span className={status === 'Closed' ? 'text-red-600' : 'text-green-600'}>{status}</span>
+                    </p>
+                    <div className="mt-auto flex space-x-2 relative">
+                      <Button size="sm" onClick={() => navigate(`/installments/${installment.id}`)} className="flex-grow flex items-center justify-center">
+                        <FolderIcon className="w-4 h-4 mr-1" />
+                        {t('details')}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleOpenFormModal(installment)} aria-label="Edit">
+                        <PencilSquareIcon className="w-5 h-5" />
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={() => handleDeleteInstallment(installment.id)} aria-label="Delete">
+                        <TrashIcon className="w-5 h-5" />
+                      </Button>
+                      <div className="relative">
+                        <Button size="sm" variant="ghost" aria-label="Download" onClick={() => setOpenReportModal({ installment, memberCommittees })}>
+                          <ArrowDownTrayIcon className="w-5 h-5" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      <Modal isOpen={isFormModalOpen} onClose={handleCloseFormModal} title={editingInstallment ? t('editInstallment') : t('createInstallment')}>
-        <InstallmentForm
-          initialData={editingInstallment}
-          onClose={handleCloseFormModal}
-          onSuccess={handleFormSuccess}
-        />
-      </Modal>
-      {/* Hidden Urdu table for PDF export */}
-      <div
-        id="urdu-overall-report-table"
-        style={{
-          visibility: 'hidden',
-          position: 'absolute',
-          left: '-9999px',
-          direction: 'rtl',
-          fontFamily: 'Jameel Noori Nastaleeq, serif',
-          fontSize: 18,
-          background: '#fff',
-          color: '#222',
-          padding: 16,
-          width: '100%',
-          top: 0,
-          zIndex: -1,
-        }}
-      >
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 18 }}>
-          <thead>
-            <tr style={{ background: '#06b6d4', color: '#fff', fontWeight: 'bold' }}>
-              <th>خریدار کا نام</th>
-              <th>شناختی کارڈ</th>
-              <th>فون</th>
-              <th>موبائل کا نام</th>
-              <th>کل رقم</th>
-              <th>پیشگی</th>
-              <th>جمع شدہ رقم</th>
-              <th>باقی رقم</th>
-              <th>مدت</th>
-              <th>باقی اقساط</th>
-              <th>اکاؤنٹ اسٹیٹس</th>
-            </tr>
-          </thead>
-          <tbody>
-            {installments.map(inst => {
-              const totalPaid = inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
-              const collectedAmount = (inst.advancePayment || 0) + totalPaid;
-              const remainingAmount = (inst.totalPayment || 0) - collectedAmount;
-              const remainingInstallments = (inst.duration || 0) - (inst.payments?.length || 0);
-              const statusUr = remainingAmount <= 0 ? 'بند' : 'کھلا';
-              const statusColor = remainingAmount <= 0 ? 'red' : 'green';
-              return (
-                <tr key={inst.id}>
-                  <td>{inst.buyerName}</td>
-                  <td>{inst.cnic}</td>
-                  <td>{inst.phone}</td>
-                  <td>{inst.mobileName}</td>
-                  <td>{`PKR ${(inst.totalPayment || 0).toLocaleString()}`}</td>
-                  <td>{`PKR ${(inst.advancePayment || 0).toLocaleString()}`}</td>
-                  <td>{`PKR ${collectedAmount.toLocaleString()}`}</td>
-                  <td>{`PKR ${remainingAmount.toLocaleString()}`}</td>
-                  <td>{inst.duration}</td>
-                  <td>{remainingInstallments}</td>
-                  <td style={{ color: statusColor, fontWeight: 'bold' }}>{statusUr}</td>
-                </tr>
               );
             })}
-          </tbody>
-        </table>
+          </div>
+        )}
+        <Modal isOpen={isFormModalOpen} onClose={handleCloseFormModal} title={editingInstallment ? t('editInstallment') : t('createInstallment')}>
+          <InstallmentForm
+            initialData={editingInstallment}
+            onClose={handleCloseFormModal}
+            onSuccess={handleFormSuccess}
+          />
+        </Modal>
+        {openReportModal && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+          }}>
+            <div style={{ background: 'white', padding: 32, borderRadius: 8, minWidth: 300 }}>
+              <h2 style={{marginBottom: 16}}>Download Report</h2>
+              <button style={{display: 'block', width: '100%', marginBottom: 8, padding: 8}} onClick={() => { handleDownloadDropdown('overall', openReportModal.installment); setOpenReportModal(null); }}>Overall Report</button>
+              {openReportModal.memberCommittees.map((committee) => (
+                <button key={committee.id} style={{display: 'block', width: '100%', marginBottom: 8, padding: 8}} onClick={() => { handleDownloadDropdown('committee', openReportModal.installment, committee); setOpenReportModal(null); }}>{committee.title} Report</button>
+              ))}
+              <button style={{marginTop: 16, padding: 8, background: '#eee', borderRadius: 4}} onClick={() => setOpenReportModal(null)}>Cancel</button>
+            </div>
+          </div>
+        )}
+        {/* Hidden Urdu table for PDF export */}
+        <div
+          id="urdu-overall-report-table"
+          style={{
+            visibility: 'hidden',
+            position: 'absolute',
+            left: '-9999px',
+            direction: 'rtl',
+            fontFamily: 'Jameel Noori Nastaleeq, serif',
+            fontSize: 18,
+            background: '#fff',
+            color: '#222',
+            padding: 16,
+            width: '100%',
+            top: 0,
+            zIndex: -1,
+          }}
+        >
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 18 }}>
+            <thead>
+              <tr style={{ background: '#06b6d4', color: '#fff', fontWeight: 'bold' }}>
+                <th>خریدار کا نام</th>
+                <th>شناختی کارڈ</th>
+                <th>فون</th>
+                <th>موبائل کا نام</th>
+                <th>کل رقم</th>
+                <th>پیشگی</th>
+                <th>جمع شدہ رقم</th>
+                <th>باقی رقم</th>
+                <th>مدت</th>
+                <th>باقی اقساط</th>
+                <th>اکاؤنٹ اسٹیٹس</th>
+              </tr>
+            </thead>
+            <tbody>
+              {installments.map(inst => {
+                const totalPaid = inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
+                const collectedAmount = (inst.advancePayment || 0) + totalPaid;
+                const remainingAmount = (inst.totalPayment || 0) - collectedAmount;
+                const remainingInstallments = (inst.duration || 0) - (inst.payments?.length || 0);
+                const statusUr = remainingAmount <= 0 ? 'بند' : 'کھلا';
+                const statusColor = remainingAmount <= 0 ? 'red' : 'green';
+                return (
+                  <tr key={inst.id}>
+                    <td>{inst.buyerName || ''}</td>
+                    <td>{inst.cnic || ''}</td>
+                    <td>{inst.phone || ''}</td>
+                    <td>{inst.mobileName || ''}</td>
+                    <td>{`PKR ${(inst.totalPayment || 0).toLocaleString()}`}</td>
+                    <td>{`PKR ${(inst.advancePayment || 0).toLocaleString()}`}</td>
+                    <td>{`PKR ${collectedAmount.toLocaleString()}`}</td>
+                    <td>{`PKR ${remainingAmount.toLocaleString()}`}</td>
+                    <td>{inst.duration}</td>
+                    <td>{remainingInstallments}</td>
+                    <td style={{ color: statusColor, fontWeight: 'bold' }}>{statusUr}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

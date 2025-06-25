@@ -1503,8 +1503,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Fetch installments on mount (now with real-time updates)
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'installments'), (snapshot) => {
-      const data: Installment[] = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as Omit<Installment, 'id'>) }));
-      setInstallmentsState(data);
+        const data: Installment[] = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as Omit<Installment, 'id'>) }));
+        setInstallmentsState(data);
     }, (error) => {
       console.error('Error fetching installments from Firestore', error);
     });
