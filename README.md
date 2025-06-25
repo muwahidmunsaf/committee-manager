@@ -1,4 +1,4 @@
-# Asad Mobile's Shop Committee Management System
+# Faisal Mobile's Committee Management System
 
 A comprehensive bilingual (English/Urdu) React web application for managing rotating savings committees (committees). Features include member management, payment tracking, automated payouts, PDF receipt generation, financial dashboards with charts, and secure PIN-based authentication.
 
@@ -39,7 +39,7 @@ A comprehensive bilingual (English/Urdu) React web application for managing rota
 1. **Clone the repository**
    ```bash
    git clone <your-repository-url>
-   cd asad-mobiles-shop
+   cd faisal-mobiles
    ```
 
 2. **Install dependencies**
@@ -96,7 +96,7 @@ A comprehensive bilingual (English/Urdu) React web application for managing rota
 
 ## 📄 License
 
-This project is private and proprietary to Asad Mobile's Shop.
+This project is private and proprietary to Faisal Mobile's Shop.
 
 ## 🤝 Contributing
 
@@ -108,4 +108,4 @@ For technical support or questions about the committee management system, please
 
 ---
 
-**Built with ❤️ for Asad Mobile's Shop**
+**Built with ❤️ for Faisal Mobile's Shop**

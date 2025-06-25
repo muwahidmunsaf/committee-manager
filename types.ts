@@ -143,7 +143,9 @@ export enum NotificationType {
   PAYMENT_OVERDUE = 'payment_overdue',
   PAYOUT_UPCOMING = 'payout_upcoming',
   COMMITTEE_UPDATE = 'committee_update',
-  SYSTEM = 'system'
+  SYSTEM = 'system',
+  INSTALLMENT_UPDATE = 'installment_update',
+  INSTALLMENT_CLOSED = 'installment_closed',
 }
 
 export interface Notification {
@@ -156,4 +158,31 @@ export interface Notification {
   committeeId?: string;
   memberId?: string;
   actionUrl?: string; // URL to navigate to when notification is clicked
+}
+
+export interface InstallmentPayment {
+  id: string;
+  installmentId: string;
+  amountPaid: number;
+  paymentDate: string; // ISO Date string
+  status: 'Paid' | 'Unpaid';
+  receiptGenerated?: boolean;
+}
+
+export interface Installment {
+  id: string;
+  buyerName: string;
+  phone: string;
+  cnic: string;
+  address: string;
+  mobileName: string;
+  advancePayment: number;
+  totalPayment: number;
+  monthlyInstallment: number;
+  startDate: string; // ISO Date string
+  duration: number; // in months
+  profilePictureUrl?: string;
+  cnicImageUrl?: string; // Optional CNIC image for buyer
+  payments: InstallmentPayment[];
+  status: 'Open' | 'Closed';
 }

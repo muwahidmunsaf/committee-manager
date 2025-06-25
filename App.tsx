@@ -10,6 +10,8 @@ import DevToolsProtection from './components/DevToolsProtection'; // Import DevT
 import { Button, Input, LoadingSpinner, LockClosedIcon } from './components/UIComponents';
 import { Language, AuthMethod } from './types'; 
 import { sendLoginNotification } from './services/emailService';
+import InstallmentManagement from './components/InstallmentManagement';
+import InstallmentDetailScreen from './components/InstallmentDetailScreen';
 
 const AppLockScreen: React.FC = () => {
   const { t, unlockApp, language, userProfile, updateAppPin, forceUpdateAppPin, authMethod, pinLength } = useAppContext();
@@ -277,7 +279,7 @@ const AppLockScreen: React.FC = () => {
   return (
     <div className="fixed inset-0 bg-primary bg-opacity-95 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
       <div className="bg-white dark:bg-neutral-darker p-8 rounded-xl shadow-2xl w-full max-w-sm text-center">
-        <img src="/logo.png" alt="Asad Mobile's Shop Logo" className="h-24 w-auto mx-auto mb-2" />
+        <img src="/logo.png" alt="Faisal Mobile's Logo" className="h-24 w-auto mx-auto mb-2" />
         <LockClosedIcon className="w-16 h-16 text-primary mx-auto mb-2" />
         <h2 className={`text-2xl font-bold text-neutral-darker dark:text-neutral-light mb-2 ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>
           {showForgot 
@@ -440,7 +442,7 @@ const App: React.FC = () => {
               <div className="relative mb-6">
                 <img 
                   src="/logo.png" 
-                  alt="Asad Mobile's Shop Logo" 
+                  alt="Faisal Mobile's Logo" 
                   className="h-32 w-auto mx-auto animate-pulse" 
                 />
                 {/* Loading ring around logo */}
@@ -453,7 +455,7 @@ const App: React.FC = () => {
               
               {/* App Name */}
               <h1 className={`text-2xl font-bold text-white mb-2 ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>
-                Asad Mobile's Shop
+                Faisal Mobile's
               </h1>
               
               {/* Loading text with dots animation */}
@@ -495,6 +497,8 @@ const App: React.FC = () => {
             <Route path="/" element={isLocked ? <Navigate to="/" /> : <DashboardScreen />} />
             <Route path="/committees" element={isLocked ? <Navigate to="/" /> : <CommitteeManagement />} />
             <Route path="/committees/:committeeId" element={isLocked ? <Navigate to="/" /> : <CommitteeDetailScreen />} />
+            <Route path="/installments" element={isLocked ? <Navigate to="/" /> : <InstallmentManagement />} />
+            <Route path="/installments/:installmentId" element={isLocked ? <Navigate to="/" /> : <InstallmentDetailScreen />} />
             <Route path="/profile" element={isLocked ? <Navigate to="/" /> : <UserProfileScreen />} />
             <Route path="/settings" element={isLocked ? <Navigate to="/" /> : <SettingsScreen />} /> {/* Add Settings route */}
             <Route path="*" element={<Navigate to="/" />} /> 
@@ -502,7 +506,7 @@ const App: React.FC = () => {
         </main>
         {!isLocked && (
           <footer className={`py-4 text-center text-sm text-neutral-DEFAULT dark:text-gray-400 ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>
-            © {new Date().getFullYear()} Asad Mobile's Shop. {language === Language.UR ? "جملہ حقوق محفوظ ہیں." : "All rights reserved."}
+            © {new Date().getFullYear()} Faisal Mobile's. {language === Language.UR ? "جملہ حقوق محفوظ ہیں." : "All rights reserved."}
           </footer>
         )}
       </div>

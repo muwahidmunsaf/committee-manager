@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { Language, Theme, Translations, Committee, Member, CommitteePayment, UserProfile, PayoutMethod, CommitteeType, AuthMethod, PinLength, Notification, NotificationType } from '../types';
+import { Language, Theme, Translations, Committee, Member, CommitteePayment, UserProfile, PayoutMethod, CommitteeType, AuthMethod, PinLength, Notification, NotificationType, Installment, InstallmentPayment } from '../types';
 import { APP_DATA_STORAGE_KEY, DEFAULT_PROFILE_PIC, DEFAULT_APP_PIN } from '../constants'; // Added DEFAULT_APP_PIN
 import { generateId, initializePayoutTurns } from '../utils/appUtils';
 import { db } from '../services/firebaseService';
@@ -11,12 +11,13 @@ import {
   deleteDoc,
   doc,
   setDoc,
-  getDoc
+  getDoc,
+  onSnapshot // <-- add this import
 } from 'firebase/firestore';
 
 const initialTranslations: Translations = {
   [Language.EN]: {
-    appName: "Asad Mobile's Shop",
+    appName: "Faisal Mobile's",
     dashboard: "Dashboard",
     committees: "Committees",
     members: "Members",
@@ -228,10 +229,57 @@ const initialTranslations: Translations = {
     justNow: "Just now",
     minutesAgo: "{minutes}m ago",
     hoursAgo: "{hours}h ago",
-    daysAgo: "{days}d ago"
+    daysAgo: "{days}d ago",
+    attentionNeeded: "Attention Needed",
+    actionRequired: "Action required for committee and installment management",
+    overduePaymentsAlert: "{count} member(s) have overdue committee payments for the current period",
+    overduePaymentsDesc: "Review payment status and follow up with members",
+    overdueInstallmentsAlert: "{count} installment(s) have missed payments",
+    overdueInstallmentsDesc: "Review installment payment status and follow up with buyers",
+    upcomingPayoutsAlert: "{count} payout(s) due in the next 7 days",
+    upcomingPayoutsDesc: "Prepare for upcoming committee payouts",
+    dismiss: "Dismiss",
+    attentionDetails: "Attention Details",
+    overduePaymentsTitle: "Overdue Payments",
+    overdue: "Overdue",
+    prepareForPayouts: "Prepare for upcoming committee payouts",
+    installments: "Installments",
+    createInstallment: "Create Installment",
+    editInstallment: "Edit Installment",
+    buyerName: "Buyer Name",
+    mobileName: "Mobile Name/Model",
+    advancePayment: "Advance Payment",
+    totalPayment: "Total Payment",
+    monthlyInstallment: "Monthly Installment Amount",
+    remainingInstallments: "Remaining Installments",
+    searchInstallments: "Search Buyer, Phone, CNIC, or Mobile Name",
+    noInstallmentsFound: "No installments found.",
+    uploadPhoto: "Upload Photo",
+    takePhoto: "Take Photo",
+    changeCnicImage: "Change CNIC Image",
+    uploadCnicImage: "Upload CNIC Image",
+    takePicture: "Take Picture",
+    captureCnic: "Capture CNIC (Place card inside box)",
+    captureProfilePicture: "Capture Profile Picture",
+    capture: "Capture",
+    buyerNameRequired: "Buyer name is required.",
+    phoneRequired: "Phone is required.",
+    cnicRequired: "CNIC is required.",
+    mobileNameRequired: "Mobile name is required.",
+    totalPaymentRequired: "Total payment is required.",
+    monthlyInstallmentRequired: "Monthly installment is required.",
+    startDateRequired: "Start date is required.",
+    durationRequired: "Duration is required.",
+    amountExceedsBalance: "Amount exceeds remaining balance.",
+    enterValidAmount: "Enter a valid amount.",
+    enterValidDate: "Enter a valid date.",
+    confirmDeleteInstallment: "Are you sure you want to delete this installment?",
+    mobile: "Mobile",
+    total: "Total",
+    details: "Details"
   },
   [Language.UR]: {
-    appName: "اسد موبائل شاپ",
+    appName: "فیصل موبائل شاپ",
     dashboard: "ڈیش بورڈ",
     committees: "کمیٹیاں",
     members: "اراکین",
@@ -443,7 +491,54 @@ const initialTranslations: Translations = {
     justNow: "Just now",
     minutesAgo: "{minutes}m ago",
     hoursAgo: "{hours}h ago",
-    daysAgo: "{days}d ago"
+    daysAgo: "{days}d ago",
+    attentionNeeded: "توجہ درکار",
+    actionRequired: "کمیٹی اور قسط کے انتظام کے لیے کارروائی درکار",
+    overduePaymentsAlert: "{count} رکن(وں) کی موجودہ مدت کے لیے کمیٹی کی ادائیگیاں باقی ہیں",
+    overduePaymentsDesc: "ادائیگی کی حیثیت کا جائزہ لیں اور اراکین سے رابطہ کریں",
+    overdueInstallmentsAlert: "{count} قسط(وں) کی ادائیگیاں باقی ہیں",
+    overdueInstallmentsDesc: "قسط کی ادائیگی کی حیثیت کا جائزہ لیں اور خریداروں سے رابطہ کریں",
+    upcomingPayoutsAlert: "{count} ادائیگی(اں) اگلے 7 دنوں میں واجب ہیں",
+    upcomingPayoutsDesc: "آنے والی کمیٹی کی ادائیگیوں کے لیے تیاری کریں",
+    dismiss: "مسترد کریں",
+    attentionDetails: "توجہ کی تفصیلات",
+    overduePaymentsTitle: "باقی ادائیگیاں",
+    overdue: "باقی",
+    prepareForPayouts: "آنے والی کمیٹی کی ادائیگیوں کے لیے تیاری کریں",
+    installments: "اقساط",
+    createInstallment: "قسط بنائیں",
+    editInstallment: "قسط میں ترمیم کریں",
+    buyerName: "خریدار کا نام",
+    mobileName: "موبائل کا نام/ماڈل",
+    advancePayment: "پیشگی ادائیگی",
+    totalPayment: "کل ادائیگی",
+    monthlyInstallment: "ماہانہ قسط کی رقم",
+    remainingInstallments: "باقی اقساط",
+    searchInstallments: "خریدار، فون، شناختی کارڈ، یا موبائل کا نام تلاش کریں",
+    noInstallmentsFound: "کوئی اقساط نہیں ملیں۔",
+    uploadPhoto: "تصویر اپلوڈ کریں",
+    takePhoto: "تصویر کھینچیں",
+    changeCnicImage: "شناختی کارڈ کی تصویر تبدیل کریں",
+    uploadCnicImage: "شناختی کارڈ کی تصویر اپلوڈ کریں",
+    takePicture: "تصویر کھینچیں",
+    captureCnic: "شناختی کارڈ کھینچیں (کارڈ کو باکس کے اندر رکھیں)",
+    captureProfilePicture: "پروفائل تصویر کھینچیں",
+    capture: "کھینچیں",
+    buyerNameRequired: "خریدار کا نام درکار ہے۔",
+    phoneRequired: "فون نمبر درکار ہے۔",
+    cnicRequired: "شناختی کارڈ درکار ہے۔",
+    mobileNameRequired: "موبائل کا نام درکار ہے۔",
+    totalPaymentRequired: "کل ادائیگی درکار ہے۔",
+    monthlyInstallmentRequired: "ماہانہ قسط کی رقم درکار ہے۔",
+    startDateRequired: "آغاز کی تاریخ درکار ہے۔",
+    durationRequired: "مدت درکار ہے۔",
+    amountExceedsBalance: "رقم باقی بیلنس سے زیادہ ہے۔",
+    enterValidAmount: "درست رقم درج کریں۔",
+    enterValidDate: "درست تاریخ درج کریں۔",
+    confirmDeleteInstallment: "کیا آپ واقعی اس قسط کو حذف کرنا چاہتے ہیں؟",
+    mobile: "موبائل",
+    total: "کل",
+    details: "تفصیلات"
   },
 };
 
@@ -498,6 +593,10 @@ interface AppContextType {
   setMembers: (members: Member[]) => void;
   showDashboardAlert: boolean;
   setShowDashboardAlert: (show: boolean) => void;
+  installments: Installment[];
+  addInstallment: (installmentData: Omit<Installment, 'id' | 'payments' | 'status'>) => Promise<Installment>;
+  updateInstallment: (updatedInstallment: Installment) => void;
+  deleteInstallment: (installmentId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -521,6 +620,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
   const [committeesState, setCommitteesState] = useState<Committee[]>([]);
   const [membersState, setMembersState] = useState<Member[]>([]);
+  const [installmentsState, setInstallmentsState] = useState<Installment[]>([]);
 
   // Notification state
   const [notificationsState, setNotificationsState] = useState<Notification[]>([]);
@@ -1329,6 +1429,88 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
   }, [autoLockTimer]);
 
+  // Firestore CRUD for Installments
+  const addInstallment = async (installmentData: Omit<Installment, 'id' | 'payments' | 'status'>): Promise<Installment> => {
+    const newInstallment: Installment = {
+      id: generateId(),
+      ...installmentData,
+      payments: [],
+      status: 'Open',
+    };
+    try {
+      await setDoc(doc(db, 'installments', newInstallment.id), newInstallment as any);
+      // Removed setInstallmentsState here to avoid duplicate creation
+    } catch (error) {
+      console.error('Error adding installment to Firestore');
+    }
+    return newInstallment;
+  };
+
+  const updateInstallment = async (updatedInstallment: Installment) => {
+    // Recalculate status before saving
+    const prevInstallment = installmentsState.find(i => i.id === updatedInstallment.id);
+    const prevPaymentsCount = prevInstallment?.payments.length || 0;
+    const newPaymentsCount = updatedInstallment.payments.length;
+    const totalPaid = updatedInstallment.payments.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
+    const collectedAmount = (updatedInstallment.advancePayment || 0) + totalPaid;
+    const remainingAmount = (updatedInstallment.totalPayment || 0) - collectedAmount;
+    const prevStatus = prevInstallment?.status;
+    updatedInstallment.status = remainingAmount <= 0 ? 'Closed' : 'Open';
+    try {
+      await updateDoc(doc(db, 'installments', updatedInstallment.id), updatedInstallment as any);
+      setInstallmentsState((prev: Installment[]) => prev.map((i: Installment) => i.id === updatedInstallment.id ? updatedInstallment : i));
+      // Notify if a new payment was made
+      if (newPaymentsCount > prevPaymentsCount) {
+        const lastPayment = updatedInstallment.payments[updatedInstallment.payments.length - 1];
+        const notification = {
+          id: generateId(),
+          type: NotificationType.INSTALLMENT_UPDATE,
+          title: 'Installment Payment Received',
+          message: `Payment of PKR ${lastPayment.amountPaid.toLocaleString()} received for ${updatedInstallment.buyerName} (${updatedInstallment.mobileName}).`,
+          timestamp: new Date().toISOString(),
+          isRead: false,
+          actionUrl: `/installments/${updatedInstallment.id}`,
+        };
+        setNotificationsState(prev => [...prev, notification]);
+      }
+      // Notify if installment just closed
+      if (prevStatus === 'Open' && updatedInstallment.status === 'Closed') {
+        const notification = {
+          id: generateId(),
+          type: NotificationType.INSTALLMENT_CLOSED,
+          title: 'Installment Closed',
+          message: `Installment for ${updatedInstallment.buyerName} (${updatedInstallment.mobileName}) is now fully paid and closed.`,
+          timestamp: new Date().toISOString(),
+          isRead: false,
+          actionUrl: `/installments/${updatedInstallment.id}`,
+        };
+        setNotificationsState(prev => [...prev, notification]);
+      }
+    } catch (error) {
+      console.error('Error updating installment in Firestore');
+    }
+  };
+
+  const deleteInstallment = async (installmentId: string) => {
+    try {
+      await deleteDoc(doc(db, 'installments', installmentId));
+      setInstallmentsState((prev: Installment[]) => prev.filter(i => i.id !== installmentId));
+    } catch (error) {
+      console.error('Error deleting installment from Firestore');
+    }
+  };
+
+  // Fetch installments on mount (now with real-time updates)
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'installments'), (snapshot) => {
+      const data: Installment[] = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as Omit<Installment, 'id'>) }));
+      setInstallmentsState(data);
+    }, (error) => {
+      console.error('Error fetching installments from Firestore', error);
+    });
+    return () => unsubscribe();
+  }, []);
+
   return (
     <AppContext.Provider value={{
       language: languageState,
@@ -1369,9 +1551,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       isAuthSettingsLoaded,
       resetAutoLockTimer,
       getAutoLockTimeRemaining,
-      showDashboardAlert: showDashboardAlertState,
-      setShowDashboardAlert: setShowDashboardAlertState,
-      // Notification methods
       notifications: notificationsState,
       addNotification: (notification) => {
         setNotificationsState((prev: Notification[]) => [...prev, { ...notification, id: generateId(), timestamp: new Date().toISOString(), isRead: false }]);
@@ -1389,15 +1568,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       getUnreadNotificationCount: () => notificationsState.filter(n => !n.isRead).length,
       setCommittees: setCommitteesState,
       setMembers: setMembersState,
+      showDashboardAlert: showDashboardAlertState,
+      setShowDashboardAlert: setShowDashboardAlertState,
+      installments: installmentsState,
+      addInstallment,
+      updateInstallment,
+      deleteInstallment,
     }}>
       {children}
     </AppContext.Provider>
   );
 };
 
-export const useAppContext = (): AppContextType => {
+export const useAppContext = () => {
   const context = useContext(AppContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAppContext must be used within an AppProvider');
   }
   return context;

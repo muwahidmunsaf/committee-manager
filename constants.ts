@@ -9,7 +9,7 @@ export const DEFAULT_COMMITTEE_PIC = 'https://picsum.photos/seed/defaultcommitte
 export const DEFAULT_APP_PIN = '1234'; // Default PIN for the app
 
 export const APP_VERSION = '1.0.0';
-export const APP_DATA_STORAGE_KEY = 'AsadMobilesShopData_v1';
+export const APP_DATA_STORAGE_KEY = 'FaisalMobilesData_v1';
 
 export const MAX_DURATION = 60; // Max duration for committees (e.g., 60 months)
 export const MAX_MEMBERS_PER_COMMITTEE = 100;

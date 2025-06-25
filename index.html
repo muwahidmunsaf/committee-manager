@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Asad Mobile's Shop</title>
+  <title>Faisal Mobile's</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -641,6 +641,69 @@
       }
        .receipt-render-area[dir="ur"] *, .report-render-area[dir="ur"] * {
         font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
+      }
+    }
+
+    /* Urdu font-face (if not already present) */
+    @font-face {
+      font-family: 'Jameel Noori Nastaleeq';
+      src: url('./assets/Jameel Noori Nastaleeq Kasheeda.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    /* Urdu-specific styles for PDF/print */
+    .receipt-render-area[dir="rtl"], .report-render-area[dir="rtl"] {
+      font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
+      direction: rtl;
+      text-align: right;
+    }
+    .receipt-render-area[dir="rtl"] *, .report-render-area[dir="rtl"] * {
+      font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
+    }
+    /* Print styles for PDF generation */
+    @media print {
+      .receipt-render-area, .report-render-area {
+        background: #fff !important;
+        color: #222 !important;
+        box-shadow: none !important;
+        border: 1px solid #dee2e6 !important;
+        padding: 25px !important;
+        margin: 0 auto !important;
+        width: 100% !important;
+        max-width: 800px !important;
+      }
+      .receipt-render-area[dir="rtl"], .report-render-area[dir="rtl"] {
+        font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
+        direction: rtl;
+        text-align: right;
+      }
+      .receipt-render-area[dir="rtl"] *, .report-render-area[dir="rtl"] * {
+        font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
+      }
+      .receipt-render-area h2, .report-render-area h2 {
+        color: #0e7490 !important;
+        border-bottom: 2px solid #06b6d4 !important;
+        padding-bottom: 12px !important;
+        margin-bottom: 25px !important;
+        font-size: 1.6em !important;
+        font-weight: bold !important;
+        text-align: center !important;
+      }
+      .receipt-render-area .auto-generated-note, .report-render-area .auto-generated-note {
+        color: #6c757d !important;
+        font-size: 0.85em !important;
+        text-align: center !important;
+        margin-top: 20px !important;
+      }
+      .receipt-render-area table, .report-render-area table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin-bottom: 16px !important;
+      }
+      .receipt-render-area th, .receipt-render-area td,
+      .report-render-area th, .report-render-area td {
+        border: 1px solid #ccc !important;
+        padding: 4px !important;
       }
     }
   </style>

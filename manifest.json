@@ -1,7 +1,7 @@
 {
-  "name": "Asad Mobile's Shop",
-  "short_name": "Asad Mobile's Shop",
-  "description": "Committee management app for Asad Mobile's Shop.",
+  "name": "Faisal Mobile's",
+  "short_name": "Faisal Mobile's",
+  "description": "Committee management app for Faisal Mobile's.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

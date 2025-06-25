@@ -2,12 +2,13 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
 import { Committee, Member, CommitteeType, PayoutMethod, CommitteePayment, CommitteeMemberTurn, Language } from '../types'; 
-import { Button, Input, Select, Modal, LoadingSpinner, PlusCircleIcon, TrashIcon, PencilSquareIcon, Textarea, UserGroupIcon, DocumentTextIcon, ArrowDownTrayIcon, UserCircleIcon as DefaultUserIcon, ArrowLeftIcon, ArrowRightIcon, ArrowDownTrayIcon as DownloadIcon, XMarkIcon, HomeIcon, CreditCardIcon, ClockIcon, StarIcon, HeartIcon, TrophyIcon, GiftIcon, FireIcon, RocketLaunchIcon, AcademicCapIcon, BuildingOfficeIcon, HandRaisedIcon, LightBulbIcon, PuzzlePieceIcon, SparklesIcon2, ChartBarIcon, FolderIcon, BellIcon, ShieldCheckIcon, GlobeAltIcon, PaintBrushIcon } from './UIComponents';
+import { Button, Input, Select, Modal, LoadingSpinner, PlusCircleIcon, TrashIcon, PencilSquareIcon, Textarea, UserGroupIcon, DocumentTextIcon, ArrowDownTrayIcon, UserCircleIcon as DefaultUserIcon, ArrowLeftIcon, ArrowRightIcon, ArrowDownTrayIcon as DownloadIcon, XMarkIcon, HomeIcon, CreditCardIcon, ClockIcon, StarIcon, HeartIcon, TrophyIcon, GiftIcon, FireIcon, RocketLaunchIcon, AcademicCapIcon, BuildingOfficeIcon, HandRaisedIcon, LightBulbIcon, PuzzlePieceIcon, SparklesIcon2, ChartBarIcon, FolderIcon, BellIcon, ShieldCheckIcon, GlobeAltIcon, PaintBrushIcon, CalendarDaysIcon } from './UIComponents';
 import { isValidPakistaniCnic, isValidPakistaniPhone, formatDate, getCommitteeMonthName, calculateTotalPool, getMemberName, initializePayoutTurns } from '../utils/appUtils';
 import { DEFAULT_PROFILE_PIC } from '../constants';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import autoTable from 'jspdf-autotable';
+import { Menu } from '@headlessui/react';
 // Import and register the JameelNooriNastaleeq font for jsPDF
 let registerJameelNooriNastaleeq: any = (null as any);
 try {
@@ -453,6 +454,7 @@ export const CommitteeDetailScreen: React.FC = () => {
     // Additional state for existing functionality
     const [currentPaymentContext, setCurrentPaymentContext] = useState<{ memberId: string; monthIndex: number } | null>(null);
     const [selectedMonthForReceipts, setSelectedMonthForReceipts] = useState(0);
+    const [historyMenuOpenFor, setHistoryMenuOpenFor] = useState<string | null>(null);
 
     const availableMembersForCommittee = allMembers.filter(
       m => (m.name.toLowerCase().includes(searchTerm.toLowerCase()) || m.cnic.includes(searchTerm))
@@ -1062,7 +1064,7 @@ export const CommitteeDetailScreen: React.FC = () => {
         pdf.setFontSize(16);
         pdf.setTextColor('#0e7490');
         pdf.setFont(undefined, 'bold');
-        pdf.text("Asad Mobile's Shop", pdfWidth/2, 110, { align: 'center' });
+        pdf.text("Faisal Mobile's", pdfWidth/2, 110, { align: 'center' });
       }
 
       // Create hidden div for table rendering
@@ -2158,6 +2160,27 @@ export const CommitteeDetailScreen: React.FC = () => {
       pdf.save(`member_history_${member.name.replace(/\s/g, '_')}.pdf`);
     };
 
+    // New: Download single committee history for a member
+    const handleDownloadSingleCommitteeHistory = async (memberId: string, committeeId: string) => {
+      const member = getMemberById(memberId);
+      if (!member) return;
+      setIsLoading(true);
+      const committee = committees.find(c => c.id === committeeId);
+      if (!committee) return setIsLoading(false);
+      const logoBase64 = await getLogoBase64();
+      if (language === Language.UR) {
+        await generateImageBasedMemberHistoryPdf(member, [committee], userProfile, logoBase64, t('appName'), t, language);
+      } else {
+        await generateTextMemberHistoryPdf(member, [committee], userProfile, logoBase64, t('appName'), t, language);
+      }
+      setIsLoading(false);
+    };
+
+    // Add this helper function inside the component, before the return statement:
+    function getMemberCommittees(memberId) {
+      return committees.filter(c => c.memberIds.includes(memberId));
+    }
+
     if (appIsLoading && !committee) {
         return <div className="flex justify-center items-center h-screen"><LoadingSpinner size="lg" /></div>;
     }
@@ -2171,20 +2194,99 @@ export const CommitteeDetailScreen: React.FC = () => {
         <div className={`p-4 md:p-6 space-y-6 ${language === Language.UR ? 'font-notoNastaliqUrdu text-right' : ''}`}>
             <div className="bg-white dark:bg-neutral-darker p-6 rounded-lg shadow-md">
                 <div className={`flex flex-col md:flex-row justify-between items-start md:items-center ${language === Language.UR ? 'md:flex-row-reverse' : ''}`}>
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-bold text-primary dark:text-primary-light mb-1">{committee.title}</h1>
-                        <p className="text-neutral-DEFAULT dark:text-gray-400 text-sm">
-                          <span className="font-semibold">Type:</span> {t(committee.type.toLowerCase())} |
-                          <span className="font-semibold ml-1">{t('startDate')}:</span> {formatDate(committee?.startDate ?? '', language)} |
-                          <span className="font-semibold ml-1">{t('duration')}:</span> {committee.duration} {t(committee.type === CommitteeType.MONTHLY ? 'months' : committee.type === CommitteeType.WEEKLY ? 'weeks' : 'days')}
-                        </p>
-                        <p className="text-neutral-DEFAULT dark:text-gray-400 text-sm">
-                          <span className="font-semibold">{t('amountPerMember')}:</span> PKR {committee.amountPerMember.toLocaleString()} |
-                          <span className="font-semibold ml-1">{t('totalPool')}:</span> PKR {(committee.amountPerMember * committee.memberIds.length * committee.duration).toLocaleString()}
-                        </p>
-                        <p className="text-neutral-DEFAULT dark:text-gray-400 text-sm">
-                          <span className="font-semibold">{t('payoutMethod')}:</span> {t(committee.payoutMethod.toLowerCase())}
-                        </p>
+                    <div className="w-full">
+                        <h1 className="text-2xl md:text-3xl font-bold text-primary dark:text-primary-light mb-3">{committee.title}</h1>
+                        {/* Stat Card Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                          {/* Type */}
+                          <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-4 flex items-center gap-3 shadow-sm">
+                            <BuildingOfficeIcon className="h-7 w-7 text-blue-500" />
+                            <div>
+                              <div className="text-xs text-blue-700 dark:text-blue-200 font-semibold">{t('committeeType')}</div>
+                              <div className="text-base font-bold text-neutral-darker dark:text-neutral-light">{t(committee.type.toLowerCase())}</div>
+                            </div>
+                          </div>
+                          {/* Start Date */}
+                          <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-4 flex items-center gap-3 shadow-sm">
+                            <ClockIcon className="h-7 w-7 text-green-500" />
+                            <div>
+                              <div className="text-xs text-green-700 dark:text-green-200 font-semibold">{t('startDate')}</div>
+                              <div className="text-base font-bold text-neutral-darker dark:text-neutral-light">{formatDate(committee.startDate, language)}</div>
+                            </div>
+                          </div>
+                          {/* End Date */}
+                          {(() => {
+                            let endDate = new Date(committee.startDate);
+                            if (committee.type === CommitteeType.MONTHLY) {
+                              endDate.setMonth(endDate.getMonth() + committee.duration);
+                            } else if (committee.type === CommitteeType.WEEKLY) {
+                              endDate.setDate(endDate.getDate() + committee.duration * 7);
+                            } else if (committee.type === CommitteeType.DAILY) {
+                              endDate.setDate(endDate.getDate() + committee.duration);
+                            } else {
+                              endDate.setMonth(endDate.getMonth() + committee.duration);
+                            }
+                            return (
+                              <div className="bg-indigo-50 dark:bg-indigo-900/30 rounded-lg p-4 flex items-center gap-3 shadow-sm">
+                                <CalendarDaysIcon className="h-7 w-7 text-indigo-500" />
+                                <div>
+                                  <div className="text-xs text-indigo-700 dark:text-indigo-200 font-semibold">End Date</div>
+                                  <div className="text-base font-bold text-neutral-darker dark:text-neutral-light">{formatDate(endDate.toISOString().split('T')[0], language)}</div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                          {/* Duration */}
+                          <div className="bg-purple-50 dark:bg-purple-900/30 rounded-lg p-4 flex items-center gap-3 shadow-sm">
+                            <UserGroupIcon className="h-7 w-7 text-purple-500" />
+                            <div>
+                              <div className="text-xs text-purple-700 dark:text-purple-200 font-semibold">{t('totalMembers')}</div>
+                              <div className="text-base font-bold text-neutral-darker dark:text-neutral-light">{committee.memberIds.length}</div>
+                            </div>
+                          </div>
+                          <div className="bg-pink-50 dark:bg-pink-900/30 rounded-lg p-4 flex items-center gap-3 shadow-sm">
+                            <CreditCardIcon className="h-7 w-7 text-pink-500" />
+                            <div>
+                              <div className="text-xs text-pink-700 dark:text-pink-200 font-semibold">{t('amountPerMember')}</div>
+                              <div className="text-base font-bold text-neutral-darker dark:text-neutral-light">PKR {committee.amountPerMember.toLocaleString()}</div>
+                            </div>
+                          </div>
+                          <div className="bg-cyan-50 dark:bg-cyan-900/30 rounded-lg p-4 flex items-center gap-3 shadow-sm">
+                            <ChartBarIcon className="h-7 w-7 text-cyan-500" />
+                            <div>
+                              <div className="text-xs text-cyan-700 dark:text-cyan-200 font-semibold">{t('totalPool')}</div>
+                              <div className="text-base font-bold text-neutral-darker dark:text-neutral-light">PKR {(committee.amountPerMember * committee.memberIds.length * committee.duration).toLocaleString()}</div>
+                            </div>
+                          </div>
+                          <div className="bg-orange-50 dark:bg-orange-900/30 rounded-lg p-4 flex items-center gap-3 shadow-sm">
+                            <GiftIcon className="h-7 w-7 text-orange-500" />
+                            <div>
+                              <div className="text-xs text-orange-700 dark:text-orange-200 font-semibold">{t('payoutAmount')}</div>
+                              <div className="text-base font-bold text-neutral-darker dark:text-neutral-light">PKR {(committee.amountPerMember * committee.memberIds.length).toLocaleString()}</div>
+                            </div>
+                          </div>
+                          <div className="bg-green-100 dark:bg-green-900/40 rounded-lg p-4 flex items-center gap-3 shadow-sm">
+                            <SparklesIcon2 className="h-7 w-7 text-green-600" />
+                            <div>
+                              <div className="text-xs text-green-800 dark:text-green-200 font-semibold">{t('totalCollected')}</div>
+                              <div className="text-base font-bold text-neutral-darker dark:text-neutral-light">PKR {committee.payments.filter(p => p.status === 'Cleared').reduce((sum, p) => sum + p.amountPaid, 0).toLocaleString()}</div>
+                            </div>
+                          </div>
+                          <div className="bg-red-50 dark:bg-red-900/30 rounded-lg p-4 flex items-center gap-3 shadow-sm">
+                            <FireIcon className="h-7 w-7 text-red-500" />
+                            <div>
+                              <div className="text-xs text-red-700 dark:text-red-200 font-semibold">{t('remainingAmount')}</div>
+                              <div className="text-base font-bold text-neutral-darker dark:text-neutral-light">PKR {(committee.amountPerMember * committee.memberIds.length * committee.duration - committee.payments.filter(p => p.status === 'Cleared').reduce((sum, p) => sum + p.amountPaid, 0)).toLocaleString()}</div>
+                            </div>
+                          </div>
+                          <div className="bg-gray-50 dark:bg-gray-800/30 rounded-lg p-4 flex items-center gap-3 shadow-sm">
+                            <HandRaisedIcon className="h-7 w-7 text-gray-500" />
+                            <div>
+                              <div className="text-xs text-gray-700 dark:text-gray-200 font-semibold">{t('payoutMethod')}</div>
+                              <div className="text-base font-bold text-neutral-darker dark:text-neutral-light">{t(committee.payoutMethod.toLowerCase())}</div>
+                            </div>
+                          </div>
+                        </div>
                     </div>
                     <Link to="/committees" className={`mt-4 md:mt-0 text-primary dark:text-primary-light hover:underline flex items-center ${language === Language.UR ? 'text-right flex-row-reverse' : 'text-left'}`}>
                         {language === Language.UR ? <ArrowRightIcon className="h-4 w-4 ml-1" /> : <ArrowLeftIcon className="h-4 w-4 mr-1" />} 
@@ -2260,7 +2362,37 @@ export const CommitteeDetailScreen: React.FC = () => {
                                         <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium text-center`}>
                                             <div className={`flex items-center justify-center space-x-1 ${language === Language.UR ? 'space-x-reverse' : ''}`}>
                                                 <Button variant="ghost" size="sm" onClick={() => handleOpenMemberForm(member.member)} aria-label={t('edit')} title={t('edit')}><PencilSquareIcon className="w-4 h-4" /></Button>
-                                                <Button variant="ghost" size="sm" onClick={() => handleDownloadMemberHistory(member.member.id)} aria-label={t('downloadMemberHistory')} title={t('downloadMemberHistory')}><ArrowDownTrayIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" /></Button>
+                                                <Menu as="div" className="relative inline-block text-left">
+                                                  <Menu.Button as={Button} variant="ghost" size="sm" aria-label={t('downloadMemberHistory')} title={t('downloadMemberHistory')}>
+                                                    <ArrowDownTrayIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                                  </Menu.Button>
+                                                  <Menu.Items className="absolute z-10 mt-2 w-56 origin-top-right rounded-md bg-white dark:bg-neutral-darker shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                                    <div className="py-1">
+                                                      <Menu.Item>
+                                                        {({ active }) => (
+                                                          <button
+                                                            className={`w-full text-left px-4 py-2 text-sm ${active ? 'bg-blue-100 dark:bg-blue-900/30' : ''}`}
+                                                            onClick={() => { handleDownloadMemberHistory(member.member.id); }}
+                                                          >
+                                                            Overall Report
+                                                          </button>
+                                                        )}
+                                                      </Menu.Item>
+                                                      {getMemberCommittees(member.member.id).map((c) => (
+                                                        <Menu.Item key={c.id}>
+                                                          {({ active }) => (
+                                                            <button
+                                                              className={`w-full text-left px-4 py-2 text-sm ${active ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}
+                                                              onClick={() => { handleDownloadSingleCommitteeHistory(member.member.id, c.id); }}
+                                                            >
+                                                              {`${c.title.charAt(0).toUpperCase() + c.title.slice(1)} Report`}
+                                                            </button>
+                                                          )}
+                                                        </Menu.Item>
+                                                      ))}
+                                                    </div>
+                                                  </Menu.Items>
+                                                </Menu>
                                                 <Button variant="ghost" size="sm" onClick={() => handleRemoveMemberWrapper(member.member.id)} aria-label={t('delete')} title={language === Language.UR ? "اس کمیٹی سے ہٹائیں" : "Remove from this committee"}><TrashIcon className="w-4 h-4 text-yellow-600 dark:text-yellow-400" /></Button>
                                                 <Button variant="ghost" size="sm" onClick={() => handleDeleteMemberGloballyWrapper(member.member.id)} title={language === Language.UR ? "مکمل طور پر حذف کریں" : "Delete Globally"} aria-label={language === Language.UR ? "مکمل طور پر حذف کریں" : "Delete Globally"}><TrashIcon className="w-4 h-4 text-red-600 dark:text-red-400" /></Button>
                                             </div>
@@ -2533,6 +2665,21 @@ export const CommitteeDetailScreen: React.FC = () => {
 
             <Modal isOpen={paymentModalOpen} onClose={() => setPaymentModalOpen(false)} title={t('addInstallment')} size="sm">
               <div className="space-y-4">
+                {/* Show remaining amount for this member/month */}
+                {committee && selectedMemberId && typeof selectedMonthIndex === 'number' && (
+                  (() => {
+                    const memberShares = committee.memberIds.filter(id => id === selectedMemberId).length;
+                    const totalAmountDue = committee.amountPerMember * memberShares;
+                    const existingPayments = getPaymentsForMemberByMonth(committee.id, selectedMemberId, selectedMonthIndex);
+                    const totalPaid = existingPayments.reduce((sum, p) => sum + p.amountPaid, 0);
+                    const remainingAmount = totalAmountDue - totalPaid;
+                    return (
+                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded px-3 py-2 text-blue-700 dark:text-blue-300 text-sm font-semibold">
+                        {t('remainingAmount')}: PKR {remainingAmount.toLocaleString()}
+                      </div>
+                    );
+                  })()
+                )}
                 <Input
                   label={t('installmentAmount')}
                   type="number"

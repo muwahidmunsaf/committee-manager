@@ -59,6 +59,10 @@ const Navbar: React.FC = () => {
         return <TrophyIcon className="h-4 w-4 text-yellow-500" />;
       case 'committee_update':
         return <BuildingOfficeIcon className="h-4 w-4 text-blue-500" />;
+      case 'installment_update':
+        return <CreditCardIcon className="h-4 w-4 text-purple-500" />;
+      case 'installment_overdue':
+        return <ClockIcon className="h-4 w-4 text-orange-500" />;
       default:
         return <BellIcon className="h-4 w-4 text-gray-500" />;
     }
@@ -89,6 +93,7 @@ const Navbar: React.FC = () => {
               <div className={`flex items-baseline space-x-4 ${language === Language.UR ? 'space-x-reverse' : ''}`}>
                 <NavLink to="/" className={navLinkClasses}>{t('dashboard')}</NavLink>
                 <NavLink to="/committees" className={navLinkClasses}>{t('committees')}</NavLink>
+                <NavLink to="/installments" className={navLinkClasses}>{t('installments')}</NavLink>
                 <NavLink to="/settings" className={navLinkClasses}>{t('settings')}</NavLink> 
               </div>
             </div>
@@ -308,6 +313,7 @@ const Navbar: React.FC = () => {
           <div className={`px-2 pt-2 pb-3 space-y-1 sm:px-3 ${language === Language.UR ? 'text-right' : 'text-left'}`}>
             <NavLink to="/" className={mobileNavLinkClasses} onClick={() => setIsMobileMenuOpen(false)}>{t('dashboard')}</NavLink>
             <NavLink to="/committees" className={mobileNavLinkClasses} onClick={() => setIsMobileMenuOpen(false)}>{t('committees')}</NavLink>
+            <NavLink to="/installments" className={mobileNavLinkClasses} onClick={() => setIsMobileMenuOpen(false)}>{t('installments')}</NavLink>
             <NavLink to="/profile" className={mobileNavLinkClasses} onClick={() => setIsMobileMenuOpen(false)}>{t('profile')}</NavLink>
             <NavLink to="/settings" className={mobileNavLinkClasses} onClick={() => setIsMobileMenuOpen(false)}>{t('settings')}</NavLink>
             <button
