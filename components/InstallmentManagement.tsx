@@ -292,14 +292,30 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
               {showProfilePhotoMenu && (
                 <>
                   <Button type="button" className="w-full" onClick={() => { setShowProfilePhotoMenu(false); document.getElementById('buyerProfilePicUpload')?.click(); }}>{t('uploadPhoto')}</Button>
-                  <Button type="button" className="w-full" onClick={() => { openCameraModal('profile'); setShowProfilePhotoMenu(false); }}>{t('takePhoto')}</Button>
+                  <Button type="button" className="w-full" onClick={() => {
+                    setShowProfilePhotoMenu(false);
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.capture = 'user';
+                    input.onchange = (e: any) => handleFileUpload(e, 'profile');
+                    input.click();
+                  }}>{t('takePhoto')}</Button>
                   <Button type="button" variant="ghost" className="w-full" onClick={() => setShowProfilePhotoMenu(false)}>{t('cancel')}</Button>
                 </>
               )}
               {showCnicPhotoMenu && (
                 <>
                   <Button type="button" className="w-full" onClick={() => { setShowCnicPhotoMenu(false); document.getElementById('buyerCnicPicUpload')?.click(); }}>{t('uploadCnicImage')}</Button>
-                  <Button type="button" className="w-full" onClick={() => { openCameraModal('cnic'); setShowCnicPhotoMenu(false); }}>{t('takePicture')}</Button>
+                  <Button type="button" className="w-full" onClick={() => {
+                    setShowCnicPhotoMenu(false);
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.capture = 'environment';
+                    input.onchange = (e: any) => handleFileUpload(e, 'cnic');
+                    input.click();
+                  }}>{t('takePicture')}</Button>
                   <Button type="button" variant="ghost" className="w-full" onClick={() => setShowCnicPhotoMenu(false)}>{t('cancel')}</Button>
                 </>
               )}
