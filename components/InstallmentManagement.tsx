@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Installment, Language, Committee } from '../types';
 import { Button, Input, Modal, PlusCircleIcon, FolderIcon, PencilSquareIcon, TrashIcon, CreditCardIcon } from './UIComponents';
@@ -8,6 +8,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import Cropper, { ReactCropperElement } from 'react-cropper';
+import 'cropperjs/dist/cropper.css';
 
 const openCameraWithBackPreference = async (onStream, onError) => {
   try {
@@ -50,6 +52,11 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const { addInstallment, updateInstallment } = useAppContext();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [showCropper, setShowCropper] = useState(false);
+  const [cropType, setCropType] = useState<'profile' | 'cnic' | null>(null);
+  const cropperRef = useRef<ReactCropperElement>(null);
+  const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('user');
 
   const overlayAspect = 1.6; // ATM card aspect ratio (width:height)
   const overlayWidth = 320; // px
@@ -104,7 +111,9 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, [type === 'profile' ? 'profilePictureUrl' : 'cnicImageUrl']: reader.result as string }));
+        setCropSrc(reader.result as string);
+        setCropType(type);
+        setShowCropper(true);
       };
       reader.readAsDataURL(file);
     }
@@ -116,8 +125,9 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
     setShowCnicPhotoMenu(false);
     setPhotoType(type);
     setShowCameraModal(true);
-    openCameraWithBackPreference(
-      (stream) => {
+    setCameraFacingMode(type === 'profile' ? 'user' : 'environment');
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: type === 'profile' ? cameraFacingMode : { exact: 'environment' } } })
+      .then(stream => {
         setCameraStream(stream);
         setTimeout(() => {
           if (videoRef.current) {
@@ -125,9 +135,8 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
             videoRef.current.play();
           }
         }, 100);
-      },
-      () => setCameraError('Unable to access camera. Please allow camera access in your browser.')
-    );
+      })
+      .catch(() => setCameraError('Unable to access camera. Please allow camera access in your browser.'));
   };
   const closeCameraModal = () => {
     setShowCameraModal(false);
@@ -141,44 +150,29 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
     if (!videoRef.current || !photoType) return;
     const video = videoRef.current;
     const canvas = document.createElement('canvas');
-    if (photoType === 'cnic') {
-      // Draw full frame, then crop to overlay
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = video.videoWidth;
-      tempCanvas.height = video.videoHeight;
-      const tempCtx = tempCanvas.getContext('2d');
-      if (tempCtx) {
-        tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-        // Calculate crop area in video coordinates
-        const scaleX = tempCanvas.width / 480; // video element width
-        const scaleY = tempCanvas.height / 360; // video element height
-        const cropX = overlayBox.x * scaleX;
-        const cropY = overlayBox.y * scaleY;
-        const cropW = overlayBox.width * scaleX;
-        const cropH = overlayBox.height * scaleY;
-        // Crop to overlay
-        const cropCanvas = document.createElement('canvas');
-        cropCanvas.width = overlayBox.width;
-        cropCanvas.height = overlayBox.height;
-        const cropCtx = cropCanvas.getContext('2d');
-        if (cropCtx) {
-          cropCtx.drawImage(tempCanvas, cropX, cropY, cropW, cropH, 0, 0, overlayBox.width, overlayBox.height);
-          const dataUrl = cropCanvas.toDataURL('image/png');
-          setFormData(prev => ({ ...prev, cnicImageUrl: dataUrl }));
-        }
-      }
-      closeCameraModal();
-      return;
-    }
-    // Default: capture full frame
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/png');
-      setFormData(prev => ({ ...prev, [photoType === 'profile' ? 'profilePictureUrl' : 'cnicImageUrl']: dataUrl }));
-      closeCameraModal();
+      setCropSrc(canvas.toDataURL('image/png'));
+      setCropType(photoType);
+      setShowCropper(true);
+    }
+    closeCameraModal();
+  };
+
+  const handleCropConfirm = () => {
+    if (cropperRef.current && cropperRef.current.cropper) {
+      const croppedDataUrl = cropperRef.current.cropper.getCroppedCanvas().toDataURL();
+      if (cropType === 'profile') {
+        setFormData(prev => ({ ...prev, profilePictureUrl: croppedDataUrl }));
+      } else if (cropType === 'cnic') {
+        setFormData(prev => ({ ...prev, cnicImageUrl: croppedDataUrl }));
+      }
+      setShowCropper(false);
+      setCropSrc(null);
+      setCropType(null);
     }
   };
 
@@ -334,6 +328,28 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
           <div className="bg-white dark:bg-neutral-dark rounded-lg shadow-lg p-4 flex flex-col items-center relative">
             <img src={previewImage || ''} alt="Preview" className="max-w-xs max-h-[70vh] rounded" />
             <Button type="button" className="mt-4" onClick={() => setPreviewImage(null)}>{t('cancel')}</Button>
+          </div>
+        </div>
+      )}
+      {showCropper && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
+          <div className="bg-white dark:bg-neutral-dark rounded-lg shadow-lg p-4 flex flex-col items-center relative w-full max-w-md mx-auto">
+            <Cropper
+              src={cropSrc || ''}
+              style={{ height: 300, width: '100%' }}
+              aspectRatio={cropType === 'profile' ? 1 : 1.6}
+              guides={true}
+              viewMode={1}
+              dragMode="move"
+              scalable={true}
+              cropBoxResizable={true}
+              cropBoxMovable={true}
+              ref={cropperRef}
+            />
+            <div className="flex gap-2 mt-4">
+              <Button onClick={handleCropConfirm}>{t('confirm')}</Button>
+              <Button variant="ghost" onClick={() => setShowCropper(false)}>{t('cancel')}</Button>
+            </div>
           </div>
         </div>
       )}

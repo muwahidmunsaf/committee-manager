@@ -288,8 +288,8 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } });
       onStream(stream);
     } catch (err) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         onStream(stream);
       } catch (err2) {
         onError(err2);

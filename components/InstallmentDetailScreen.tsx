@@ -669,7 +669,7 @@ const InstallmentDetailScreen: React.FC = () => {
           <img src={installment.profilePictureUrl || DEFAULT_PROFILE_PIC} alt={installment.buyerName} className="w-24 h-24 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-primary mb-4 sm:mb-0" />
           <div className="flex-1 w-full">
             <h1 className="text-2xl font-bold text-primary mb-1 break-words">{installment.buyerName}</h1>
-            <div className="space-y-1">
+              <div className="space-y-1">
               <div className="flex flex-wrap items-center text-sm text-neutral-DEFAULT dark:text-gray-400"><span className="min-w-[90px] font-medium">{t('mobile')}:</span><span className="ml-3 break-all">{installment.mobileName}</span></div>
               <div className="flex flex-wrap items-center text-sm text-neutral-DEFAULT dark:text-gray-400"><span className="min-w-[90px] font-medium">{t('phone')}:</span><span className="ml-3 break-all">{installment.phone}</span></div>
               <div className="flex flex-wrap items-center text-sm text-neutral-DEFAULT dark:text-gray-400"><span className="min-w-[90px] font-medium">{t('cnic')}:</span><span className="ml-3 break-all">{installment.cnic}</span></div>
@@ -700,38 +700,38 @@ const InstallmentDetailScreen: React.FC = () => {
             <p className="text-neutral-DEFAULT dark:text-gray-400">{t('noInstallmentsMade')}</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700">
-                <thead className="bg-gray-50 dark:bg-neutral-dark">
-                  <tr>
-                    <th className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-                    <th className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">{t('amountPaid')}</th>
-                    <th className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">{t('paymentDate')}</th>
-                    <th className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">{t('status')}</th>
-                    <th className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">{t('receipt')}</th>
-                    <th className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">{t('edit')}</th>
-                    <th className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">{t('delete')}</th>
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700">
+              <thead className="bg-gray-50 dark:bg-neutral-dark">
+                <tr>
+                  <th className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+                  <th className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">{t('amountPaid')}</th>
+                  <th className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">{t('paymentDate')}</th>
+                  <th className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">{t('status')}</th>
+                  <th className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">{t('receipt')}</th>
+                  <th className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">{t('edit')}</th>
+                  <th className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">{t('delete')}</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-neutral-darker divide-y divide-gray-200 dark:divide-gray-700">
+                {installment.payments.map((p, idx) => (
+                  <tr key={p.id}>
+                    <td className="px-3 py-2 text-center">{idx + 1}</td>
+                    <td className="px-3 py-2 text-center">PKR {p.amountPaid.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-center">{p.paymentDate}</td>
+                    <td className="px-3 py-2 text-center">{p.status}</td>
+                    <td className="px-3 py-2 text-center">
+                      <Button size="sm" variant="ghost" onClick={() => handleDownloadReceipt(p)} disabled={pdfLoading}>PDF</Button>
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      <Button size="sm" variant="ghost" onClick={() => handleEditPayment(p)}>{t('edit')}</Button>
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      <Button size="sm" variant="ghost" color="red" onClick={() => setDeletePayment(p)}>{t('delete')}</Button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-neutral-darker divide-y divide-gray-200 dark:divide-gray-700">
-                  {installment.payments.map((p, idx) => (
-                    <tr key={p.id}>
-                      <td className="px-3 py-2 text-center">{idx + 1}</td>
-                      <td className="px-3 py-2 text-center">PKR {p.amountPaid.toLocaleString()}</td>
-                      <td className="px-3 py-2 text-center">{p.paymentDate}</td>
-                      <td className="px-3 py-2 text-center">{p.status}</td>
-                      <td className="px-3 py-2 text-center">
-                        <Button size="sm" variant="ghost" onClick={() => handleDownloadReceipt(p)} disabled={pdfLoading}>PDF</Button>
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <Button size="sm" variant="ghost" onClick={() => handleEditPayment(p)}>{t('edit')}</Button>
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <Button size="sm" variant="ghost" color="red" onClick={() => setDeletePayment(p)}>{t('delete')}</Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                ))}
+              </tbody>
+            </table>
             </div>
           )}
         </div>
