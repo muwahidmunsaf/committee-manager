@@ -283,21 +283,17 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
   };
   
   // Function to open camera modal and request camera access
-  const openCameraModal = async () => {
-    setCameraError('');
-    setShowPhotoMenu(false);
-    setShowCameraModal(true);
+  const openCameraWithBackPreference = async (onStream, onError) => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      setCameraStream(stream);
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play();
-        }
-      }, 100);
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } });
+      onStream(stream);
     } catch (err) {
-      setCameraError('Unable to access camera. Please allow camera access in your browser.');
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        onStream(stream);
+      } catch (err2) {
+        onError(err2);
+      }
     }
   };
 
@@ -325,6 +321,25 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
       setFormData(prev => ({ ...prev, profilePictureUrl: dataUrl }));
       closeCameraModal();
     }
+  };
+
+  // In openCameraModal, replace navigator.mediaDevices.getUserMedia({ video: true }) with:
+  const openCameraModal = async () => {
+    setCameraError('');
+    setShowPhotoMenu(false);
+    setShowCameraModal(true);
+    openCameraWithBackPreference(
+      (stream) => {
+        setCameraStream(stream);
+        setTimeout(() => {
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            videoRef.current.play();
+          }
+        }, 100);
+      },
+      () => setCameraError('Unable to access camera. Please allow camera access in your browser.')
+    );
   };
 
   return (
