@@ -10,6 +10,7 @@ import html2canvas from 'html2canvas';
 import autoTable from 'jspdf-autotable';
 import { Menu } from '@headlessui/react';
 import Cropper from 'react-cropper';
+import imageCompression from 'browser-image-compression';
 // Import and register the JameelNooriNastaleeq font for jsPDF
 let registerJameelNooriNastaleeq: any = (null as any);
 try {
@@ -242,15 +243,17 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
   };
 
   // 2. Handle file upload with cropping
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      const options = { maxSizeMB: 1, maxWidthOrHeight: 1000, useWebWorker: true };
+      const compressedFile = await imageCompression(file, options);
       const reader = new FileReader();
       reader.onloadend = () => {
         setCropSrc(reader.result as string);
         setShowCropper(true);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(compressedFile);
     }
   };
 

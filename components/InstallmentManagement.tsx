@@ -10,6 +10,7 @@ import html2canvas from 'html2canvas';
 import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import Cropper, { ReactCropperElement } from 'react-cropper';
 import 'cropperjs/dist/cropper.css';
+import imageCompression from 'browser-image-compression';
 
 const openCameraWithBackPreference = async (onStream, onError) => {
   try {
@@ -106,16 +107,18 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
     });
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'cnic') => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'cnic') => {
     const file = event.target.files?.[0];
     if (file) {
+      const options = { maxSizeMB: 1, maxWidthOrHeight: 1000, useWebWorker: true };
+      const compressedFile = await imageCompression(file, options);
       const reader = new FileReader();
       reader.onloadend = () => {
         setCropSrc(reader.result as string);
         setCropType(type);
         setShowCropper(true);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(compressedFile);
     }
   };
 
