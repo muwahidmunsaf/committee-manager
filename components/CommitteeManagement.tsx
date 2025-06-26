@@ -9,6 +9,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import autoTable from 'jspdf-autotable';
 import { Menu } from '@headlessui/react';
+import Cropper from 'react-cropper';
 // Import and register the JameelNooriNastaleeq font for jsPDF
 let registerJameelNooriNastaleeq: any = (null as any);
 try {
@@ -202,6 +203,13 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
+  // 1. Add state for cropping and menu
+  const [showCropper, setShowCropper] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const cropperRef = useRef<any>(null);
+  const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('user');
+  // Add state for preview modal
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -233,12 +241,14 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
     setFormData(prev => ({ ...prev, [name]: processedValue }));
   };
 
+  // 2. Handle file upload with cropping
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, profilePictureUrl: reader.result as string }));
+        setCropSrc(reader.result as string);
+        setShowCropper(true);
       };
       reader.readAsDataURL(file);
     }
@@ -307,7 +317,40 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
     }
   };
 
-  // Function to capture photo from video
+  // 3. Handle crop confirm
+  const handleCropConfirm = () => {
+    if (cropperRef.current && cropperRef.current.cropper) {
+      const croppedDataUrl = cropperRef.current.cropper.getCroppedCanvas().toDataURL();
+      setFormData(prev => ({ ...prev, profilePictureUrl: croppedDataUrl }));
+      setShowCropper(false);
+      setCropSrc(null);
+    }
+  };
+
+  // 4. Camera modal logic (with facing mode)
+  const openCameraModal = async () => {
+    setCameraError('');
+    setShowPhotoMenu(false);
+    setShowCameraModal(true);
+    try {
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: cameraFacingMode } });
+      } catch (err) {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
+      setCameraStream(stream);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+        }
+      }, 100);
+    } catch (err: any) {
+      setCameraError('Unable to access camera. Please allow camera access in your browser.');
+    }
+  };
+
   const capturePhoto = () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
@@ -317,29 +360,10 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/png');
-      setFormData(prev => ({ ...prev, profilePictureUrl: dataUrl }));
-      closeCameraModal();
+      setCropSrc(canvas.toDataURL('image/png'));
+      setShowCropper(true);
     }
-  };
-
-  // In openCameraModal, replace navigator.mediaDevices.getUserMedia({ video: true }) with:
-  const openCameraModal = async () => {
-    setCameraError('');
-    setShowPhotoMenu(false);
-    setShowCameraModal(true);
-    openCameraWithBackPreference(
-      (stream) => {
-        setCameraStream(stream);
-        setTimeout(() => {
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            videoRef.current.play();
-          }
-        }, 100);
-      },
-      () => setCameraError('Unable to access camera. Please allow camera access in your browser.')
-    );
+    closeCameraModal();
   };
 
   return (
@@ -349,23 +373,17 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
           src={formData.profilePictureUrl || DEFAULT_PROFILE_PIC} 
           alt={t('profilePicture')} 
           className="w-24 h-24 rounded-full object-cover border-2 border-primary-light dark:border-primary-dark cursor-pointer"
-          onClick={() => setShowPhotoMenu(true)}
+          onClick={() => setShowPreviewModal(true)}
         />
-        {showPhotoMenu && (
-          <div className="absolute top-24 left-1/2 transform -translate-x-1/2 bg-white dark:bg-neutral-dark border border-gray-200 dark:border-gray-700 rounded shadow-lg z-20 p-2 flex flex-col space-y-1">
-            <button type="button" className="text-sm text-primary hover:underline text-left px-4 py-2" onClick={() => { setShowPhotoMenu(false); document.getElementById('memberProfilePicUpload')?.click(); }}>
-              Choose Photo
-            </button>
-            <button type="button" className="text-sm text-primary hover:underline text-left px-4 py-2" onClick={openCameraModal}>
-              Take Photo
-            </button>
-            <button type="button" className="text-xs text-gray-500 hover:underline text-left px-4 py-1" onClick={() => setShowPhotoMenu(false)}>
-              Cancel
-            </button>
-          </div>
-        )}
-        <input type="file" id="memberProfilePicUpload" className="hidden" accept="image/*" onChange={handleFileUpload} />
-        <input type="file" id="memberProfilePicCamera" className="hidden" accept="image/*" capture="environment" onChange={handleFileUpload} />
+        <div className="mt-1">
+          <button
+            type="button"
+            className="text-primary underline text-sm hover:text-primary-dark focus:outline-none"
+            onClick={() => setShowPhotoMenu(true)}
+          >
+            Upload Photo
+          </button>
+        </div>
         {formData.profilePictureUrl && formData.profilePictureUrl !== DEFAULT_PROFILE_PIC && (
           <Button 
             type="button" 
@@ -379,14 +397,17 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
         )}
         {/* Camera Modal */}
         {showCameraModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
-            <div className="bg-white dark:bg-neutral-dark rounded-lg shadow-lg p-6 flex flex-col items-center">
+          <div className="fixed inset-0 z-[1000] flex flex-col justify-center items-center bg-black bg-opacity-80 w-full h-full">
+            <div className="bg-white dark:bg-neutral-dark rounded-lg shadow-lg p-4 flex flex-col items-center w-full max-w-xs mx-auto">
               <h3 className="text-lg font-semibold mb-2">Take Photo</h3>
-              {cameraError && <div className="text-red-500 mb-2">{cameraError}</div>}
-              <video ref={videoRef} className="w-64 h-48 bg-black rounded mb-4" autoPlay playsInline />
-              <div className="flex space-x-2">
-                <Button type="button" onClick={capturePhoto}>Capture</Button>
-                <Button type="button" variant="ghost" onClick={closeCameraModal}>{t('cancel')}</Button>
+              {cameraError && <div className="text-red-500 mb-2 text-center">{cameraError}</div>}
+              <video ref={videoRef} className="w-full h-64 bg-black rounded mb-4" autoPlay playsInline style={{ display: 'block' }} />
+              <div className="flex flex-col gap-2 w-full">
+                <Button type="button" className="w-full" onClick={capturePhoto}>Capture</Button>
+                <Button type="button" variant="ghost" className="w-full" onClick={closeCameraModal}>Cancel</Button>
+                <Button variant="ghost" className="w-full" onClick={() => setCameraFacingMode(cameraFacingMode === 'user' ? 'environment' : 'user')}>
+                  {cameraFacingMode === 'user' ? 'Switch to Back Camera' : 'Switch to Front Camera'}
+                </Button>
               </div>
             </div>
           </div>
@@ -403,6 +424,44 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
         <Button type="button" variant="ghost" onClick={onClose}>{t('cancel')}</Button>
         <Button type="submit">{initialData ? t('saveChanges') : (committeeId ? t('addMember') : t('createNewMember'))}</Button>
       </div>
+      {showCropper && (
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black bg-opacity-70">
+          <div className="bg-white dark:bg-neutral-dark rounded-lg shadow-lg p-4 flex flex-col items-center w-full max-w-xs mx-auto">
+            <h3 className="text-lg font-semibold mb-2">Crop Photo</h3>
+            <Cropper
+              src={cropSrc || ''}
+              style={{ height: 300, width: '100%' }}
+              // aspectRatio={1} // Uncomment for square crop
+              guides={false}
+              ref={cropperRef}
+              viewMode={1}
+              dragMode="move"
+              background={false}
+              responsive={true}
+              autoCropArea={1}
+              checkOrientation={false}
+            />
+            <div className="flex gap-2 mt-4 w-full">
+              <Button type="button" className="w-full" onClick={handleCropConfirm}>Confirm</Button>
+              <Button type="button" variant="ghost" className="w-full" onClick={() => { setShowCropper(false); setCropSrc(null); }}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showPreviewModal && (
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black bg-opacity-80">
+          <div className="bg-white dark:bg-neutral-dark rounded-lg shadow-lg p-4 flex flex-col items-center">
+            <img
+              src={formData.profilePictureUrl || DEFAULT_PROFILE_PIC}
+              alt={t('profilePicture')}
+              className="w-64 h-64 rounded-full object-cover border-2 border-primary-light dark:border-primary-dark mb-4"
+            />
+            <Button type="button" className="w-full" onClick={() => setShowPreviewModal(false)}>
+              Close
+            </Button>
+          </div>
+        </div>
+      )}
     </form>
   );
 };
