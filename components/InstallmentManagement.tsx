@@ -131,10 +131,20 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
               stream = await navigator.mediaDevices.getUserMedia({ video: true });
             }
           } else {
-            try {
-              stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } });
-            } catch (err) {
-              stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(device => device.kind === 'videoinput');
+            const backCamera = videoDevices.find(device =>
+              device.label.toLowerCase().includes('back') ||
+              device.label.toLowerCase().includes('environment')
+            );
+            if (backCamera) {
+              stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: backCamera.deviceId } } });
+            } else {
+              try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } });
+              } catch (err) {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+              }
             }
           }
           setCameraStream(stream);
