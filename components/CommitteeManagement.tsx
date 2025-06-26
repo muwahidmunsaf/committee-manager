@@ -10,7 +10,6 @@ import html2canvas from 'html2canvas';
 import autoTable from 'jspdf-autotable';
 import { Menu } from '@headlessui/react';
 import Cropper from 'react-cropper';
-import imageCompression from 'browser-image-compression';
 // Import and register the JameelNooriNastaleeq font for jsPDF
 let registerJameelNooriNastaleeq: any = (null as any);
 try {
@@ -246,6 +245,7 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      const imageCompression = (await import('browser-image-compression')).default;
       const options = { maxSizeMB: 1, maxWidthOrHeight: 1000, useWebWorker: true };
       const compressedFile = await imageCompression(file, options);
       const reader = new FileReader();
@@ -349,7 +349,7 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
       setCropSrc(canvas.toDataURL('image/png'));
       setShowCropper(true);
     }
-    closeCameraModal();
+      closeCameraModal();
   };
 
   // Add this useEffect for camera switching
@@ -401,7 +401,7 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
             onClick={() => setShowPhotoMenu(true)}
           >
             Upload Photo
-          </button>
+            </button>
         </div>
         {showPhotoMenu && (
           <div className="fixed inset-0 z-[1001] flex items-end justify-center bg-black bg-opacity-40">

@@ -10,7 +10,6 @@ import html2canvas from 'html2canvas';
 import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import Cropper, { ReactCropperElement } from 'react-cropper';
 import 'cropperjs/dist/cropper.css';
-import imageCompression from 'browser-image-compression';
 
 const openCameraWithBackPreference = async (onStream, onError) => {
   try {
@@ -58,6 +57,7 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
   const [cropType, setCropType] = useState<'profile' | 'cnic' | null>(null);
   const cropperRef = useRef<ReactCropperElement>(null);
   const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('user');
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   const overlayAspect = 1.6; // ATM card aspect ratio (width:height)
   const overlayWidth = 320; // px
@@ -110,6 +110,7 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'cnic') => {
     const file = event.target.files?.[0];
     if (file) {
+      const imageCompression = (await import('browser-image-compression')).default;
       const options = { maxSizeMB: 1, maxWidthOrHeight: 1000, useWebWorker: true };
       const compressedFile = await imageCompression(file, options);
       const reader = new FileReader();
@@ -297,12 +298,16 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
                   <Button type="button" className="w-full" onClick={() => { setShowProfilePhotoMenu(false); document.getElementById('buyerProfilePicUpload')?.click(); }}>{t('uploadPhoto')}</Button>
                   <Button type="button" className="w-full" onClick={() => {
                     setShowProfilePhotoMenu(false);
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = 'image/*';
-                    input.capture = 'user';
-                    input.onchange = (e: any) => handleFileUpload(e, 'profile');
-                    input.click();
+                    if (isMobile) {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = 'image/*';
+                      input.capture = 'user';
+                      input.onchange = (e: any) => handleFileUpload(e, 'profile');
+                      input.click();
+                    } else {
+                      openCameraModal('profile');
+                    }
                   }}>{t('takePhoto')}</Button>
                   <Button type="button" variant="ghost" className="w-full" onClick={() => setShowProfilePhotoMenu(false)}>{t('cancel')}</Button>
                 </>
@@ -312,12 +317,16 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
                   <Button type="button" className="w-full" onClick={() => { setShowCnicPhotoMenu(false); document.getElementById('buyerCnicPicUpload')?.click(); }}>{t('uploadCnicImage')}</Button>
                   <Button type="button" className="w-full" onClick={() => {
                     setShowCnicPhotoMenu(false);
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = 'image/*';
-                    input.capture = 'environment';
-                    input.onchange = (e: any) => handleFileUpload(e, 'cnic');
-                    input.click();
+                    if (isMobile) {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = 'image/*';
+                      input.capture = 'environment';
+                      input.onchange = (e: any) => handleFileUpload(e, 'cnic');
+                      input.click();
+                    } else {
+                      openCameraModal('cnic');
+                    }
                   }}>{t('takePicture')}</Button>
                   <Button type="button" variant="ghost" className="w-full" onClick={() => setShowCnicPhotoMenu(false)}>{t('cancel')}</Button>
                 </>
