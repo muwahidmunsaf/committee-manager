@@ -328,27 +328,10 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
   };
 
   // 4. Camera modal logic (with facing mode)
-  const openCameraModal = async () => {
+  const openCameraModal = () => {
     setCameraError('');
     setShowPhotoMenu(false);
     setShowCameraModal(true);
-    try {
-      let stream: MediaStream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: cameraFacingMode } });
-      } catch (err) {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      }
-      setCameraStream(stream);
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play();
-        }
-      }, 100);
-    } catch (err: any) {
-      setCameraError('Unable to access camera. Please allow camera access in your browser.');
-    }
   };
 
   const capturePhoto = () => {
@@ -365,6 +348,39 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
     }
     closeCameraModal();
   };
+
+  // Add this useEffect for camera switching
+  useEffect(() => {
+    if (showCameraModal) {
+      (async () => {
+        try {
+          let stream;
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: cameraFacingMode } });
+          } catch (err) {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          }
+          setCameraStream(stream);
+          setTimeout(() => {
+            if (videoRef.current) {
+              videoRef.current.srcObject = stream;
+              videoRef.current.play();
+            }
+          }, 100);
+        } catch (err) {
+          setCameraError('Unable to access camera. Please allow camera access in your browser.');
+          setShowCameraModal(false);
+        }
+      })();
+    }
+    // Clean up on modal close
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+    };
+    // eslint-disable-next-line
+  }, [cameraFacingMode, showCameraModal]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -388,7 +404,15 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
           <div className="fixed inset-0 z-[1001] flex items-end justify-center bg-black bg-opacity-40">
             <div className="bg-white dark:bg-neutral-dark rounded-t-lg shadow-lg w-full max-w-md mx-auto p-4 flex flex-col gap-2 mb-0">
               <Button type="button" className="w-full" onClick={() => { setShowPhotoMenu(false); document.getElementById('memberProfilePicUpload')?.click(); }}>Upload Image</Button>
-              <Button type="button" className="w-full" onClick={() => { openCameraModal(); setShowPhotoMenu(false); }}>Take Photo</Button>
+              <Button type="button" className="w-full" onClick={() => {
+                setShowPhotoMenu(false);
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.capture = 'user';
+                input.onchange = (e: any) => handleFileUpload(e);
+                input.click();
+              }}>Take Photo</Button>
               <Button type="button" variant="ghost" className="w-full" onClick={() => setShowPhotoMenu(false)}>Cancel</Button>
             </div>
           </div>
