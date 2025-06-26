@@ -119,48 +119,55 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
     }
   };
 
-  const openCameraModal = async (type: 'profile' | 'cnic') => {
+  useEffect(() => {
+    if (showCameraModal && photoType) {
+      (async () => {
+        try {
+          let stream;
+          if (photoType === 'profile') {
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: cameraFacingMode } });
+            } catch (err) {
+              stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            }
+          } else {
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } });
+            } catch (err) {
+              stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            }
+          }
+          setCameraStream(stream);
+          setTimeout(() => {
+            if (videoRef.current) {
+              videoRef.current.srcObject = stream;
+              videoRef.current.play();
+            }
+          }, 100);
+        } catch (err) {
+          setCameraError(t('unableToAccessCamera') || 'Unable to access camera. Please allow camera access in your browser.');
+          setShowCameraModal(false);
+        }
+      })();
+    }
+    // Clean up on modal close
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+    };
+    // eslint-disable-next-line
+  }, [cameraFacingMode, showCameraModal, photoType]);
+
+  const openCameraModal = (type: 'profile' | 'cnic') => {
     setCameraError('');
     setShowProfilePhotoMenu(false);
     setShowCnicPhotoMenu(false);
     setPhotoType(type);
     setShowCameraModal(true);
     setCameraFacingMode(type === 'profile' ? 'user' : 'environment');
-    try {
-      let stream: MediaStream;
-      if (type === 'profile') {
-        // Try user or environment based on cameraFacingMode
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: cameraFacingMode } });
-        } catch (err) {
-          // Fallback to any camera
-          stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        }
-      } else {
-        // CNIC: always try back camera, fallback to any camera
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } });
-        } catch (err) {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        }
-      }
-      setCameraStream(stream);
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play();
-        }
-      }, 100);
-    } catch (err: any) {
-      if (err && err.name === 'NotAllowedError') {
-        setCameraError(t('cameraPermissionDenied') || 'Camera permission denied. Please allow camera access in your browser settings.');
-      } else if (err && err.name === 'NotFoundError') {
-        setCameraError(t('noCameraFound') || 'No camera found on this device.');
-      } else {
-        setCameraError(t('unableToAccessCamera') || 'Unable to access camera. Please allow camera access in your browser.');
-      }
-    }
   };
+
   const closeCameraModal = () => {
     setShowCameraModal(false);
     setCameraError('');
