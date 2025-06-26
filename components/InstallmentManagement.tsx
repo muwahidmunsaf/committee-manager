@@ -119,24 +119,47 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
     }
   };
 
-  const openCameraModal = (type: 'profile' | 'cnic') => {
+  const openCameraModal = async (type: 'profile' | 'cnic') => {
     setCameraError('');
     setShowProfilePhotoMenu(false);
     setShowCnicPhotoMenu(false);
     setPhotoType(type);
     setShowCameraModal(true);
     setCameraFacingMode(type === 'profile' ? 'user' : 'environment');
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: type === 'profile' ? cameraFacingMode : { exact: 'environment' } } })
-      .then(stream => {
-        setCameraStream(stream);
-        setTimeout(() => {
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            videoRef.current.play();
-          }
-        }, 100);
-      })
-      .catch(() => setCameraError('Unable to access camera. Please allow camera access in your browser.'));
+    try {
+      let stream: MediaStream;
+      if (type === 'profile') {
+        // Try user or environment based on cameraFacingMode
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: cameraFacingMode } });
+        } catch (err) {
+          // Fallback to any camera
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        }
+      } else {
+        // CNIC: always try back camera, fallback to any camera
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } });
+        } catch (err) {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        }
+      }
+      setCameraStream(stream);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+        }
+      }, 100);
+    } catch (err: any) {
+      if (err && err.name === 'NotAllowedError') {
+        setCameraError(t('cameraPermissionDenied') || 'Camera permission denied. Please allow camera access in your browser settings.');
+      } else if (err && err.name === 'NotFoundError') {
+        setCameraError(t('noCameraFound') || 'No camera found on this device.');
+      } else {
+        setCameraError(t('unableToAccessCamera') || 'Unable to access camera. Please allow camera access in your browser.');
+      }
+    }
   };
   const closeCameraModal = () => {
     setShowCameraModal(false);
@@ -150,6 +173,30 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
     if (!videoRef.current || !photoType) return;
     const video = videoRef.current;
     const canvas = document.createElement('canvas');
+    if (photoType === 'cnic') {
+      // Crop to overlay box (centered 240x150px in 640x384px video)
+      const videoW = video.videoWidth;
+      const videoH = video.videoHeight;
+      const cropW = 240;
+      const cropH = 150;
+      const scale = videoH / 256; // 256 is h-64 in px, so scale overlay to video size
+      const cropWidth = cropW * scale;
+      const cropHeight = cropH * scale;
+      const cropX = (videoW - cropWidth) / 2;
+      const cropY = (videoH - cropHeight) / 2;
+      canvas.width = cropWidth;
+      canvas.height = cropHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+        setCropSrc(canvas.toDataURL('image/png'));
+        setCropType('cnic');
+        setShowCropper(true);
+      }
+      closeCameraModal();
+      return;
+    }
+    // Profile: full frame
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
@@ -222,17 +269,24 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
         >
           {t('uploadPhoto')}
         </div>
-        {showProfilePhotoMenu && (
-          <div className="absolute top-24 left-1/2 transform -translate-x-1/2 bg-white dark:bg-neutral-dark border border-gray-200 dark:border-gray-700 rounded shadow-lg z-20 p-2 flex flex-col space-y-1">
-            <button type="button" className="text-sm text-primary hover:underline text-left px-4 py-2" onClick={() => { setShowProfilePhotoMenu(false); document.getElementById('buyerProfilePicUpload')?.click(); }}>
-              {t('uploadPhoto')}
-            </button>
-            <button type="button" className="text-sm text-primary hover:underline text-left px-4 py-2" onClick={() => { openCameraModal('profile'); setShowProfilePhotoMenu(false); }}>
-              {t('takePhoto')}
-            </button>
-            <button type="button" className="text-xs text-gray-500 hover:underline text-left px-4 py-1" onClick={() => setShowProfilePhotoMenu(false)}>
-              {t('cancel')}
-            </button>
+        {(showProfilePhotoMenu || showCnicPhotoMenu) && (
+          <div className="fixed inset-0 z-[1001] flex items-end justify-center bg-black bg-opacity-40">
+            <div className="bg-white dark:bg-neutral-dark rounded-t-lg shadow-lg w-full max-w-md mx-auto p-4 flex flex-col gap-2 mb-0">
+              {showProfilePhotoMenu && (
+                <>
+                  <Button type="button" className="w-full" onClick={() => { setShowProfilePhotoMenu(false); document.getElementById('buyerProfilePicUpload')?.click(); }}>{t('uploadPhoto')}</Button>
+                  <Button type="button" className="w-full" onClick={() => { openCameraModal('profile'); setShowProfilePhotoMenu(false); }}>{t('takePhoto')}</Button>
+                  <Button type="button" variant="ghost" className="w-full" onClick={() => setShowProfilePhotoMenu(false)}>{t('cancel')}</Button>
+                </>
+              )}
+              {showCnicPhotoMenu && (
+                <>
+                  <Button type="button" className="w-full" onClick={() => { setShowCnicPhotoMenu(false); document.getElementById('buyerCnicPicUpload')?.click(); }}>{t('uploadCnicImage')}</Button>
+                  <Button type="button" className="w-full" onClick={() => { openCameraModal('cnic'); setShowCnicPhotoMenu(false); }}>{t('takePicture')}</Button>
+                  <Button type="button" variant="ghost" className="w-full" onClick={() => setShowCnicPhotoMenu(false)}>{t('cancel')}</Button>
+                </>
+              )}
+            </div>
           </div>
         )}
         <input type="file" id="buyerProfilePicUpload" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, 'profile')} />
@@ -278,47 +332,37 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
         <Button type="button" size="sm" onClick={() => { setShowCnicPhotoMenu(true); setShowProfilePhotoMenu(false); }}>
           {formData.cnicImageUrl ? t('changeCnicImage') : t('uploadCnicImage')}
         </Button>
-        {showCnicPhotoMenu && (
-          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 bg-white dark:bg-neutral-dark border border-gray-200 dark:border-gray-700 rounded shadow-lg z-20 p-2 flex flex-col space-y-1">
-            <button type="button" className="text-sm text-primary hover:underline text-left px-4 py-2" onClick={() => { setShowCnicPhotoMenu(false); document.getElementById('buyerCnicPicUpload')?.click(); }}>
-              {t('uploadCnicImage')}
-            </button>
-            <button type="button" className="text-sm text-primary hover:underline text-left px-4 py-2" onClick={() => { openCameraModal('cnic'); setShowCnicPhotoMenu(false); }}>
-              {t('takePicture')}
-            </button>
-            <button type="button" className="text-xs text-gray-500 hover:underline text-left px-4 py-1" onClick={() => setShowCnicPhotoMenu(false)}>
-              {t('cancel')}
-            </button>
-          </div>
-        )}
-        <input type="file" id="buyerCnicPicUpload" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, 'cnic')} />
       </div>
       {showCameraModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
-          <div className="bg-white dark:bg-neutral-dark rounded-lg shadow-lg p-6 flex flex-col items-center">
-            <h3 className="text-lg font-semibold mb-2">
-              {photoType === 'cnic' ? t('captureCnic') : t('captureProfilePicture')}
-            </h3>
-            {cameraError && <div className="text-red-500 mb-2">{cameraError}</div>}
-            <div style={{ position: 'relative', width: 480, height: 360 }}>
-              <video ref={videoRef} width={480} height={360} className="bg-black rounded" autoPlay playsInline style={{ display: 'block' }} />
+        <div className="fixed inset-0 z-[1000] flex flex-col justify-center items-center bg-black bg-opacity-80 w-full h-full">
+          <div className="bg-white dark:bg-neutral-dark rounded-lg shadow-lg p-4 flex flex-col items-center w-full max-w-xs mx-auto">
+            <h3 className="text-lg font-semibold mb-2">{photoType === 'cnic' ? t('captureCnic') : t('captureProfilePicture')}</h3>
+            {cameraError && <div className="text-red-500 mb-2 text-center">{cameraError}</div>}
+            <div className="relative w-full h-64 mb-4">
+              <video ref={videoRef} className="w-full h-64 bg-black rounded" autoPlay playsInline style={{ display: 'block' }} />
               {photoType === 'cnic' && (
                 <div style={{
                   position: 'absolute',
-                  left: overlayBox.x,
-                  top: overlayBox.y,
-                  width: overlayBox.width,
-                  height: overlayBox.height,
+                  left: '50%',
+                  top: '50%',
+                  width: '240px',
+                  height: '150px',
+                  transform: 'translate(-50%, -50%)',
                   border: '3px solid #0e7490',
-                  borderRadius: 8,
+                  borderRadius: '8px',
                   boxSizing: 'border-box',
                   pointerEvents: 'none',
                 }} />
               )}
             </div>
-            <div className="flex space-x-2 mt-4">
-              <Button type="button" onClick={capturePhoto}>{t('capture')}</Button>
-              <Button type="button" variant="ghost" onClick={closeCameraModal}>{t('cancel')}</Button>
+            <div className="flex flex-col gap-2 w-full">
+              <Button type="button" className="w-full" onClick={capturePhoto}>{t('capture')}</Button>
+              <Button type="button" variant="ghost" className="w-full" onClick={closeCameraModal}>{t('cancel')}</Button>
+              {photoType === 'profile' && (
+                <Button variant="ghost" className="w-full" onClick={() => setCameraFacingMode(cameraFacingMode === 'user' ? 'environment' : 'user')}>
+                  {cameraFacingMode === 'user' ? 'Switch to Back Camera' : 'Switch to Front Camera'}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -451,8 +495,10 @@ const InstallmentManagement: React.FC = () => {
         return;
       }
     }
-    let columns;
-    let heading;
+    let columns: string[] = [];
+    let heading: string = '';
+    let safeTotalCollected: number = typeof totalCollected === 'number' ? totalCollected : 0;
+    let safeTotalRemaining: number = typeof totalRemaining === 'number' ? totalRemaining : 0;
     if (language === Language.UR) {
       pdf.setFont('JameelNooriNastaleeq', 'normal');
       pdf.setFontSize(20);
@@ -470,7 +516,7 @@ const InstallmentManagement: React.FC = () => {
         'Buyer Name', 'CNIC', 'Phone', 'Product Name', 'Total Amount', 'Advance', 'Collected Amount', 'Remaining Amount', 'Duration', 'Remaining Installments', 'Account Status'
       ];
     }
-    pdf.text(String(heading || ''), pdfWidth/2, y + 30, { align: 'center' });
+    pdf.text(heading, pdfWidth/2, y + 30, { align: 'center' });
     y += 50;
     // Table rows
     const rows = installments.map(inst => {
@@ -545,8 +591,8 @@ const InstallmentManagement: React.FC = () => {
     pdf.setFont(undefined, 'bold');
     pdf.setFontSize(13);
     pdf.setTextColor('#0e7490');
-    pdf.text(String(`Total Collected: PKR ${totalCollected.toLocaleString()}`), 60, lastY);
-    pdf.text(String(`Total Remaining: PKR ${totalRemaining.toLocaleString()}`), 320, lastY);
+    pdf.text('Total Collected: PKR ' + safeTotalCollected.toLocaleString(), 60, lastY);
+    pdf.text('Total Remaining: PKR ' + safeTotalRemaining.toLocaleString(), 320, lastY);
     drawPdfFooter(pdf, pdfWidth, pdfHeight);
     pdf.save('overall_installments_report.pdf');
   };
@@ -556,9 +602,9 @@ const InstallmentManagement: React.FC = () => {
     if (type === 'overall') {
       await handleDownloadAllBuyersPDF();
     } else if (type === 'installment') {
-      alert(`Download report for ${(installment.buyerName || '')} - ${(installment.mobileName || '')}`);
+      alert('Download report for ' + (installment.buyerName || '') + ' - ' + (installment.mobileName || ''));
     } else if (type === 'committee' && committee) {
-      alert(`Download report for committee: ${committee.title}`);
+      alert('Download report for committee: ' + (committee && committee.title ? committee.title : ''));
     }
   };
 

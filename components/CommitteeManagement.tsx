@@ -384,6 +384,17 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
             Upload Photo
           </button>
         </div>
+        {showPhotoMenu && (
+          <div className="fixed inset-0 z-[1001] flex items-end justify-center bg-black bg-opacity-40">
+            <div className="bg-white dark:bg-neutral-dark rounded-t-lg shadow-lg w-full max-w-md mx-auto p-4 flex flex-col gap-2 mb-0">
+              <Button type="button" className="w-full" onClick={() => { setShowPhotoMenu(false); document.getElementById('memberProfilePicUpload')?.click(); }}>Upload Image</Button>
+              <Button type="button" className="w-full" onClick={() => { openCameraModal(); setShowPhotoMenu(false); }}>Take Photo</Button>
+              <Button type="button" variant="ghost" className="w-full" onClick={() => setShowPhotoMenu(false)}>Cancel</Button>
+            </div>
+          </div>
+        )}
+        <input type="file" id="memberProfilePicUpload" className="hidden" accept="image/*" onChange={handleFileUpload} />
+        <input type="file" id="memberProfilePicCamera" className="hidden" accept="image/*" capture="environment" onChange={handleFileUpload} />
         {formData.profilePictureUrl && formData.profilePictureUrl !== DEFAULT_PROFILE_PIC && (
           <Button 
             type="button" 
