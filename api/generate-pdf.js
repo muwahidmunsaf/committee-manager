@@ -30,6 +30,7 @@ export default async function handler(req, res) {
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(),
       headless: chromium.headless,
+      ignoreDefaultArgs: ['--disable-extensions'],
     });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
