@@ -10,17 +10,17 @@ app.post('/generate-pdf', async (req, res) => {
   const { html } = req.body;
   if (!html) return res.status(400).send('No HTML provided');
 
-  const browser = await puppeteer.launch();
+  const browser = await puppeteer.launch({
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    headless: true,
+  });
   const page = await browser.newPage();
-
   await page.setContent(html, { waitUntil: 'networkidle0' });
-
   const pdfBuffer = await page.pdf({
     format: 'A4',
     printBackground: true,
     margin: { top: 20, bottom: 20, left: 20, right: 20 }
   });
-
   await browser.close();
 
   res.set({
@@ -31,4 +31,5 @@ app.post('/generate-pdf', async (req, res) => {
   res.send(pdfBuffer);
 });
 
-app.listen(3002, () => console.log('PDF server running on port 3002')); 
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`PDF server running on port ${PORT}`)); 
