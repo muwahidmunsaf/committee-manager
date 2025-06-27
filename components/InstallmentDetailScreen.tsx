@@ -6,7 +6,7 @@ import { DEFAULT_PROFILE_PIC } from '../constants';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Language } from '../types';
-import '../assets/JameelNooriNastaleeq-normal.js'; // Register Urdu font for jsPDF
+import '../assets/JameelNooriNastaleeqKasheeda-normal.js'; // Register Urdu font for jsPDF
 import html2canvas from 'html2canvas';
 
 const InstallmentDetailScreen: React.FC = () => {

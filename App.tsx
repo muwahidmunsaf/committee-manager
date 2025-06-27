@@ -12,6 +12,7 @@ import { Language, AuthMethod } from './types';
 import { sendLoginNotification } from './services/emailService';
 import InstallmentManagement from './components/InstallmentManagement';
 import InstallmentDetailScreen from './components/InstallmentDetailScreen';
+import UrduPdfDownload from './components/UrduPdfDownload';
 
 const AppLockScreen: React.FC = () => {
   const { t, unlockApp, language, userProfile, updateAppPin, forceUpdateAppPin, authMethod, pinLength } = useAppContext();
@@ -482,6 +483,8 @@ const App: React.FC = () => {
   }
 
   return (
+    <>
+      <UrduPdfDownload />
     <DevToolsProtection>
     <BrowserRouter>
       <div className={`min-h-screen flex flex-col bg-neutral-light dark:bg-neutral-darkest text-neutral-darker dark:text-neutral-light ${language === Language.UR ? 'font-notoNastaliqUrdu' : 'font-inter'}`} dir={language === Language.UR ? 'rtl' : 'ltr'}>
@@ -512,6 +515,7 @@ const App: React.FC = () => {
       </div>
     </BrowserRouter>
     </DevToolsProtection>
+    </>
   );
 };
 

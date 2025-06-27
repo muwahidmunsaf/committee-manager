@@ -11,6 +11,7 @@ import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import Cropper, { ReactCropperElement } from 'react-cropper';
 import 'cropperjs/dist/cropper.css';
 import { optimizeImageWithCanvas } from '../utils/appUtils';
+import '../assets/JameelNooriNastaleeqKasheeda-normal.js';
 
 const openCameraWithBackPreference = async (onStream, onError) => {
   try {
@@ -457,6 +458,7 @@ const InstallmentManagement: React.FC = () => {
   const navigate = useNavigate();
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [openReportModal, setOpenReportModal] = useState<null | { installment: Installment, memberCommittees: Committee[] }>(null);
+  const urduDivRef = useRef<HTMLDivElement>(null);
 
   const handleOpenFormModal = (installment?: Installment) => {
     setEditingInstallment(installment);
@@ -482,30 +484,121 @@ const InstallmentManagement: React.FC = () => {
     i.mobileName.toLowerCase().includes(search.toLowerCase())
   );
 
-  const drawPdfHeader = (pdf: jsPDF, pdfWidth: number, logoImg: string) => {
-    // No background color, no app name, just logo centered
-    pdf.addImage(String(logoImg ?? ''), 'PNG', pdfWidth/2 - 25, 10, 50, 35, String(''), 'FAST');
-    // Add extra vertical space below logo
-    // (No app name, no colored bar)
-  };
-  const drawPdfFooter = (pdf: jsPDF, pdfWidth: number, pdfHeight: number) => {
-    pdf.setFillColor(6, 182, 212);
-    pdf.rect(0, pdfHeight - 50, pdfWidth, 40, 'F');
-    pdf.setFontSize(13);
-    pdf.setTextColor('#fff');
-    pdf.setFont(undefined, 'bold');
-    pdf.text(String('0300-1234567 | muhammadumaru3615@gmail.com | Chungi Stop Darghowala, Lahore'), pdfWidth/2, pdfHeight - 28, { align: 'center' });
-    // Page number removed from footer
-  };
-
   const handleDownloadAllBuyersPDF = async () => {
+    if (language === Language.UR) {
+      // Calculate totals
+      let totalCollected = 0;
+      let totalRemaining = 0;
+      installments.forEach(inst => {
+        const totalPaid = inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
+        const collectedAmount = (inst.advancePayment || 0) + totalPaid;
+        const remainingAmount = (inst.totalPayment || 0) - collectedAmount;
+        totalCollected += collectedAmount;
+        totalRemaining += remainingAmount > 0 ? remainingAmount : 0;
+      });
+      const logoUrl = `${window.location.origin}/assets/logo.png`;
+      const html = `
+        <html>
+          <head>
+            <meta charset='UTF-8' />
+            <style>
+              @page { size: A4 landscape; margin: 8mm; }
+              body { font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif; direction: rtl; background: #f8fafc; margin: 0; padding: 0; }
+              .header { text-align: center; margin: 0 0 6px 0; }
+              .logo { height: 48px; margin-bottom: 4px; }
+              .title { color: #0e7490; font-size: 1.5rem; font-weight: bold; margin-bottom: 4px; }
+              table { border-collapse: collapse; width: 100%; background: #fff; page-break-inside: auto; margin: 0; }
+              th, td { border: 1px solid #06b6d4; padding: 4px 6px; font-size: 0.95rem; }
+              th { background: #06b6d4; color: #fff; font-weight: bold; }
+              td { text-align: right; }
+              thead { display: table-header-group; }
+              tfoot { display: table-footer-group; background: #f8fafc; }
+              .totals-row td { color: #0e7490; font-size: 1.1rem; font-weight: bold; background: #f8fafc; border: none; }
+              .footer-info-row td { color: #fff; background: #06b6d4; text-align: center; font-size: 1rem; font-weight: bold; border: none; }
+            </style>
+          </head>
+          <body>
+            <div class='header'>
+              <img src='${logoUrl}' class='logo' />
+              <div class='title'>مجموعی قسط رپورٹ</div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>خریدار کا نام</th>
+                  <th>شناختی کارڈ</th>
+                  <th>فون</th>
+                  <th>موبائل کا نام</th>
+                  <th>کل رقم</th>
+                  <th>پیشگی</th>
+                  <th>جمع شدہ رقم</th>
+                  <th>باقی رقم</th>
+                  <th>مدت</th>
+                  <th>باقی اقساط</th>
+                  <th>اکاؤنٹ اسٹیٹس</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${installments.map(inst => {
+                  const totalPaid = inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
+                  const collectedAmount = (inst.advancePayment || 0) + totalPaid;
+                  const remainingAmount = (inst.totalPayment || 0) - collectedAmount;
+                  const remainingInstallments = (inst.duration || 0) - (inst.payments?.length || 0);
+                  const statusUr = remainingAmount <= 0 ? 'بند' : 'کھلا';
+                  const statusColor = remainingAmount <= 0 ? 'red' : 'green';
+                  return `<tr>
+                    <td>${inst.buyerName || ''}</td>
+                    <td>${inst.cnic || ''}</td>
+                    <td>${inst.phone || ''}</td>
+                    <td>${inst.mobileName || ''}</td>
+                    <td>PKR ${(inst.totalPayment || 0).toLocaleString()}</td>
+                    <td>PKR ${(inst.advancePayment || 0).toLocaleString()}</td>
+                    <td>PKR ${collectedAmount.toLocaleString()}</td>
+                    <td>PKR ${remainingAmount.toLocaleString()}</td>
+                    <td>${inst.duration}</td>
+                    <td>${remainingInstallments}</td>
+                    <td style='color:${statusColor};font-weight:bold;'>${statusUr}</td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+              <tfoot>
+                <tr class='totals-row'>
+                  <td colspan='6'></td>
+                  <td colspan='3'>کل جمع شدہ: PKR ${totalCollected.toLocaleString()}</td>
+                  <td colspan='2'>کل باقی: PKR ${totalRemaining.toLocaleString()}</td>
+                </tr>
+                <tr class='footer-info-row'>
+                  <td colspan='11'>0300-1234567 | muhammadumaru3615@gmail.com | Chungi Stop Darghowala, Lahore</td>
+                </tr>
+              </tfoot>
+            </table>
+          </body>
+        </html>
+      `;
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html })
+      });
+      if (!response.ok) {
+        alert('Failed to generate PDF');
+        return;
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'overall_installments_report_urdu.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      return;
+    }
     const logoImg = await fetch('/assets/logo.png').then(r => r.blob()).then(blob => new Promise<string>((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result as string); reader.readAsDataURL(blob); }));
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
-    drawPdfHeader(pdf, pdfWidth, logoImg);
-    let y = 60;
-    // Calculate totals for Urdu mode
     let totalCollected = 0;
     let totalRemaining = 0;
     installments.forEach(inst => {
@@ -515,129 +608,64 @@ const InstallmentManagement: React.FC = () => {
       totalCollected += collectedAmount;
       totalRemaining += remainingAmount > 0 ? remainingAmount : 0;
     });
-    if (language === Language.UR) {
-      // Ensure font is loaded before rendering
-      await document.fonts.load('18px "Jameel Noori Nastaleeq"');
-      // Wait for the table to be rendered in the DOM
-      await new Promise(resolve => setTimeout(resolve, 200));
-      // Render hidden Urdu table as image
-      const urduTable = document.getElementById('urdu-overall-report-table');
-      if (urduTable) {
-        const canvas = await html2canvas(urduTable);
-        const imgData = canvas.toDataURL('image/png');
-        const imgWidth = pdfWidth - 80;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        pdf.addImage(imgData, 'PNG', 40, y, imgWidth, imgHeight);
-        y += imgHeight + 20;
-        pdf.setFontSize(15);
-        pdf.setTextColor('#0e7490');
-        pdf.setFont(undefined, 'bold');
-        pdf.text(String(`کل جمع شدہ: PKR ${totalCollected.toLocaleString()}`), 60, y);
-        pdf.text(String(`کل باقی: PKR ${totalRemaining.toLocaleString()}`), pdfWidth - 320, y);
-        drawPdfFooter(pdf, pdfWidth, pdfHeight);
-        pdf.save('overall_installments_report.pdf');
-        return;
-      }
-    }
-    let columns: string[] = [];
-    let heading: string = '';
-    let safeTotalCollected: number = typeof totalCollected === 'number' ? totalCollected : 0;
-    let safeTotalRemaining: number = typeof totalRemaining === 'number' ? totalRemaining : 0;
-    if (language === Language.UR) {
-      pdf.setFont('JameelNooriNastaleeq', 'normal');
-      pdf.setFontSize(20);
-      pdf.setTextColor('#0e7490');
-      heading = 'مجموعی قسط رپورٹ';
-      columns = [
-        'خریدار کا نام', 'شناختی کارڈ', 'فون', 'موبائل کا نام', 'کل رقم', 'پیشگی', 'جمع شدہ رقم', 'باقی رقم', 'مدت', 'باقی اقساط', 'اکاؤنٹ اسٹیٹس'
-      ];
-    } else {
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(18);
-      pdf.setTextColor('#0e7490');
-      heading = 'Overall Installment Report';
-      columns = [
-        'Buyer Name', 'CNIC', 'Phone', 'Product Name', 'Total Amount', 'Advance', 'Collected Amount', 'Remaining Amount', 'Duration', 'Remaining Installments', 'Account Status'
-      ];
-    }
-    pdf.text(heading, pdfWidth/2, y + 30, { align: 'center' });
-    y += 50;
+    let columns = [
+      'Buyer Name', 'CNIC', 'Phone', 'Product Name', 'Total Amount', 'Advance', 'Collected Amount', 'Remaining Amount', 'Duration', 'Remaining Installments', 'Account Status'
+    ];
+    let heading = 'Overall Installment Report';
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(18);
+    pdf.setTextColor('#0e7490');
     // Table rows
     const rows = installments.map(inst => {
       const totalPaid = inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
       const collectedAmount = (inst.advancePayment || 0) + totalPaid;
       const remainingAmount = (inst.totalPayment || 0) - collectedAmount;
       const remainingInstallments = (inst.duration || 0) - (inst.payments?.length || 0);
-      totalCollected += collectedAmount;
-      totalRemaining += remainingAmount > 0 ? remainingAmount : 0;
-      // New status logic: Closed if remainingAmount <= 0, otherwise Open
-      let status, statusUr;
-      if (remainingAmount <= 0) {
-        status = 'Closed';
-        statusUr = 'بند';
-      } else {
-        status = 'Open';
-        statusUr = 'کھلا';
-      }
-      if (language === Language.UR) {
-        return [
-          inst.buyerName || '',
-          inst.cnic || '',
-          inst.phone || '',
-          inst.mobileName || '',
-          `PKR ${(inst.totalPayment || 0).toLocaleString()}`,
-          `PKR ${(inst.advancePayment || 0).toLocaleString()}`,
-          `PKR ${collectedAmount.toLocaleString()}`,
-          `PKR ${remainingAmount.toLocaleString()}`,
-          inst.duration,
-          remainingInstallments,
-          statusUr,
-        ];
-      } else {
-        return [
-          inst.buyerName || '',
-          inst.cnic || '',
-          inst.phone || '',
-          inst.mobileName || '',
-          `PKR ${(inst.totalPayment || 0).toLocaleString()}`,
-          `PKR ${(inst.advancePayment || 0).toLocaleString()}`,
-          `PKR ${collectedAmount.toLocaleString()}`,
-          `PKR ${remainingAmount.toLocaleString()}`,
-          inst.duration,
-          remainingInstallments,
-          status,
-        ];
-      }
+      let status = remainingAmount <= 0 ? 'Closed' : 'Open';
+      return [
+        inst.buyerName || '',
+        inst.cnic || '',
+        inst.phone || '',
+        inst.mobileName || '',
+        `PKR ${(inst.totalPayment || 0).toLocaleString()}`,
+        `PKR ${(inst.advancePayment || 0).toLocaleString()}`,
+        `PKR ${collectedAmount.toLocaleString()}`,
+        `PKR ${remainingAmount.toLocaleString()}`,
+        inst.duration,
+        remainingInstallments,
+        status,
+      ];
     }).filter(Boolean);
     autoTable(pdf, {
-      startY: y,
+      startY: 80,
       head: [columns],
       body: rows,
       theme: 'grid',
       headStyles: { fillColor: [6, 182, 212], textColor: 255, fontStyle: 'bold' },
-      styles: { fontSize: language === Language.UR ? 14 : 10, cellPadding: 4, font: language === Language.UR ? 'JameelNooriNastaleeq' : undefined, halign: language === Language.UR ? 'right' : 'left' },
+      styles: { fontSize: 10, cellPadding: 4, font: 'helvetica', halign: 'left' },
       margin: { left: 40, right: 40 },
-      didParseCell: function (data) {
-        if (data.column.index === columns.length - 1 && data.cell.raw) {
-          if (data.cell.raw === 'Open' || data.cell.raw === 'کھلا') {
-            data.cell.styles.textColor = [22, 163, 74]; // green
-          } else if (data.cell.raw === 'Closed' || data.cell.raw === 'بند') {
-            data.cell.styles.textColor = [220, 38, 38]; // red
-          }
-        }
-      },
       didDrawPage: (data) => {
-        drawPdfHeader(pdf, pdfWidth, logoImg);
-        drawPdfFooter(pdf, pdfWidth, pdfHeight);
+        // Header
+        pdf.addImage(String(logoImg ?? ''), 'PNG', pdfWidth/2 - 25, 10, 50, 35, String(''), 'FAST');
+        pdf.setFontSize(18);
+        pdf.setTextColor('#0e7490');
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(heading, pdfWidth/2, 60, { align: 'center' });
+        // Footer
+        pdf.setFillColor(6, 182, 212);
+        pdf.rect(0, pdfHeight - 50, pdfWidth, 40, 'F');
+        pdf.setFontSize(13);
+        pdf.setTextColor('#fff');
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('0300-1234567 | muhammadumaru3615@gmail.com | Chungi Stop Darghowala, Lahore', pdfWidth/2, pdfHeight - 28, { align: 'center' });
+        // Totals
+        pdf.setFontSize(13);
+        pdf.setTextColor('#0e7490');
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Total Collected: PKR ' + totalCollected.toLocaleString(), 60, pdfHeight - 70);
+        pdf.text('Total Remaining: PKR ' + totalRemaining.toLocaleString(), 320, pdfHeight - 70);
       }
     });
-    let lastY = (pdf as any).lastAutoTable.finalY + 20;
-    pdf.setFont(undefined, 'bold');
-    pdf.setFontSize(13);
-    pdf.setTextColor('#0e7490');
-    pdf.text('Total Collected: PKR ' + safeTotalCollected.toLocaleString(), 60, lastY);
-    pdf.text('Total Remaining: PKR ' + safeTotalRemaining.toLocaleString(), 320, lastY);
-    drawPdfFooter(pdf, pdfWidth, pdfHeight);
     pdf.save('overall_installments_report.pdf');
   };
 
@@ -794,69 +822,8 @@ const InstallmentManagement: React.FC = () => {
                 Cancel
               </button>
             </div>
-          </div>
-        )}
-      {/* Hidden Urdu table for PDF export */}
-      <div
-        id="urdu-overall-report-table"
-        style={{
-          visibility: 'hidden',
-          position: 'absolute',
-          left: '-9999px',
-          direction: 'rtl',
-          fontFamily: 'Jameel Noori Nastaleeq, serif',
-          fontSize: 18,
-          background: '#fff',
-          color: '#222',
-          padding: 16,
-          width: '100%',
-          top: 0,
-          zIndex: -1,
-        }}
-      >
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 18 }}>
-          <thead>
-            <tr style={{ background: '#06b6d4', color: '#fff', fontWeight: 'bold' }}>
-              <th>خریدار کا نام</th>
-              <th>شناختی کارڈ</th>
-              <th>فون</th>
-              <th>موبائل کا نام</th>
-              <th>کل رقم</th>
-              <th>پیشگی</th>
-              <th>جمع شدہ رقم</th>
-              <th>باقی رقم</th>
-              <th>مدت</th>
-              <th>باقی اقساط</th>
-              <th>اکاؤنٹ اسٹیٹس</th>
-            </tr>
-          </thead>
-          <tbody>
-            {installments.map(inst => {
-              const totalPaid = inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
-              const collectedAmount = (inst.advancePayment || 0) + totalPaid;
-              const remainingAmount = (inst.totalPayment || 0) - collectedAmount;
-              const remainingInstallments = (inst.duration || 0) - (inst.payments?.length || 0);
-              const statusUr = remainingAmount <= 0 ? 'بند' : 'کھلا';
-              const statusColor = remainingAmount <= 0 ? 'red' : 'green';
-              return (
-                <tr key={inst.id}>
-                    <td>{inst.buyerName || ''}</td>
-                    <td>{inst.cnic || ''}</td>
-                    <td>{inst.phone || ''}</td>
-                    <td>{inst.mobileName || ''}</td>
-                  <td>{`PKR ${(inst.totalPayment || 0).toLocaleString()}`}</td>
-                  <td>{`PKR ${(inst.advancePayment || 0).toLocaleString()}`}</td>
-                  <td>{`PKR ${collectedAmount.toLocaleString()}`}</td>
-                  <td>{`PKR ${remainingAmount.toLocaleString()}`}</td>
-                  <td>{inst.duration}</td>
-                  <td>{remainingInstallments}</td>
-                  <td style={{ color: statusColor, fontWeight: 'bold' }}>{statusUr}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
       </div>
+        )}
     </div>
     </>
   );
