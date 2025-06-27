@@ -140,3 +140,56 @@ export function parseGeminiJsonResponse<T,>(jsonString: string): T | null {
     return null;
   }
 }
+
+/**
+ * Optimizes an image using the Canvas API: resizes and compresses to JPEG.
+ * @param file The image File or Blob to optimize.
+ * @param maxSize The maximum width or height in pixels (default 800).
+ * @param quality JPEG quality (0-1, default 0.7).
+ * @returns Promise<Blob> The optimized image as a JPEG Blob.
+ */
+export async function optimizeImageWithCanvas(
+  file: File | Blob,
+  maxSize: number = 800,
+  quality: number = 0.7
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        let { width, height } = img;
+        // Calculate new dimensions
+        if (width > height) {
+          if (width > maxSize) {
+            height = Math.round((height * maxSize) / width);
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = Math.round((width * maxSize) / height);
+            height = maxSize;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject(new Error('Canvas context not available'));
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error('Image compression failed'));
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = () => reject(new Error('Failed to load image for optimization'));
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('Failed to read image file'));
+    reader.readAsDataURL(file);
+  });
+}

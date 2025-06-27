@@ -10,6 +10,7 @@ import html2canvas from 'html2canvas';
 import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import Cropper, { ReactCropperElement } from 'react-cropper';
 import 'cropperjs/dist/cropper.css';
+import { optimizeImageWithCanvas } from '../utils/appUtils';
 
 const openCameraWithBackPreference = async (onStream, onError) => {
   try {
@@ -110,16 +111,14 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'cnic') => {
     const file = event.target.files?.[0];
     if (file) {
-      const imageCompression = (await import('browser-image-compression')).default;
-      const options = { maxSizeMB: 1, maxWidthOrHeight: 1000, useWebWorker: true };
-      const compressedFile = await imageCompression(file, options);
+      const optimizedBlob = await optimizeImageWithCanvas(file, 1000, 0.7);
       const reader = new FileReader();
       reader.onloadend = () => {
         setCropSrc(reader.result as string);
         setCropType(type);
         setShowCropper(true);
       };
-      reader.readAsDataURL(compressedFile);
+      reader.readAsDataURL(optimizedBlob);
     }
   };
 
@@ -227,7 +226,7 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
       setCropType(photoType);
       setShowCropper(true);
     }
-    closeCameraModal();
+      closeCameraModal();
   };
 
   const handleCropConfirm = () => {
@@ -293,7 +292,7 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
         {(showProfilePhotoMenu || showCnicPhotoMenu) && (
           <div className="fixed inset-0 z-[1001] flex items-end justify-center bg-black bg-opacity-40">
             <div className="bg-white dark:bg-neutral-dark rounded-t-lg shadow-lg w-full max-w-md mx-auto p-4 flex flex-col gap-2 mb-0">
-              {showProfilePhotoMenu && (
+        {showProfilePhotoMenu && (
                 <>
                   <Button type="button" className="w-full" onClick={() => { setShowProfilePhotoMenu(false); document.getElementById('buyerProfilePicUpload')?.click(); }}>{t('uploadPhoto')}</Button>
                   <Button type="button" className="w-full" onClick={() => {
@@ -755,7 +754,7 @@ const InstallmentManagement: React.FC = () => {
                           <ArrowDownTrayIcon className="w-5 h-5" />
                         </Button>
                       </div>
-                    </div>
+                  </div>
                 </div>
               </div>
             );

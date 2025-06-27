@@ -245,15 +245,13 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const imageCompression = (await import('browser-image-compression')).default;
-      const options = { maxSizeMB: 1, maxWidthOrHeight: 1000, useWebWorker: true };
-      const compressedFile = await imageCompression(file, options);
+      const optimizedBlob = await optimizeImageWithCanvas(file, 1000, 0.7);
       const reader = new FileReader();
       reader.onloadend = () => {
         setCropSrc(reader.result as string);
         setShowCropper(true);
       };
-      reader.readAsDataURL(compressedFile);
+      reader.readAsDataURL(optimizedBlob);
     }
   };
 

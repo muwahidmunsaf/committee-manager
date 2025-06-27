@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
       },
       build: {
         rollupOptions: {
-          external: ['browser-image-compression'],
+          external: [],
         },
       },
     };
