@@ -1,5 +1,5 @@
-import puppeteer from 'puppeteer';
 import chromium from '@sparticuz/chromium';
+import puppeteer from 'puppeteer-core';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
