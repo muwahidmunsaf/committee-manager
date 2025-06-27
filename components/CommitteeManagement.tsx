@@ -10,6 +10,7 @@ import html2canvas from 'html2canvas';
 import autoTable from 'jspdf-autotable';
 import { Menu } from '@headlessui/react';
 import Cropper from 'react-cropper';
+import { optimizeImageWithCanvas } from '../utils/appUtils';
 // Import and register the JameelNooriNastaleeq font for jsPDF
 let registerJameelNooriNastaleeq: any = (null as any);
 try {
@@ -210,6 +211,10 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
   const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('user');
   // Add state for preview modal
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  // Add state for fallback
+  const [cameraFallbackTimeout, setCameraFallbackTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [showCameraFallbackMsg, setShowCameraFallbackMsg] = useState(false);
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -243,6 +248,8 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
 
   // 2. Handle file upload with cropping
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (cameraFallbackTimeout) clearTimeout(cameraFallbackTimeout);
+    setShowCameraFallbackMsg(false);
     const file = event.target.files?.[0];
     if (file) {
       const optimizedBlob = await optimizeImageWithCanvas(file, 1000, 0.7);
@@ -253,6 +260,8 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
       };
       reader.readAsDataURL(optimizedBlob);
     }
+    // Always reset input value so same file can be re-uploaded
+    event.target.value = '';
   };
 
   const validate = (): boolean => {
@@ -407,19 +416,30 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
               <Button type="button" className="w-full" onClick={() => { setShowPhotoMenu(false); document.getElementById('memberProfilePicUpload')?.click(); }}>Upload Image</Button>
               <Button type="button" className="w-full" onClick={() => {
                 setShowPhotoMenu(false);
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = 'image/*';
-                input.capture = 'user';
-                input.onchange = (e: any) => handleFileUpload(e);
-                input.click();
+                if (isMobile) {
+                  // Fallback: if no file is selected after 2 seconds, show fallback message or open camera modal
+                  const input = document.getElementById('memberProfilePicCamera') as HTMLInputElement;
+                  if (input) {
+                    input.click();
+                    // Clear any previous timeout
+                    if (cameraFallbackTimeout) clearTimeout(cameraFallbackTimeout);
+                    const timeout = setTimeout(() => {
+                      if (!input.files || input.files.length === 0) {
+                        setShowCameraFallbackMsg(true);
+                      }
+                    }, 2000);
+                    setCameraFallbackTimeout(timeout);
+                  }
+                } else {
+                  setShowCameraModal(true);
+                }
               }}>Take Photo</Button>
               <Button type="button" variant="ghost" className="w-full" onClick={() => setShowPhotoMenu(false)}>Cancel</Button>
             </div>
           </div>
         )}
         <input type="file" id="memberProfilePicUpload" className="hidden" accept="image/*" onChange={handleFileUpload} />
-        <input type="file" id="memberProfilePicCamera" className="hidden" accept="image/*" capture="environment" onChange={handleFileUpload} />
+        <input type="file" id="memberProfilePicCamera" className="hidden" accept="image/*" capture="user" onChange={handleFileUpload} />
         {formData.profilePictureUrl && formData.profilePictureUrl !== DEFAULT_PROFILE_PIC && (
           <Button 
             type="button" 
@@ -495,6 +515,15 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
             <Button type="button" className="w-full" onClick={() => setShowPreviewModal(false)}>
               Close
             </Button>
+          </div>
+        </div>
+      )}
+      {showCameraFallbackMsg && (
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black bg-opacity-80">
+          <div className="bg-white dark:bg-neutral-dark rounded-lg shadow-lg p-4 flex flex-col items-center">
+            <div className="text-red-500 mb-4 text-center">Unable to open camera via device. Please check browser permissions or try the in-browser camera below.</div>
+            <Button type="button" className="w-full mb-2" onClick={() => { setShowCameraFallbackMsg(false); setShowCameraModal(true); }}>Open In-Browser Camera</Button>
+            <Button type="button" variant="ghost" className="w-full" onClick={() => setShowCameraFallbackMsg(false)}>Cancel</Button>
           </div>
         </div>
       )}
