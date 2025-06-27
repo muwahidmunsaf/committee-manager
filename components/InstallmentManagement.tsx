@@ -575,7 +575,10 @@ const InstallmentManagement: React.FC = () => {
           </body>
         </html>
       `;
-      const response = await fetch('/api/generate-pdf', {
+      const apiUrl = process.env.NODE_ENV === 'development'
+        ? 'https://committee-manager.vercel.app/api/generate-pdf'
+        : '/api/generate-pdf';
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ html })
@@ -612,9 +615,9 @@ const InstallmentManagement: React.FC = () => {
       'Buyer Name', 'CNIC', 'Phone', 'Product Name', 'Total Amount', 'Advance', 'Collected Amount', 'Remaining Amount', 'Duration', 'Remaining Installments', 'Account Status'
     ];
     let heading = 'Overall Installment Report';
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(18);
-    pdf.setTextColor('#0e7490');
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(18);
+      pdf.setTextColor('#0e7490');
     // Table rows
     const rows = installments.map(inst => {
       const totalPaid = inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
@@ -622,19 +625,19 @@ const InstallmentManagement: React.FC = () => {
       const remainingAmount = (inst.totalPayment || 0) - collectedAmount;
       const remainingInstallments = (inst.duration || 0) - (inst.payments?.length || 0);
       let status = remainingAmount <= 0 ? 'Closed' : 'Open';
-      return [
+        return [
         inst.buyerName || '',
         inst.cnic || '',
         inst.phone || '',
         inst.mobileName || '',
-        `PKR ${(inst.totalPayment || 0).toLocaleString()}`,
-        `PKR ${(inst.advancePayment || 0).toLocaleString()}`,
-        `PKR ${collectedAmount.toLocaleString()}`,
-        `PKR ${remainingAmount.toLocaleString()}`,
-        inst.duration,
-        remainingInstallments,
-        status,
-      ];
+          `PKR ${(inst.totalPayment || 0).toLocaleString()}`,
+          `PKR ${(inst.advancePayment || 0).toLocaleString()}`,
+          `PKR ${collectedAmount.toLocaleString()}`,
+          `PKR ${remainingAmount.toLocaleString()}`,
+          inst.duration,
+          remainingInstallments,
+          status,
+        ];
     }).filter(Boolean);
     autoTable(pdf, {
       startY: 80,
