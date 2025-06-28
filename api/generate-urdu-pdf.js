@@ -52,8 +52,8 @@ export default async function handler(req, res) {
     if (fs.existsSync(logoPath)) {
       doc.image(logoPath, pageWidth / 2 - 40, 20, { width: 80, align: 'center' });
     }
-    doc.font('Urdu').fontSize(20).fillColor('#0e7490').text(reverseUrduWords('مجموعی اقساط رپورٹ'), 0, 110, { align: 'center', width: pageWidth });
-    doc.moveDown(1.2);
+    doc.font('Urdu').fontSize(20).fillColor('#0e7490').text(reverseUrduWords('مجموعی اقساط رپورٹ'), 0, 90, { align: 'center', width: pageWidth });
+    doc.moveDown(0.5);
   }
 
   // Helper to draw footer
@@ -61,7 +61,7 @@ export default async function handler(req, res) {
     const pageWidth = doc.page.width;
     const footerY = doc.page.height - 50;
     doc.rect(0, footerY, pageWidth, 40).fill('#06b6d4');
-    const footerText = reverseUrduWords(`${ownerPhone} | ${ownerEmail} | ${ownerAddress}`);
+    const footerText = `${ownerPhone} | ${ownerEmail} | ${ownerAddress}`;
     doc.font('Urdu').fontSize(11).fillColor('#fff').text(footerText, 0, footerY + 10, { align: 'center', width: pageWidth });
     doc.fillColor('#000');
   }
@@ -71,7 +71,7 @@ export default async function handler(req, res) {
   const pageHeight = doc.page.height;
   const margin = 30;
   const footerHeight = 50;
-  const headerHeight = 140;
+  const headerHeight = 110; // reduced from 140
   const rowHeight = 20;
   const headerRowHeight = 24;
   const headers = [
