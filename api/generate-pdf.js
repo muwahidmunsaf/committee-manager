@@ -1,52 +1,69 @@
+import { IncomingMessage, ServerResponse } from 'http';
 import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 
 export default async function handler(req, res) {
-  // CORS headers
+  // Allow CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
+    res.statusCode = 200;
+    res.end();
     return;
   }
 
   if (req.method !== 'POST') {
-    res.status(405).send('Method Not Allowed');
+    res.statusCode = 405;
+    res.end('Method Not Allowed');
     return;
   }
 
-  const { html } = req.body;
+  // Read body as buffer if not already parsed
+  let body = '';
+  for await (const chunk of req) {
+    body += chunk;
+  }
+  const { html } = JSON.parse(body);
+
   if (!html) {
-    res.status(400).send('No HTML provided');
+    res.statusCode = 400;
+    res.end('No HTML provided');
     return;
   }
 
-  let browser;
+  let browser = null;
   try {
+    const executablePath = await chromium.executablePath();
+
     browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
+      executablePath,
       headless: chromium.headless,
-      ignoreDefaultArgs: ['--disable-extensions'],
     });
+
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
+
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
       margin: { top: 20, bottom: 20, left: 20, right: 20 },
     });
+
     await browser.close();
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename=urdu-report.pdf');
-    res.setHeader('Content-Length', pdfBuffer.length);
-    res.status(200).send(pdfBuffer);
+    res.setHeader('Content-Length', pdfBuffer.length.toString());
+    res.statusCode = 200;
+    res.end(pdfBuffer);
   } catch (error) {
     console.error('PDF generation failed:', error);
     if (browser) await browser.close();
-    res.status(500).send('PDF generation failed: ' + error.message);
+    res.statusCode = 500;
+    res.end('PDF generation failed: ' + error.message);
   }
-} 
+}
