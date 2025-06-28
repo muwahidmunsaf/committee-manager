@@ -486,100 +486,12 @@ const InstallmentManagement: React.FC = () => {
 
   const handleDownloadAllBuyersPDF = async () => {
     if (language === Language.UR) {
-      // Calculate totals
-      let totalCollected = 0;
-      let totalRemaining = 0;
-      installments.forEach(inst => {
-        const totalPaid = inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
-        const collectedAmount = (inst.advancePayment || 0) + totalPaid;
-        const remainingAmount = (inst.totalPayment || 0) - collectedAmount;
-        totalCollected += collectedAmount;
-        totalRemaining += remainingAmount > 0 ? remainingAmount : 0;
-      });
-      const logoUrl = `${window.location.origin}/assets/logo.png`;
-      const html = `
-        <html>
-          <head>
-            <meta charset='UTF-8' />
-            <style>
-              @page { size: A4 landscape; margin: 8mm; }
-              body { font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif; direction: rtl; background: #f8fafc; margin: 0; padding: 0; }
-              .header { text-align: center; margin: 0 0 6px 0; }
-              .logo { height: 48px; margin-bottom: 4px; }
-              .title { color: #0e7490; font-size: 1.5rem; font-weight: bold; margin-bottom: 4px; }
-              table { border-collapse: collapse; width: 100%; background: #fff; page-break-inside: auto; margin: 0; }
-              th, td { border: 1px solid #06b6d4; padding: 4px 6px; font-size: 0.95rem; }
-              th { background: #06b6d4; color: #fff; font-weight: bold; }
-              td { text-align: right; }
-              thead { display: table-header-group; }
-              tfoot { display: table-footer-group; background: #f8fafc; }
-              .totals-row td { color: #0e7490; font-size: 1.1rem; font-weight: bold; background: #f8fafc; border: none; }
-              .footer-info-row td { color: #fff; background: #06b6d4; text-align: center; font-size: 1rem; font-weight: bold; border: none; }
-            </style>
-          </head>
-          <body>
-            <div class='header'>
-              <img src='${logoUrl}' class='logo' />
-              <div class='title'>مجموعی قسط رپورٹ</div>
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>خریدار کا نام</th>
-                  <th>شناختی کارڈ</th>
-                  <th>فون</th>
-                  <th>موبائل کا نام</th>
-                  <th>کل رقم</th>
-                  <th>پیشگی</th>
-                  <th>جمع شدہ رقم</th>
-                  <th>باقی رقم</th>
-                  <th>مدت</th>
-                  <th>باقی اقساط</th>
-                  <th>اکاؤنٹ اسٹیٹس</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${installments.map(inst => {
-                  const totalPaid = inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
-                  const collectedAmount = (inst.advancePayment || 0) + totalPaid;
-                  const remainingAmount = (inst.totalPayment || 0) - collectedAmount;
-                  const remainingInstallments = (inst.duration || 0) - (inst.payments?.length || 0);
-                  const statusUr = remainingAmount <= 0 ? 'بند' : 'کھلا';
-                  const statusColor = remainingAmount <= 0 ? 'red' : 'green';
-                  return `<tr>
-                    <td>${inst.buyerName || ''}</td>
-                    <td>${inst.cnic || ''}</td>
-                    <td>${inst.phone || ''}</td>
-                    <td>${inst.mobileName || ''}</td>
-                    <td>PKR ${(inst.totalPayment || 0).toLocaleString()}</td>
-                    <td>PKR ${(inst.advancePayment || 0).toLocaleString()}</td>
-                    <td>PKR ${collectedAmount.toLocaleString()}</td>
-                    <td>PKR ${remainingAmount.toLocaleString()}</td>
-                    <td>${inst.duration}</td>
-                    <td>${remainingInstallments}</td>
-                    <td style='color:${statusColor};font-weight:bold;'>${statusUr}</td>
-                  </tr>`;
-                }).join('')}
-              </tbody>
-              <tfoot>
-                <tr class='totals-row'>
-                  <td colspan='6'></td>
-                  <td colspan='3'>کل جمع شدہ: PKR ${totalCollected.toLocaleString()}</td>
-                  <td colspan='2'>کل باقی: PKR ${totalRemaining.toLocaleString()}</td>
-                </tr>
-                <tr class='footer-info-row'>
-                  <td colspan='11'>0300-1234567 | muhammadumaru3615@gmail.com | Chungi Stop Darghowala, Lahore</td>
-                </tr>
-              </tfoot>
-            </table>
-          </body>
-        </html>
-      `;
-      const apiUrl = '/api/generate-pdf';
-      const response = await fetch(apiUrl, {
+      // Compose Urdu text for the report (replace with real data if needed)
+      const urduText = 'یہ ایک مکمل اردو اقساط رپورٹ ہے۔';
+      const response = await fetch('/api/generate-urdu-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html })
+        body: JSON.stringify({ urduText, title: 'اقساط رپورٹ' })
       });
       if (!response.ok) {
         alert('Failed to generate PDF');
