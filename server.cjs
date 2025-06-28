@@ -42,5 +42,12 @@ app.post('/generate-pdf', async (req, res) => {
   res.send(pdfBuffer);
 });
 
+app.options('/generate-pdf', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.sendStatus(200);
+});
+
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`PDF server running on port ${PORT}`)); 
