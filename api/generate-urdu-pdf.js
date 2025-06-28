@@ -27,8 +27,8 @@ export default async function handler(req, res) {
   const fontPath = path.join(process.cwd(), 'assets', 'JameelNooriNastaleeqKasheeda.ttf');
   const logoPath = path.join(process.cwd(), 'assets', 'logo.png');
 
-  // Create PDF
-  const doc = new PDFDocument({ size: 'A4', margin: 30 });
+  // Create PDF in landscape orientation
+  const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 30 });
   let buffers = [];
   doc.on('data', buffers.push.bind(buffers));
   doc.on('end', () => {
@@ -49,48 +49,49 @@ export default async function handler(req, res) {
   doc.font('Urdu').fontSize(22).fillColor('#0e7490').text('مجموعی اقساط رپورٹ', 0, 110, { align: 'center', width: pageWidth });
   doc.moveDown(1.5);
 
-  // Table headers (Urdu)
+  // Table headers (Urdu, RTL)
   const headers = [
-    'خریدار کا نام', 'شناختی کارڈ', 'فون', 'پروڈکٹ', 'کل رقم', 'ایڈوانس', 'جمع شدہ رقم', 'باقی رقم', 'مدت', 'باقی اقساط', 'اکاؤنٹ اسٹیٹس'
+    'اکاؤنٹ اسٹیٹس', 'باقی اقساط', 'مدت', 'باقی رقم', 'جمع شدہ رقم', 'ایڈوانس', 'کل رقم', 'پروڈکٹ', 'فون', 'شناختی کارڈ', 'خریدار کا نام'
   ];
-  const colWidths = [70, 80, 70, 60, 60, 60, 70, 70, 40, 60, 70];
-  const tableLeft = pageWidth - 40 - colWidths.reduce((a, b) => a + b, 0);
+  const colWidths = [70, 60, 40, 70, 70, 60, 60, 60, 70, 80, 70].reverse();
+  const tableLeft = 40; // RTL: start from left margin
   let y = 150;
 
-  // Draw table headers with background
-  let x = pageWidth - 40;
+  // Draw table headers with background (RTL)
+  let x = tableLeft;
   doc.font('Urdu').fontSize(12);
   headers.forEach((header, i) => {
-    x -= colWidths[i];
     doc.save();
     doc.rect(x, y, colWidths[i], 25).fillAndStroke('#06b6d4', '#06b6d4');
     doc.fillColor('#fff').text(header, x + 2, y + 6, { width: colWidths[i] - 4, align: 'center' });
     doc.restore();
+    x += colWidths[i];
   });
 
-  // Draw table rows with alternating background
+  // Draw table rows with alternating background (RTL)
   y += 25;
   rows.forEach((row, rowIdx) => {
-    x = pageWidth - 40;
+    x = tableLeft;
     if (rowIdx % 2 === 0) {
       doc.save();
-      doc.rect(tableLeft, y, pageWidth - 40 - tableLeft, 22).fill('#f0fafd');
+      doc.rect(tableLeft, y, colWidths.reduce((a, b) => a + b, 0), 22).fill('#f0fafd');
       doc.restore();
     }
-    row.forEach((cell, i) => {
-      x -= colWidths[i];
+    const rtlRow = [...row].reverse();
+    rtlRow.forEach((cell, i) => {
       doc.save();
       doc.rect(x, y, colWidths[i], 22).stroke('#06b6d4');
       doc.font('Urdu').fontSize(11).fillColor('#222').text(cell, x + 2, y + 5, { width: colWidths[i] - 4, align: 'center' });
       doc.restore();
+      x += colWidths[i];
     });
     y += 22;
   });
 
-  // Totals row (styled)
+  // Totals row (styled, RTL)
   y += 10;
-  doc.font('Urdu').fontSize(13).fillColor('#0e7490').text(`کل جمع شدہ: ${totalCollected}`, tableLeft, y, { align: 'right', width: pageWidth / 2 - tableLeft });
-  doc.font('Urdu').fontSize(13).fillColor('#0e7490').text(`کل باقی: ${totalRemaining}`, pageWidth / 2, y, { align: 'right', width: pageWidth / 2 - 40 });
+  doc.font('Urdu').fontSize(13).fillColor('#0e7490').text(`کل جمع شدہ: ${totalCollected}`, tableLeft, y, { align: 'left', width: pageWidth / 2 - tableLeft });
+  doc.font('Urdu').fontSize(13).fillColor('#0e7490').text(`کل باقی: ${totalRemaining}`, pageWidth / 2, y, { align: 'left', width: pageWidth / 2 - 40 });
   doc.fillColor('#000');
 
   // Footer (styled bar)
