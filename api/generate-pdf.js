@@ -17,7 +17,6 @@ export default async function handler(req, res) {
   }
 
   const { html } = req.body;
-
   if (!html) {
     res.status(400).send('No HTML provided');
     return;
@@ -26,7 +25,7 @@ export default async function handler(req, res) {
   let browser;
 
   try {
-    const executablePath = await chromium.executablePath;
+    const executablePath = await chromium.executablePath(); // 🟢 fixed
 
     browser = await puppeteer.launch({
       args: chromium.args,
