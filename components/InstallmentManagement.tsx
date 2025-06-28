@@ -486,12 +486,35 @@ const InstallmentManagement: React.FC = () => {
 
   const handleDownloadAllBuyersPDF = async () => {
     if (language === Language.UR) {
-      // Compose Urdu text for the report (replace with real data if needed)
-      const urduText = 'یہ ایک مکمل اردو اقساط رپورٹ ہے۔';
+      // Prepare Urdu table data for PDFKit
+      let totalCollected = 0;
+      let totalRemaining = 0;
+      const rows = installments.map(inst => {
+        const totalPaid = inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
+        const collectedAmount = (inst.advancePayment || 0) + totalPaid;
+        const remainingAmount = (inst.totalPayment || 0) - collectedAmount;
+        totalCollected += collectedAmount;
+        totalRemaining += remainingAmount > 0 ? remainingAmount : 0;
+        const remainingInstallments = (inst.duration || 0) - (inst.payments?.length || 0);
+        let status = remainingAmount <= 0 ? 'بند' : 'کھلا';
+        return [
+          inst.buyerName || '',
+          inst.cnic || '',
+          inst.phone || '',
+          inst.mobileName || '',
+          `${(inst.totalPayment || 0).toLocaleString()}`,
+          `${(inst.advancePayment || 0).toLocaleString()}`,
+          `${collectedAmount.toLocaleString()}`,
+          `${remainingAmount.toLocaleString()}`,
+          inst.duration,
+          remainingInstallments,
+          status,
+        ];
+      });
       const response = await fetch('/api/generate-urdu-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urduText, title: 'اقساط رپورٹ' })
+        body: JSON.stringify({ rows, totalCollected: totalCollected.toLocaleString(), totalRemaining: totalRemaining.toLocaleString() })
       });
       if (!response.ok) {
         alert('Failed to generate PDF');
