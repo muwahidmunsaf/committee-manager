@@ -23,10 +23,10 @@ const UrduPdfDownload: React.FC = () => {
         </body>
       </html>
     `;
-    const response = await fetch('/api/generate-pdf', {
+    const response = await fetch('/api/generate-urdu-pdf', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ html })
+      body: JSON.stringify({ urduText: urduDiv.innerText, title: 'اردو رپورٹ' })
     });
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
