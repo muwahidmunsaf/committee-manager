@@ -575,9 +575,7 @@ const InstallmentManagement: React.FC = () => {
           </body>
         </html>
       `;
-      const apiUrl = process.env.NODE_ENV === 'development'
-        ? 'https://committee-manager.vercel.app/api/generate-pdf'
-        : '/api/generate-pdf';
+      const apiUrl = 'https://committee-manager.fly.dev/generate-pdf';
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
