@@ -511,7 +511,8 @@ const InstallmentManagement: React.FC = () => {
           status,
         ];
       });
-      const response = await fetch('/api/generate-urdu-pdf', {
+      const apiUrl = window.location.origin + '/api/generate-urdu-pdf';
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rows, totalCollected: totalCollected.toLocaleString(), totalRemaining: totalRemaining.toLocaleString() })

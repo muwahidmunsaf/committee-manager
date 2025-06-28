@@ -49,7 +49,7 @@ export default async function handler(req, res) {
   doc.font('Urdu').fontSize(22).fillColor('#0e7490').text('مجموعی اقساط رپورٹ', 0, 110, { align: 'center', width: pageWidth });
   doc.moveDown(1.5);
 
-  // Table headers (Urdu, RTL columns, but text as-is)
+  // Table headers (Urdu, RTL columns, text as-is)
   const headers = [
     'خریدار کا نام', 'شناختی کارڈ', 'فون', 'موبائل کا نام', 'کل رقم', 'ایڈوانس', 'جمع شدہ رقم', 'باقی رقم', 'مدت', 'باقی اقساط', 'اکاؤنٹ اسٹیٹس'
   ];
@@ -59,32 +59,32 @@ export default async function handler(req, res) {
   const tableLeft = (pageWidth - tableWidth) / 2;
   let y = 150;
 
-  // Draw table headers with background (RTL columns, text as-is)
-  let x = tableLeft;
+  // Draw table headers with background (RTL: first col on right, last on left)
+  let x = tableLeft + tableWidth;
   doc.font('Urdu').fontSize(13);
-  for (let i = numCols - 1; i >= 0; i--) {
+  for (let i = 0; i < numCols; i++) {
+    x -= colWidths[i];
     doc.save();
     doc.rect(x, y, colWidths[i], 30).fillAndStroke('#06b6d4', '#06b6d4');
     doc.fillColor('#fff').text(headers[i], x + 4, y + 8, { width: colWidths[i] - 8, align: 'center' });
     doc.restore();
-    x += colWidths[i];
   }
 
   // Draw table rows with alternating background (RTL columns, text as-is)
   y += 30;
   rows.forEach((row, rowIdx) => {
-    x = tableLeft;
+    x = tableLeft + tableWidth;
     if (rowIdx % 2 === 0) {
       doc.save();
       doc.rect(tableLeft, y, tableWidth, 28).fill('#f0fafd');
       doc.restore();
     }
-    for (let i = numCols - 1; i >= 0; i--) {
+    for (let i = 0; i < numCols; i++) {
+      x -= colWidths[i];
       doc.save();
       doc.rect(x, y, colWidths[i], 28).stroke('#06b6d4');
       doc.font('Urdu').fontSize(12).fillColor('#222').text(row[i], x + 4, y + 8, { width: colWidths[i] - 8, align: 'center' });
       doc.restore();
-      x += colWidths[i];
     }
     y += 28;
   });
