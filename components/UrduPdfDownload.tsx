@@ -4,29 +4,19 @@ const UrduPdfDownload: React.FC = () => {
   const urduDivRef = useRef<HTMLDivElement>(null);
 
   const downloadUrduPdf = async () => {
-    const urduDiv = urduDivRef.current;
-    if (!urduDiv) return;
-    // Compose a minimal HTML document with styles and the Urdu content
-    const html = `
-      <html>
-        <head>
-          <meta charset="UTF-8" />
-          <style>
-            body { font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif; direction: rtl; }
-            table { border-collapse: collapse; width: 100%; }
-            th, td { border: 1px solid #06b6d4; padding: 8px; }
-            th { background: #06b6d4; color: #fff; }
-          </style>
-        </head>
-        <body>
-          ${urduDiv.innerHTML}
-        </body>
-      </html>
-    `;
+    // Sample data for demonstration - in real app this would come from props or context
+    const sampleRows = [
+      ['منصف', '12345-1234567-1', '0333-3333333', 'iPhone 15', '150000', '50000', '75000', '25000', '12', '6', 'کھلا'],
+      ['شہرام', '54321-7654321-2', '0333-3333334', 'Samsung S24', '120000', '40000', '80000', '0', '10', '0', 'بند'],
+    ];
+    
+    const totalCollected = '155000';
+    const totalRemaining = '25000';
+
     const response = await fetch('/api/generate-urdu-pdf', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ urduText: urduDiv.innerText, title: 'اردو رپورٹ' })
+      body: JSON.stringify({ rows: sampleRows, totalCollected, totalRemaining })
     });
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
@@ -40,30 +30,6 @@ const UrduPdfDownload: React.FC = () => {
   return (
     <div>
       <button onClick={downloadUrduPdf} style={{ marginBottom: 16, background: '#06b6d4', color: '#fff', padding: '8px 16px', border: 'none', borderRadius: 4 }}>Download Urdu PDF</button>
-      <div ref={urduDivRef} style={{ display: 'none' }}>
-        <h2 style={{ color: '#0e7490', textAlign: 'center' }}>اردو رپورٹ</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>نام</th>
-              <th>فون</th>
-              <th>پتہ</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>منصف</td>
-              <td>0333-3333333</td>
-              <td>لاہور</td>
-            </tr>
-            <tr>
-              <td>شہرام</td>
-              <td>0333-3333334</td>
-              <td>کراچی</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 };
