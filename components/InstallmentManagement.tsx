@@ -575,7 +575,7 @@ const InstallmentManagement: React.FC = () => {
           </body>
         </html>
       `;
-      const apiUrl = 'https://committee-manager.fly.dev/generate-pdf';
+      const apiUrl = '/api/generate-pdf';
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

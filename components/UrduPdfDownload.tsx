@@ -23,7 +23,7 @@ const UrduPdfDownload: React.FC = () => {
         </body>
       </html>
     `;
-    const response = await fetch('https://committee-manager.fly.dev/generate-pdf', {
+    const response = await fetch('/api/generate-pdf', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ html })
