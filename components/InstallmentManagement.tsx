@@ -511,11 +511,21 @@ const InstallmentManagement: React.FC = () => {
           status,
         ];
       });
+      const ownerPhone = '0300-1234567';
+      const ownerEmail = 'muhammadumaru3615@gmail.com';
+      const ownerAddress = 'چونگی سٹاپ، درگاہ والا، لاہور';
       const apiUrl = window.location.origin + '/api/generate-urdu-pdf';
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows, totalCollected: totalCollected.toLocaleString(), totalRemaining: totalRemaining.toLocaleString() })
+        body: JSON.stringify({
+          rows,
+          totalCollected: totalCollected.toLocaleString(),
+          totalRemaining: totalRemaining.toLocaleString(),
+          ownerPhone,
+          ownerEmail,
+          ownerAddress
+        })
       });
       if (!response.ok) {
         alert('Failed to generate PDF');
