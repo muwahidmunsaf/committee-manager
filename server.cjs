@@ -3,6 +3,17 @@ const puppeteer = require('puppeteer');
 const cors = require('cors');
 const app = express();
 
+// CORS middleware for all routes and errors
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
