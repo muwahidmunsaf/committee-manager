@@ -49,54 +49,55 @@ export default async function handler(req, res) {
   doc.font('Urdu').fontSize(22).fillColor('#0e7490').text('مجموعی اقساط رپورٹ', 0, 110, { align: 'center', width: pageWidth });
   doc.moveDown(1.5);
 
-  // Table headers (Urdu, RTL)
+  // Table headers (Urdu, RTL columns, but text as-is)
   const headers = [
-    'اکاؤنٹ اسٹیٹس', 'باقی اقساط', 'مدت', 'باقی رقم', 'جمع شدہ رقم', 'ایڈوانس', 'کل رقم', 'پروڈکٹ', 'فون', 'شناختی کارڈ', 'خریدار کا نام'
+    'خریدار کا نام', 'شناختی کارڈ', 'فون', 'موبائل کا نام', 'کل رقم', 'ایڈوانس', 'جمع شدہ رقم', 'باقی رقم', 'مدت', 'باقی اقساط', 'اکاؤنٹ اسٹیٹس'
   ];
-  const colWidths = [70, 60, 40, 70, 70, 60, 60, 60, 70, 80, 70].reverse();
-  const tableLeft = 40; // RTL: start from left margin
+  const colWidths = [80, 100, 90, 90, 90, 80, 100, 100, 60, 80, 90];
+  const numCols = headers.length;
+  const tableWidth = colWidths.reduce((a, b) => a + b, 0);
+  const tableLeft = (pageWidth - tableWidth) / 2;
   let y = 150;
 
-  // Draw table headers with background (RTL)
+  // Draw table headers with background (RTL columns, text as-is)
   let x = tableLeft;
-  doc.font('Urdu').fontSize(12);
-  headers.forEach((header, i) => {
+  doc.font('Urdu').fontSize(13);
+  for (let i = numCols - 1; i >= 0; i--) {
     doc.save();
-    doc.rect(x, y, colWidths[i], 25).fillAndStroke('#06b6d4', '#06b6d4');
-    doc.fillColor('#fff').text(header, x + 2, y + 6, { width: colWidths[i] - 4, align: 'center' });
+    doc.rect(x, y, colWidths[i], 30).fillAndStroke('#06b6d4', '#06b6d4');
+    doc.fillColor('#fff').text(headers[i], x + 4, y + 8, { width: colWidths[i] - 8, align: 'center' });
     doc.restore();
     x += colWidths[i];
-  });
+  }
 
-  // Draw table rows with alternating background (RTL)
-  y += 25;
+  // Draw table rows with alternating background (RTL columns, text as-is)
+  y += 30;
   rows.forEach((row, rowIdx) => {
     x = tableLeft;
     if (rowIdx % 2 === 0) {
       doc.save();
-      doc.rect(tableLeft, y, colWidths.reduce((a, b) => a + b, 0), 22).fill('#f0fafd');
+      doc.rect(tableLeft, y, tableWidth, 28).fill('#f0fafd');
       doc.restore();
     }
-    const rtlRow = [...row].reverse();
-    rtlRow.forEach((cell, i) => {
+    for (let i = numCols - 1; i >= 0; i--) {
       doc.save();
-      doc.rect(x, y, colWidths[i], 22).stroke('#06b6d4');
-      doc.font('Urdu').fontSize(11).fillColor('#222').text(cell, x + 2, y + 5, { width: colWidths[i] - 4, align: 'center' });
+      doc.rect(x, y, colWidths[i], 28).stroke('#06b6d4');
+      doc.font('Urdu').fontSize(12).fillColor('#222').text(row[i], x + 4, y + 8, { width: colWidths[i] - 8, align: 'center' });
       doc.restore();
       x += colWidths[i];
-    });
-    y += 22;
+    }
+    y += 28;
   });
 
-  // Totals row (styled, RTL)
-  y += 10;
-  doc.font('Urdu').fontSize(13).fillColor('#0e7490').text(`کل جمع شدہ: ${totalCollected}`, tableLeft, y, { align: 'left', width: pageWidth / 2 - tableLeft });
-  doc.font('Urdu').fontSize(13).fillColor('#0e7490').text(`کل باقی: ${totalRemaining}`, pageWidth / 2, y, { align: 'left', width: pageWidth / 2 - 40 });
+  // Totals row (styled, RTL, match English style)
+  y += 12;
+  doc.font('Urdu').fontSize(14).fillColor('#0e7490').text(`کل جمع شدہ: PKR ${totalCollected}`, tableLeft, y, { align: 'left', width: tableWidth / 2 });
+  doc.font('Urdu').fontSize(14).fillColor('#0e7490').text(`کل باقی: PKR ${totalRemaining}`, tableLeft + tableWidth / 2, y, { align: 'left', width: tableWidth / 2 });
   doc.fillColor('#000');
 
-  // Footer (styled bar)
+  // Footer (styled bar, all details in one line, in Urdu)
   const footerY = doc.page.height - 50;
   doc.rect(0, footerY, pageWidth, 40).fill('#06b6d4');
-  doc.font('Urdu').fontSize(12).fillColor('#fff').text('0300-1234567 | muhammadumaru3615@gmail.com | چونگی سٹاپ، درگاہ والا، لاہور', 0, footerY + 10, { align: 'center', width: pageWidth });
+  doc.font('Urdu').fontSize(13).fillColor('#fff').text('0300-1234567 | muhammadumaru3615@gmail.com | چونگی سٹاپ، درگاہ والا، لاہور', 0, footerY + 12, { align: 'center', width: pageWidth });
   doc.end();
 } 
