@@ -46,32 +46,12 @@ export default async function handler(req, res) {
   // Register Urdu font
   doc.registerFont('Urdu', fontPath);
 
-  // Helper to draw header
-  function drawHeader() {
-    const pageWidth = doc.page.width;
-    if (fs.existsSync(logoPath)) {
-      doc.image(logoPath, pageWidth / 2 - 40, 20, { width: 80, align: 'center' });
-    }
-    doc.font('Urdu').fontSize(20).fillColor('#0e7490').text(reverseUrduWords('مجموعی اقساط رپورٹ'), 0, 90, { align: 'center', width: pageWidth });
-    doc.moveDown(0.5);
-  }
-
-  // Helper to draw footer
-  function drawFooter() {
-    const pageWidth = doc.page.width;
-    const footerY = doc.page.height - 50;
-    doc.rect(0, footerY, pageWidth, 40).fill('#06b6d4');
-    const footerText = `${ownerPhone} | ${ownerEmail} | ${ownerAddress}`;
-    doc.font('Urdu').fontSize(11).fillColor('#fff').text(footerText, 0, footerY + 10, { align: 'center', width: pageWidth });
-    doc.fillColor('#000');
-  }
-
-  // Table setup
+  // Table and layout setup
   const pageWidth = doc.page.width;
   const pageHeight = doc.page.height;
   const margin = 30;
   const footerHeight = 50;
-  const headerHeight = 110; // reduced from 140
+  const headerHeight = 80; // minimal space for logo/title
   const rowHeight = 20;
   const headerRowHeight = 24;
   const headers = [
@@ -82,44 +62,55 @@ export default async function handler(req, res) {
   const tableWidth = colWidths.reduce((a, b) => a + b, 0);
   const tableLeft = (pageWidth - tableWidth) / 2;
 
-  // Draw header/footer for first page
+  // Helper to draw header (logo + title)
+  function drawHeader() {
+    if (fs.existsSync(logoPath)) {
+      doc.image(logoPath, pageWidth / 2 - 40, 10, { width: 80, align: 'center' });
+    }
+    doc.font('Urdu').fontSize(20).fillColor('#0e7490').text(reverseUrduWords('مجموعی اقساط رپورٹ'), 0, 55, { align: 'center', width: pageWidth });
+  }
+
+  // Helper to draw footer (owner info in English)
+  function drawFooter() {
+    const footerY = pageHeight - footerHeight;
+    doc.rect(0, footerY, pageWidth, 40).fill('#06b6d4');
+    const footerText = `${ownerPhone} | ${ownerEmail} | ${ownerAddress}`;
+    doc.font('Urdu').fontSize(11).fillColor('#fff').text(footerText, 0, footerY + 10, { align: 'center', width: pageWidth });
+    doc.fillColor('#000');
+  }
+
+  // Helper to draw table header row
+  function drawTableHeader(y) {
+    let x = tableLeft + tableWidth;
+    doc.font('Urdu').fontSize(11);
+    for (let i = 0; i < numCols; i++) {
+      x -= colWidths[i];
+      doc.save();
+      doc.rect(x, y, colWidths[i], headerRowHeight).fillAndStroke('#06b6d4', '#06b6d4');
+      doc.fillColor('#fff').text(headers[i], x + 2, y + 6, { width: colWidths[i] - 4, align: 'center' });
+      doc.restore();
+    }
+  }
+
+  // Start first page
   drawHeader();
   drawFooter();
-
-  // Draw table headers (RTL: first col on right, last on left)
-  let y = headerHeight;
-  let x = tableLeft + tableWidth;
-  doc.font('Urdu').fontSize(11);
-  for (let i = 0; i < numCols; i++) {
-    x -= colWidths[i];
-    doc.save();
-    doc.rect(x, y, colWidths[i], headerRowHeight).fillAndStroke('#06b6d4', '#06b6d4');
-    doc.fillColor('#fff').text(headers[i], x + 2, y + 6, { width: colWidths[i] - 4, align: 'center' });
-    doc.restore();
-  }
+  let y = headerHeight + 10;
+  drawTableHeader(y);
   y += headerRowHeight;
 
-  // Draw table rows with page break, alternating background, and status color
+  // Draw table rows with auto page break and status color
   for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
-    x = tableLeft + tableWidth;
-    // Check for page break
+    // If next row would overlap footer, add new page
     if (y + rowHeight + footerHeight > pageHeight - margin) {
       doc.addPage();
       drawHeader();
       drawFooter();
-      y = headerHeight;
-      x = tableLeft + tableWidth;
-      doc.font('Urdu').fontSize(11);
-      for (let i = 0; i < numCols; i++) {
-        x -= colWidths[i];
-        doc.save();
-        doc.rect(x, y, colWidths[i], headerRowHeight).fillAndStroke('#06b6d4', '#06b6d4');
-        doc.fillColor('#fff').text(headers[i], x + 2, y + 6, { width: colWidths[i] - 4, align: 'center' });
-        doc.restore();
-      }
+      y = headerHeight + 10;
+      drawTableHeader(y);
       y += headerRowHeight;
     }
-    x = tableLeft + tableWidth;
+    let x = tableLeft + tableWidth;
     if (rowIdx % 2 === 0) {
       doc.save();
       doc.rect(tableLeft, y, tableWidth, rowHeight).fill('#f0fafd');
@@ -129,7 +120,6 @@ export default async function handler(req, res) {
       x -= colWidths[i];
       doc.save();
       doc.rect(x, y, colWidths[i], rowHeight).stroke('#06b6d4');
-      // Reverse word order for Urdu cell text
       let cellText = typeof rows[rowIdx][i] === 'string' ? reverseUrduWords(rows[rowIdx][i]) : rows[rowIdx][i];
       // Status color
       if (i === numCols - 1) {
@@ -149,12 +139,12 @@ export default async function handler(req, res) {
     y += rowHeight;
   }
 
-  // Totals row (styled, RTL, match English style)
+  // Draw totals row immediately after last table row
   if (y + rowHeight + footerHeight > pageHeight - margin) {
     doc.addPage();
     drawHeader();
     drawFooter();
-    y = headerHeight + headerRowHeight;
+    y = headerHeight + 10 + headerRowHeight;
   }
   doc.font('Urdu').fontSize(12).fillColor('#0e7490').text(reverseUrduWords(`کل جمع شدہ: PKR ${totalCollected}`), tableLeft, y, { align: 'left', width: tableWidth / 2 });
   doc.font('Urdu').fontSize(12).fillColor('#0e7490').text(reverseUrduWords(`کل باقی: PKR ${totalRemaining}`), tableLeft + tableWidth / 2, y, { align: 'left', width: tableWidth / 2 });
