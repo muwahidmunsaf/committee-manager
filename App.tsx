@@ -12,9 +12,8 @@ import { Language, AuthMethod } from './types';
 import { sendLoginNotification } from './services/emailService';
 import InstallmentManagement from './components/InstallmentManagement';
 import InstallmentDetailScreen from './components/InstallmentDetailScreen';
-import UrduPdfDownload from './components/UrduPdfDownload';
 
-const AppLockScreen: React.FC = () => {
+const AppLockScreen: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }) => {
   const { t, unlockApp, language, userProfile, updateAppPin, forceUpdateAppPin, authMethod, pinLength } = useAppContext();
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
@@ -27,6 +26,7 @@ const AppLockScreen: React.FC = () => {
   const [confirmPin, setConfirmPin] = useState('');
   const [resetSuccess, setResetSuccess] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
   
   // Login attempt tracking
   const [loginAttempts, setLoginAttempts] = useState(0);
@@ -134,7 +134,7 @@ const AppLockScreen: React.FC = () => {
 
     try {
       const success = await unlockApp(pin);
-    if (!success) {
+      if (!success) {
         // Increment failed attempts
         const newAttempts = loginAttempts + 1;
         setLoginAttempts(newAttempts);
@@ -155,7 +155,7 @@ const AppLockScreen: React.FC = () => {
           setError(language === Language.UR 
             ? (authMethod === AuthMethod.PIN ? 'غلط پن۔ دوبارہ کوشش کریں۔' : 'غلط پاس ورڈ۔ دوبارہ کوشش کریں۔')
             : `Incorrect ${authMethod === AuthMethod.PIN ? 'PIN' : 'password'}. Try again.`);
-    }
+        }
       } else {
         // Successful login - reset attempts
         setLoginAttempts(0);
@@ -181,14 +181,16 @@ const AppLockScreen: React.FC = () => {
           console.error('Failed to send login notification');
           // Don't block the login process if email fails
         }
+        // Show welcome message in App
+        if (onLoginSuccess) onLoginSuccess();
       }
     } catch (error) {
       setError(language === Language.UR 
         ? 'کوئی خرابی پیش آگئی۔ دوبارہ کوشش کریں۔'
         : 'An error occurred. Please try again.');
     } finally {
-    setLoading(false);
-    setPin(''); 
+      setLoading(false);
+      setPin('');
     }
   };
 
@@ -430,7 +432,14 @@ const AppLockScreen: React.FC = () => {
 
 
 const App: React.FC = () => {
-  const { language, isLocked, isLoading: appIsLoading, isAuthSettingsLoaded } = useAppContext();
+  const { language, isLocked, isLoading: appIsLoading, isAuthSettingsLoaded, userProfile } = useAppContext();
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  // Handler to show welcome message after login
+  const handleLoginSuccess = () => {
+    setShowWelcome(true);
+    setTimeout(() => setShowWelcome(false), 1500);
+  };
 
   // Show loading spinner while auth settings are being loaded
   if (!isAuthSettingsLoaded) {
@@ -483,12 +492,22 @@ const App: React.FC = () => {
   }
 
   return (
-    <>
-      <UrduPdfDownload />
     <DevToolsProtection>
     <BrowserRouter>
       <div className={`min-h-screen flex flex-col bg-neutral-light dark:bg-neutral-darkest text-neutral-darker dark:text-neutral-light ${language === Language.UR ? 'font-notoNastaliqUrdu' : 'font-inter'}`} dir={language === Language.UR ? 'rtl' : 'ltr'}>
-        {isLocked && <AppLockScreen />}
+        {/* Welcome Modal */}
+        {showWelcome && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white dark:bg-neutral-darker rounded-lg shadow-lg px-8 py-8 flex flex-col items-center min-w-[280px]">
+              <p className="text-lg font-semibold text-neutral-darker dark:text-neutral-light mb-2 text-center">
+                {language === Language.UR
+                  ? `خوش آمدید، ${userProfile.name}`
+                  : `Welcome, ${userProfile.name}`}
+              </p>
+            </div>
+          </div>
+        )}
+        {isLocked && <AppLockScreen onLoginSuccess={handleLoginSuccess} />}
         {!isLocked && <Navbar />}
         <main className={`flex-grow w-full max-w-7xl mx-auto ${isLocked ? 'blur-sm pointer-events-none' : ''}`}>
           {appIsLoading && !isLocked && ( 
@@ -515,7 +534,6 @@ const App: React.FC = () => {
       </div>
     </BrowserRouter>
     </DevToolsProtection>
-    </>
   );
 };
 

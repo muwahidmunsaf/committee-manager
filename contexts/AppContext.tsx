@@ -594,6 +594,7 @@ interface AppContextType {
   showDashboardAlert: boolean;
   setShowDashboardAlert: (show: boolean) => void;
   installments: Installment[];
+  setInstallments: (installments: Installment[]) => void;
   addInstallment: (installmentData: Omit<Installment, 'id' | 'payments' | 'status'>) => Promise<Installment>;
   updateInstallment: (updatedInstallment: Installment) => void;
   deleteInstallment: (installmentId: string) => void;
@@ -1571,6 +1572,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       showDashboardAlert: showDashboardAlertState,
       setShowDashboardAlert: setShowDashboardAlertState,
       installments: installmentsState,
+      setInstallments: setInstallmentsState,
       addInstallment,
       updateInstallment,
       deleteInstallment,

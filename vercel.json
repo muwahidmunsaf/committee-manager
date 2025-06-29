@@ -3,7 +3,7 @@
     { "source": "/(.*)", "destination": "/" }
   ],
   "functions": {
-    "api/generate-urdu-pdf.js": {
+    "api/generate-pdf.js": {
       "memory": 1024,
       "maxDuration": 15
     }

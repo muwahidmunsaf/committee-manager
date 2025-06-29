@@ -6,7 +6,6 @@ import { DEFAULT_PROFILE_PIC } from '../constants';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Language } from '../types';
-import '../assets/JameelNooriNastaleeqKasheeda-normal.js'; // Register Urdu font for jsPDF
 import html2canvas from 'html2canvas';
 
 const InstallmentDetailScreen: React.FC = () => {
@@ -137,9 +136,6 @@ const InstallmentDetailScreen: React.FC = () => {
     pdf.setTextColor('#fff');
     pdf.setFont(undefined, 'bold');
     pdf.text('0300-1234567 | muhammadumaru3615@gmail.com | Chungi Stop Darghowala, Lahore', pdfWidth/2, pdfHeight - 28, { align: 'center' });
-    pdf.setFontSize(11);
-    pdf.setTextColor('#444');
-    pdf.text(`Page ${String(pageNum ?? 1)} of ${String(pageCount ?? 1)}`, pdfWidth/2, pdfHeight - 8, { align: 'center' });
   };
 
   const drawTextLetterhead = (
@@ -152,7 +148,7 @@ const InstallmentDetailScreen: React.FC = () => {
     language: string = 'EN'
   ) => {
     if (language === 'UR') {
-      pdf.setFont('JameelNooriNastaleeq', 'normal');
+      pdf.setFont('Arial');
       pdf.setFontSize(16);
     }
     if (logoBase64) {
@@ -161,7 +157,7 @@ const InstallmentDetailScreen: React.FC = () => {
     pdf.setFontSize(18);
     pdf.setTextColor('#0e7490');
     if (language === 'UR') {
-      pdf.setFont('JameelNooriNastaleeq', 'normal');
+      pdf.setFont('Arial');
     }
     // pdf.text(appName, pdfWidth/2, language === 'EN' ? 106.3 : 95, { align: 'center' });
     pdf.setDrawColor('#06b6d4');
@@ -175,7 +171,7 @@ const InstallmentDetailScreen: React.FC = () => {
     pdf.setTextColor('#fff');
     const details = [userProfile.phone, userProfile.email, userProfile.address].filter(Boolean).join(' | ');
     if (language === 'UR') {
-      pdf.setFont('JameelNooriNastaleeq', 'normal');
+      pdf.setFont('Arial');
     }
     pdf.text(details || '', pdfWidth/2, footerY+8, { align: 'center' });
     pdf.setTextColor('#222');
@@ -190,12 +186,12 @@ const InstallmentDetailScreen: React.FC = () => {
         const urduDiv = urduReceiptDivRef.current;
         if (urduDiv) {
           const canvas = await html2canvas(urduDiv, { background: '#fff' });
-          const imgData = canvas.toDataURL('image/png');
+          const imgData = canvas.toDataURL('image/jpeg', 0.85);
           const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
           const pdfWidth = pdf.internal.pageSize.getWidth();
           const imgWidth = pdfWidth - 40;
           const imgHeight = (canvas.height * imgWidth) / canvas.width;
-          pdf.addImage(imgData, 'PNG', 20, 20, imgWidth, imgHeight);
+          pdf.addImage(imgData, 'JPEG', 20, 20, imgWidth, imgHeight);
           pdf.save(`receipt_${String(installment?.buyerName || '').replace(/\s/g, '_')}_${String(payment.paymentDate || '')}.pdf`);
         }
         setExportingUrduReceipt(false);
@@ -268,7 +264,7 @@ const InstallmentDetailScreen: React.FC = () => {
     ];
     infoFields.forEach(([label, value]) => {
       if (language === Language.UR) {
-        pdf.setFont('JameelNooriNastaleeq', 'normal');
+        pdf.setFont('Arial');
         pdf.setFontSize(16);
       } else {
         pdf.setFont('helvetica', 'normal');
@@ -283,92 +279,224 @@ const InstallmentDetailScreen: React.FC = () => {
     });
     // Ensure y for table is below both columns
     y = Math.max(leftY, rightY) + 10;
-    // Payment details calculations as of this payment
-    const paymentIndex = installment.payments.findIndex(p => p.id === payment.id);
-    const paidUpToThis = installment.payments.slice(0, paymentIndex + 1);
-    const totalPaidUpToThis = paidUpToThis.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
-    const remainingAmountAtThis = installment.totalPayment - (installment.advancePayment || 0) - totalPaidUpToThis;
-    const remainingInstallmentsAtThis = installment.duration - (paymentIndex + 1);
-    // Payment Details Table
+    // Add heading before table
     pdf.setFont(undefined, 'bold');
-    pdf.setFontSize(14);
+    pdf.setFontSize(15);
     pdf.setTextColor('#0e7490');
-    pdf.text(t('payments'), 60, y);
-    y += 10;
-    const paymentTableBody = [
-      [t('amountPaid'), `PKR ${payment.amountPaid?.toLocaleString?.() || '0'}`],
-      [t('totalPayment'), `PKR ${installment.totalPayment?.toLocaleString?.() || '0'}`],
-      [t('startDate'), installment.startDate || '-'],
-      [t('remainingInstallments'), `${remainingInstallmentsAtThis ?? '-'}`],
-      [t('status'), capitalizeWords(remainingAmountAtThis <= 0 ? t('closed') : t('open'))],
-      [t('remainingAmount'), `PKR ${remainingAmountAtThis?.toLocaleString?.() || '0'}`],
-      [t('paymentDate'), String(payment.paymentDate || '-')],
+    pdf.text('Installments Detail', leftX, y + 10);
+    y += 30;
+    const tableHead = [
+      [
+        '#',
+        t('amountPaid'),
+        t('paymentDate'),
+        t('status')
+      ]
     ];
+    const tableBody = installment.payments.map((p, idx) => [
+        String(idx + 1),
+        `PKR ${p.amountPaid?.toLocaleString?.() || '0'}`,
+        String(p.paymentDate || '-'),
+        p.status ? t(p.status.toLowerCase()) : '-'
+    ]);
     autoTable(pdf, {
       startY: y,
-      head: [],
-      body: paymentTableBody,
+      head: tableHead,
+      body: tableBody,
       theme: 'grid',
-      styles: { fontSize: 11, cellPadding: 4 },
-      margin: { left: 60, right: 60 },
-      tableLineColor: [6, 182, 212],
-      tableLineWidth: 0.5,
-      didDrawPage: () => {},
+      headStyles: { fillColor: [6, 182, 212], textColor: 255, fontStyle: 'bold' },
+      styles: {
+        fontSize: 11,
+        cellPadding: 4,
+        font: undefined,
+        halign: 'left',
+      },
+      margin: { left: 40, right: 40, top: 120, bottom: 60 },
+      didDrawPage: (data) => {
+        drawHeader();
+        drawPdfFooter(pdf, pdfWidth, pdfHeight);
+      }
     });
-    y = (pdf as any).lastAutoTable.finalY + 20;
-    // Add new auto-generated note
-    pdf.setFontSize(10);
-    pdf.setTextColor('#6c757d');
-    pdf.text(t('autoGeneratedReceiptNote'), pdfWidth/2, y, { align: 'center' });
-    drawTextLetterhead(pdf, pdfWidth, pdfHeight, userProfile, logoImg, appName, language);
     pdf.save(`receipt_${String(installment.buyerName || '').replace(/\s/g, '_')}_${String(payment.paymentDate || '')}.pdf`);
     setPdfLoading(false);
   };
 
   const handleDownloadHistory = async () => {
     setPdfLoading(true);
-    if (language === Language.UR) {
-      setExportingUrduPdf(true);
-      setTimeout(async () => {
-        const urduDiv = urduPdfDivRef.current;
-        if (urduDiv) {
-          const canvas = await html2canvas(urduDiv, { background: '#fff' });
-          const imgData = canvas.toDataURL('image/png');
+    const userProfile = { phone: '0300-1234567', email: 'muhammadumaru3615@gmail.com', address: 'Chungi Stop Darghowala, Lahore' };
+    const appName = t('appName');
+    const logoImg = await fetch('/assets/logo.png').then(r => r.blob()).then(blob => new Promise<string>((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result as string); reader.readAsDataURL(blob); }));
           const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
           const pdfWidth = pdf.internal.pageSize.getWidth();
-          const imgWidth = pdfWidth - 40;
-          const imgHeight = (canvas.height * imgWidth) / canvas.width;
-          pdf.addImage(imgData, 'PNG', 20, 20, imgWidth, imgHeight);
-          pdf.save(`Buyer_History_${String(installment?.buyerName || '').replace(/\s/g, '_')}.pdf`);
-        }
-        setExportingUrduPdf(false);
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    if (language === Language.UR) {
+      // --- Multi-page image-based export for Urdu ---
+      const rowsPerPage = 16; // Adjust as needed for fitting table rows per page
+      // 1. Buyer details page
+      const detailsDiv = document.createElement('div');
+      detailsDiv.style.position = 'absolute';
+      detailsDiv.style.left = '-9999px';
+      detailsDiv.style.top = '0';
+      detailsDiv.style.width = `${pdfWidth}px`;
+      detailsDiv.style.backgroundColor = 'white';
+      detailsDiv.style.fontFamily = 'Jameel Noori Nastaleeq, Noto Nastaliq Urdu, serif';
+      detailsDiv.style.direction = 'rtl';
+      detailsDiv.style.fontSize = '13px';
+      detailsDiv.style.lineHeight = '1.7';
+      detailsDiv.innerHTML = `
+        <div style="min-height: 100vh; display: flex; flex-direction: column; background: #fff; position: relative;">
+          <div style="width: 100%; background: #06b6d4; height: 70px; display: flex; flex-direction: row; align-items: center; justify-content: center; position: relative;">
+            <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; height: 70px; gap: 16px;">
+              <div style="position: relative; width: 54px; height: 54px; display: flex; align-items: center; justify-content: center;">
+                <div style="width: 54px; height: 54px; background: #fff; border-radius: 50%; position: absolute; top: 0; left: 0;"></div>
+                ${logoImg ? `<img src="${logoImg}" style="width: 36px; height: 36px; object-fit: contain; position: absolute; top: 9px; left: 9px; z-index: 1;"/>` : ''}
+              </div>
+              <span style="color: #fff; font-size: 22px; font-weight: bold;">${appName}</span>
+            </div>
+          </div>
+          <div style="flex: 1; padding: 0 20px; margin-top: 20px; box-sizing: border-box;">
+            <div style="text-align: center; margin-bottom: 25px;">
+              <h1 style="color: #0e7490; font-size: 22px; margin: 0 0 15px 0; border-bottom: 2px solid #06b6d4; padding-bottom: 10px;">
+                خریدار کی ہسٹری رپورٹ
+              </h1>
+            </div>
+            <div style="margin-bottom: 25px; border: 1px solid #eee; padding: 15px; border-radius: 5px;">
+              <h2 style="color: #0e7490; margin: 0 0 15px 0; border-bottom: 1px solid #eee; padding-bottom: 5px; font-size: 16px;">
+                ${t('personalDetails')}
+              </h2>
+              <div style="min-height: 120px; display: flex; flex-direction: row; ${language === Language.UR ? 'flex-direction: row-reverse;' : ''} align-items: flex-start; gap: 32px;">
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; min-width: 120px;">
+                  ${installment.profilePictureUrl && installment.profilePictureUrl !== DEFAULT_PROFILE_PIC ? `<img src="${installment.profilePictureUrl}" alt="${t('buyerName') || ''}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #06b6d4;" />` : ''}
+                  ${installment.cnicImageUrl ? `<img src="${installment.cnicImageUrl}" alt="${t('cnic') || ''}" style="width: 120px; height: 80px; object-fit: cover; border: 1.5px solid #06b6d4;" />` : ''}
+                </div>
+                <table style="border-collapse: collapse; width: auto; min-width: 320px;">
+                  <tbody>
+                    <tr><td style="font-weight:bold; padding: 2px 12px 2px 0; color:#222;">${t('buyerName')}:</td><td style="padding: 2px 0;">${installment.buyerName || ''}</td></tr>
+                    <tr><td style="font-weight:bold; padding: 2px 12px 2px 0; color:#222;">${t('phone')}:</td><td style="padding: 2px 0;">${installment.phone || ''}</td></tr>
+                    <tr><td style="font-weight:bold; padding: 2px 12px 2px 0; color:#222;">${t('cnic')}:</td><td style="padding: 2px 0;">${installment.cnic || ''}</td></tr>
+                    ${installment.address ? `<tr><td style=\"font-weight:bold; padding: 2px 12px 2px 0; color:#222;\">${t('address')}:</td><td style=\"padding: 2px 0;\">${installment.address}</td></tr>` : ''}
+                    <tr><td style="font-weight:bold; padding: 2px 12px 2px 0; color:#222;">${t('mobileName')}:</td><td style="padding: 2px 0;">${installment.mobileName || ''}</td></tr>
+                    <tr><td style="font-weight:bold; padding: 2px 12px 2px 0; color:#222;">${t('totalPayment')}:</td><td style="padding: 2px 0;">PKR ${installment.totalPayment?.toLocaleString?.() || '0'}</td></tr>
+                    <tr><td style="font-weight:bold; padding: 2px 12px 2px 0; color:#222;">${t('advancePayment')}:</td><td style="padding: 2px 0;">PKR ${(installment.advancePayment || 0).toLocaleString()}</td></tr>
+                    <tr><td style="font-weight:bold; padding: 2px 12px 2px 0; color:#222;">${t('monthlyInstallment')}:</td><td style="padding: 2px 0;">PKR ${installment.monthlyInstallment?.toLocaleString?.() || '0'}</td></tr>
+                    <tr><td style="font-weight:bold; padding: 2px 12px 2px 0; color:#222;">${t('duration')}:</td><td style="padding: 2px 0;">${(installment.duration ?? '-') + ' ' + t('months')}</td></tr>
+                    <tr><td style="font-weight:bold; padding: 2px 12px 2px 0; color:#222;">${t('status')}:</td><td style="padding: 2px 0; color: ${remainingAmount <= 0 ? '#dc2626' : '#16a34a'}; font-weight: bold;">${capitalizeWords(remainingAmount <= 0 ? t('closed') : t('open'))}</td></tr>
+                    <tr><td style="font-weight:bold; padding: 2px 12px 2px 0; color:#222;">${t('totalCollected')}:</td><td style="padding: 2px 0;">PKR ${totalPaid?.toLocaleString?.() || '0'}</td></tr>
+                    <tr><td style="font-weight:bold; padding: 2px 12px 2px 0; color:#222;">${t('remainingAmount')}:</td><td style="padding: 2px 0;">PKR ${remainingAmount?.toLocaleString?.() || '0'}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div style="width: 100%; background: #06b6d4; height: 40px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; position: absolute; left: 0; bottom: 0;">
+            muhammadumaru3615@gmail.com | Chungi Stop Darghowala, Lahore | 0300-1234567
+          </div>
+        </div>
+      `;
+      document.body.appendChild(detailsDiv);
+      const detailsCanvas = await html2canvas(detailsDiv, { background: '#fff', useCORS: true, allowTaint: true, width: detailsDiv.scrollWidth, height: detailsDiv.scrollHeight });
+      const detailsImgData = detailsCanvas.toDataURL('image/jpeg', 1.0);
+      const detailsImgWidth = pdfWidth;
+      const detailsImgHeight = (detailsCanvas.height * detailsImgWidth) / detailsCanvas.width;
+      pdf.addImage(detailsImgData, 'JPEG', 0, 0, detailsImgWidth, detailsImgHeight);
+      document.body.removeChild(detailsDiv);
+      // 2. Table pages
+      const tableRows = installment.payments.map((p, idx) => [
+        String(idx + 1),
+        `PKR ${p.amountPaid?.toLocaleString?.() || '0'}`,
+        String(p.paymentDate || '-'),
+        p.status ? t(p.status.toLowerCase()) : '-'
+      ]);
+      const tableHead = [
+        ['#', t('amountPaid'), t('paymentDate'), t('status')]
+      ];
+      for (let i = 0; i < tableRows.length; i += rowsPerPage) {
+        const pageRows = tableRows.slice(i, i + rowsPerPage);
+        const tableDiv = document.createElement('div');
+        tableDiv.style.position = 'absolute';
+        tableDiv.style.left = '-9999px';
+        tableDiv.style.top = '0';
+        tableDiv.style.width = `${pdfWidth}px`;
+        tableDiv.style.backgroundColor = 'white';
+        tableDiv.style.fontFamily = 'Jameel Noori Nastaleeq, Noto Nastaliq Urdu, serif';
+        tableDiv.style.direction = 'rtl';
+        tableDiv.style.fontSize = '13px';
+        tableDiv.style.lineHeight = '1.7';
+        tableDiv.innerHTML = `
+          <div style="min-height: 100vh; display: flex; flex-direction: column; background: #fff; position: relative;">
+            <div style="width: 100%; background: #06b6d4; height: 70px; display: flex; flex-direction: row; align-items: center; justify-content: center; position: relative;">
+              <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; height: 70px; gap: 16px;">
+                <div style="position: relative; width: 36px; height: 36px; display: flex; align-items: flex-end; justify-content: center;">
+                  <div style="width: 36px; height: 36px; background: #fff; border-radius: 50%; position: absolute; bottom: 0; left: 0;"></div>
+                  ${logoImg ? `<img src="${logoImg}" style="width: 26px; height: 26px; object-fit: contain; position: absolute; top: 0; left: 5px; z-index: 1;"/>` : ''}
+                </div>
+                <span style="color: #fff; font-size: 16px; font-weight: bold;">${appName}</span>
+              </div>
+            </div>
+            <div style="flex: 1; padding: 0 20px; margin-top: 20px; box-sizing: border-box;">
+              <div style="text-align: center; margin-bottom: 10px;">
+                <h2 style="color: #0e7490; font-size: 16px; margin: 0 0 8px 0; border-bottom: 1px solid #06b6d4; padding-bottom: 4px;">
+                  ادائیگیوں کی تفصیل
+                </h2>
+              </div>
+              <table style="width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12px;">
+                <thead>
+                  <tr style="background-color: #06b6d4; color: white;">
+                    ${tableHead[0].map(h => `<th style='border: 1px solid #ddd; padding: 5px;'>${h}</th>`).join('')}
+                  </tr>
+                </thead>
+                <tbody>
+                  ${pageRows.map(row => `
+                    <tr style="page-break-inside: avoid;">
+                      ${row.map(cell => `<td style='border: 1px solid #ddd; padding: 5px;'>${cell}</td>`).join('')}
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+            <div style="width: 100%; background: #06b6d4; height: 40px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; position: absolute; left: 0; bottom: 0;">
+              muhammadumaru3615@gmail.com | Chungi Stop Darghowala, Lahore | 0300-1234567
+            </div>
+          </div>
+        `;
+        document.body.appendChild(tableDiv);
+        const tableCanvas = await html2canvas(tableDiv, { background: '#fff', useCORS: true, allowTaint: true, width: tableDiv.scrollWidth, height: tableDiv.scrollHeight });
+        const tableImgData = tableCanvas.toDataURL('image/jpeg', 1.0);
+        const tableImgWidth = pdfWidth;
+        const tableImgHeight = (tableCanvas.height * tableImgWidth) / tableCanvas.width;
+        pdf.addPage();
+        pdf.addImage(tableImgData, 'JPEG', 0, 0, tableImgWidth, tableImgHeight);
+        document.body.removeChild(tableDiv);
+      }
+      pdf.save(`Buyer_History_${String(installment.buyerName || '').replace(/\s/g, '_')}.pdf`);
         setPdfLoading(false);
-      }, 100);
       return;
     }
-    const userProfile = { phone: '0300-1234567', email: 'muhammadumaru3615@gmail.com', address: 'Chungi Stop Darghowala, Lahore' };
-    const appName = "Faisal Mobile's";
-    const logoImg = await fetch('/assets/logo.png').then(r => r.blob()).then(blob => new Promise<string>((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result as string); reader.readAsDataURL(blob); }));
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
-    drawTextLetterhead(pdf, pdfWidth, pdfHeight, userProfile, logoImg, appName, language);
-    let y = 160;
-    const lineGap = 20;
-    pdf.setFontSize(16);
-    pdf.setTextColor('#0e7490');
-    pdf.setFont(undefined, 'bold');
-    pdf.text('Buyer History Report', pdfWidth/2, y, { align: 'center' });
-    y += 20;
-    pdf.setFontSize(13);
-    pdf.setTextColor('#222');
-    // --- Improved two-column layout for buyer history PDF ---
+    // --- English: add header/footer to all pages ---
+    // Restore drawHeader function for English PDF
+    const drawHeader = () => {
+      pdf.setFillColor(6, 182, 212);
+      pdf.rect(0, 0, pdfWidth, 70, 'F');
+      const logoX = 60;
+      const logoY = 10;
+      pdf.addImage(String(logoImg || ''), 'PNG', logoX, logoY, 50, 50, '', 'FAST');
+      pdf.setFontSize(24);
+      pdf.setTextColor('#fff');
+      pdf.setFont(undefined, 'bold');
+      pdf.text(appName, logoX + 70, 40, { align: 'left' });
+      pdf.setDrawColor(6, 182, 212);
+      pdf.setLineWidth(2);
+      pdf.line(40, 75, pdfWidth - 40, 75);
+    };
+    let y = 110;
+    drawHeader();
+    // Two-column layout for info and images
     const leftX = 60;
-    const rightColWidth = 80; // image width
-    const rightMargin = 72; // 1 inch
+    const rightColWidth = 100;
+    const rightMargin = 72;
     const rightX = pdfWidth - rightMargin - rightColWidth;
     const leftColWidth = rightX - leftX - 40; // 40px gap between columns
-    let leftYHistory = y;
+    let leftY = y;
     let rightY = y;
     // Draw images on right (stacked, with vertical spacing)
     if (installment.profilePictureUrl && installment.profilePictureUrl !== DEFAULT_PROFILE_PIC) {
@@ -378,24 +506,25 @@ const InstallmentDetailScreen: React.FC = () => {
         const picBase64 = await new Promise<string>((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result as string); reader.readAsDataURL(picBlob); });
         pdf.setDrawColor(6, 182, 212);
         pdf.setLineWidth(2);
-        pdf.circle(rightX + 40, rightY + 30, 30, 'S');
-        pdf.addImage(String(picBase64 || ''), 'JPEG', rightX, rightY, rightColWidth, 60, '', 'FAST');
-        rightY += 70;
+        pdf.circle(rightX + rightColWidth/2, rightY + 40, 40, 'S');
+        pdf.addImage(String(picBase64 || ''), 'JPEG', rightX, rightY, rightColWidth, 80, '', 'FAST');
+        rightY += 90;
       } catch {}
     }
     if (installment.cnicImageUrl) {
       try {
         pdf.setFont(undefined, 'bold');
+        pdf.setFontSize(13);
         pdf.text('CNIC Image:', rightX, rightY);
         const cnicResp = await fetch(installment.cnicImageUrl);
         const cnicBlob = await cnicResp.blob();
         const cnicBase64 = await new Promise<string>((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result as string); reader.readAsDataURL(cnicBlob); });
-        pdf.addImage(String(cnicBase64 || ''), 'JPEG', rightX, rightY + 10, rightColWidth, 50, '', 'FAST');
+        pdf.addImage(String(cnicBase64 || ''), 'JPEG', rightX, rightY + 10, rightColWidth, 60, '', 'FAST');
         rightY += 80;
       } catch {}
     }
-    // Buyer details fields in the requested order
-    const buyerFields = [
+    // Info fields in the requested order
+    const infoFields = [
       [t('buyerName') + ':', capitalizeWords(installment.buyerName || '')],
       [t('phone') + ':', formatPhone(installment.phone || '')],
       [t('cnic') + ':', formatCNIC(installment.cnic || '')],
@@ -403,87 +532,73 @@ const InstallmentDetailScreen: React.FC = () => {
       [t('address') + ':', installment.address || '-'],
       [t('totalPayment') + ':', `PKR ${installment.totalPayment?.toLocaleString?.() || '0'}`],
       [t('advancePayment') + ':', `PKR ${(installment.advancePayment || 0).toLocaleString()}`],
-      [t('monthlyInstallment').replace(' Amount', '') + ':', `PKR ${installment.monthlyInstallment?.toLocaleString?.() || '0'}`],
+      [t('monthlyInstallment') + ':', { value: `PKR ${installment.monthlyInstallment?.toLocaleString?.() || '0'}`, extraSpace: 40 }],
+      [t('duration') + ':', { value: `${installment.duration ?? '-'} ${t('months') || ''}`, extraSpace: 100 }],
+      [t('status') + ':', { value: capitalizeWords(remainingAmount <= 0 ? t('closed') || '' : t('open') || ''), color: remainingAmount <= 0 ? '#dc2626' : '#16a34a', labelColor: '#222' }],
       [t('totalCollected') + ':', `PKR ${totalPaid?.toLocaleString?.() || '0'}`],
       [t('remainingAmount') + ':', `PKR ${remainingAmount?.toLocaleString?.() || '0'}`],
-      [t('duration').replace(' (Months/Weeks/Days)', '') + ':', `${installment.duration ?? '-'} Months`],
-      ['Left Installment:', `${remainingInstallments ?? '-'}`],
-      ['Account Status:', capitalizeWords(isClosed ? t('closed') : t('open'))],
     ];
-    const labelWidth = 140;
-    // Simulate left column rendering to get contentHeight
-    let leftYSim = y;
-    buyerFields.forEach(([label, value]) => {
-      const splitValueSim = pdf.splitTextToSize(String(value || '-'), leftColWidth - labelWidth);
-      leftYSim += lineGap * (Array.isArray(splitValueSim) ? splitValueSim.length : 1);
-    });
-    const contentHeight = leftYSim - y;
-    // Calculate imagesHeight
-    let imagesHeight = 0;
-    if (installment.profilePictureUrl && installment.profilePictureUrl !== DEFAULT_PROFILE_PIC) imagesHeight += 70;
-    if (installment.cnicImageUrl) imagesHeight += 80;
-    // Calculate vertical offset
-    let imagesYOffset = 0;
-    if (imagesHeight < contentHeight) {
-      imagesYOffset = (contentHeight - imagesHeight) / 2;
-    }
-    let rightYCentered = y + imagesYOffset;
-    // Render left column (actual)
-    buyerFields.forEach(([label, value]) => {
-      let splitValueHistory: string[] = [];
-      if (language === Language.UR) {
-        pdf.setFont('JameelNooriNastaleeq', 'normal');
-        pdf.setFontSize(16);
-      } else {
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(13);
-      }
+    infoFields.forEach(([label, value]) => {
       pdf.setFont(undefined, 'bold');
-      pdf.text(String(label || ''), leftX, leftYHistory);
+      pdf.setFontSize(13);
+      pdf.setTextColor('#222');
+      pdf.text(String(label || ''), leftX, leftY);
       pdf.setFont(undefined, 'normal');
-      // Account Status color
-      if (label === 'Account Status:') {
-        pdf.setTextColor(isClosed ? '#dc2626' : '#16a34a');
-        const statusText = String(value || '-');
-        pdf.text(statusText, leftX + labelWidth, leftYHistory);
+      if (typeof value === 'object' && value !== null && 'value' in value) {
+        const xOffset = value.extraSpace ? 140 + value.extraSpace : 140;
+        if ('color' in value && value.color) {
+          pdf.setTextColor(value.color);
+        }
+        pdf.text(String(value.value || ''), leftX + xOffset, leftY);
         pdf.setTextColor('#222');
-        splitValueHistory = [statusText];
       } else {
-        splitValueHistory = pdf.splitTextToSize(String(value || '-'), leftColWidth - labelWidth);
-        pdf.text(Array.isArray(splitValueHistory) ? splitValueHistory.join('\n') : String(splitValueHistory || ''), leftX + labelWidth, leftYHistory);
+        const splitValue = pdf.splitTextToSize(String(value || '-'), leftColWidth - 140);
+        pdf.text(String(Array.isArray(splitValue) ? splitValue.join('\n') : splitValue || ''), leftX + 140, leftY);
+        leftY += 20 * (Array.isArray(splitValue) ? splitValue.length : 1) - 20;
       }
-      leftYHistory += lineGap * (Array.isArray(splitValueHistory) ? splitValueHistory.length : 1);
+      leftY += 20;
     });
     // Ensure y for table is below both columns
-    y = Math.max(leftYHistory, rightYCentered) + 10;
+    y = Math.max(leftY, rightY) + 10;
+    // Add heading before table
     pdf.setFont(undefined, 'bold');
     pdf.setFontSize(15);
     pdf.setTextColor('#0e7490');
-    pdf.text('Installments Detail', leftX, y);
-    y += 10;
-    pdf.setFontSize(12);
-    pdf.setTextColor('#222');
-    autoTable(pdf, {
-      startY: y,
-      head: [[
+    pdf.text('Installments Detail', leftX, y + 10);
+    y += 30;
+    const tableHead = [
+      [
         '#',
         t('amountPaid'),
         t('paymentDate'),
         t('status')
-      ]],
-      body: installment.payments.map((p, idx) => [
+      ]
+    ];
+    const tableBody = installment.payments.map((p, idx) => [
         String(idx + 1),
         `PKR ${p.amountPaid?.toLocaleString?.() || '0'}`,
         String(p.paymentDate || '-'),
         p.status ? t(p.status.toLowerCase()) : '-'
-      ]),
+    ]);
+    autoTable(pdf, {
+      startY: y,
+      head: tableHead,
+      body: tableBody,
       theme: 'grid',
       headStyles: { fillColor: [6, 182, 212], textColor: 255, fontStyle: 'bold' },
-      styles: { fontSize: 10, cellPadding: 4 },
-      margin: { left: 60, right: 60 },
+      styles: {
+        fontSize: 11,
+        cellPadding: 4,
+        font: undefined,
+        halign: 'left',
+      },
+      margin: { left: 40, right: 40, top: 120, bottom: 60 },
+      didDrawPage: (data) => {
+        drawHeader();
+        drawPdfFooter(pdf, pdfWidth, pdfHeight);
+      }
     });
-    drawTextLetterhead(pdf, pdfWidth, pdfHeight, userProfile, logoImg, appName, language);
-    pdf.save(`Buyer History_${String(installment.buyerName || '').replace(/\s/g, '_')}.pdf`);
+    pdf.save(`Buyer_History_${String(installment.buyerName || '').replace(/\s/g, '_')}.pdf`);
     setPdfLoading(false);
   };
 
@@ -517,7 +632,7 @@ const InstallmentDetailScreen: React.FC = () => {
             width: 'fit-content',
             background: '#fff',
             color: '#222',
-            fontFamily: 'Jameel Noori Nastaleeq, Noto Nastaliq Urdu, serif',
+            fontFamily: 'Arial',
             direction: 'rtl',
             textAlign: 'right',
             padding: 0,
@@ -621,23 +736,23 @@ const InstallmentDetailScreen: React.FC = () => {
                   </tr>
                   <tr>
                     <td style={{ border: '1px solid #06b6d4', padding: 8, fontWeight: 'bold' }}>{t('status')}</td>
-                    <td style={{ border: '1px solid #06b6d4', padding: 8 }}>{(() => {
+                    <td style={{ border: '1px solid #06b6d4', padding: 8 }}>{((() => {
                       const paymentIndex = installment.payments.findIndex(p => p.id === urduReceiptPayment.id);
                       const paidUpToThis = installment.payments.slice(0, paymentIndex + 1);
                       const totalPaidUpToThis = paidUpToThis.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
                       const remainingAmountAtThis = installment.totalPayment - (installment.advancePayment || 0) - totalPaidUpToThis;
                       return remainingAmountAtThis <= 0 ? t('closed') : t('open');
-                    })()}</td>
+                    })())}</td>
                   </tr>
                   <tr>
                     <td style={{ border: '1px solid #06b6d4', padding: 8, fontWeight: 'bold' }}>{t('remainingAmount')}</td>
-                    <td style={{ border: '1px solid #06b6d4', padding: 8 }}>{(() => {
+                    <td style={{ border: '1px solid #06b6d4', padding: 8 }}>{((() => {
                       const paymentIndex = installment.payments.findIndex(p => p.id === urduReceiptPayment.id);
                       const paidUpToThis = installment.payments.slice(0, paymentIndex + 1);
                       const totalPaidUpToThis = paidUpToThis.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
                       const remainingAmountAtThis = installment.totalPayment - (installment.advancePayment || 0) - totalPaidUpToThis;
                       return remainingAmountAtThis.toLocaleString();
-                    })()}</td>
+                    })())}</td>
                 </tr>
                   <tr>
                     <td style={{ border: '1px solid #06b6d4', padding: 8, fontWeight: 'bold' }}>{t('paymentDate')}</td>
@@ -663,8 +778,148 @@ const InstallmentDetailScreen: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Urdu Buyer Report Hidden Div */}
+      {exportingUrduPdf && (
+        <div
+          ref={urduPdfDivRef}
+          className="receipt-render-area"
+          style={{
+            position: 'absolute',
+            left: '-9999px',
+            top: 0,
+            minWidth: 800,
+            width: 'fit-content',
+            background: '#fff',
+            color: '#222',
+            fontFamily: 'Arial',
+            direction: 'rtl',
+            textAlign: 'right',
+            padding: 0,
+            zIndex: -1,
+            minHeight: '1122px', // A4 at 96dpi
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+          }}
+          dir="rtl"
+        >
+          {/* Header and Main Content */}
+          <div style={{ flex: 1 }}>
+            {/* Header */}
+            <div style={{ background: '#06b6d4', padding: '24px 32px 16px 32px', borderTopLeftRadius: 8, borderTopRightRadius: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{
+                  width: 70,
+                  height: 70,
+                  background: '#fff',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid #fff',
+                  overflow: 'hidden',
+                  marginLeft: 16
+                }}>
+                  <img
+                    src={'/assets/logo.png'}
+                    alt="logo"
+                    style={{ width: 60, height: 60, objectFit: 'contain', display: 'block' }}
+                    onError={e => { (e.target as HTMLImageElement).src = '/assets/logo.png'; }}
+                  />
+                </div>
+                <h2 style={{ color: '#fff', fontWeight: 'bold', fontSize: 32, margin: 0 }}>{t('appName')}</h2>
+              </div>
+            </div>
+            <div style={{ borderBottom: '4px solid #06b6d4', marginBottom: 24 }} />
+            {/* Main content */}
+            <div style={{ padding: 32 }}>
+              <div style={{ fontWeight: 'bold', fontSize: 28, color: '#0e7490', marginBottom: 16, textAlign: 'center' }}>
+                {language === Language.UR ? 'خریدار کی ہسٹری رپورٹ' : t('buyerHistoryReport')}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'row-reverse', marginBottom: 24, gap: 16 }}>
+                {/* Images column */}
+                <div style={{ minWidth: 120, marginLeft: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                  {installment.profilePictureUrl && installment.profilePictureUrl !== DEFAULT_PROFILE_PIC && (
+                    <img
+                      src={installment.profilePictureUrl || '/assets/logo.png'}
+                      alt={t('buyerName') || ''}
+                      style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '2px solid #06b6d4', marginBottom: 8 }}
+                      onError={e => { (e.target as HTMLImageElement).src = '/assets/logo.png'; }}
+                    />
+                  )}
+                  {installment.cnicImageUrl && (
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontWeight: 'bold', fontSize: 15, marginBottom: 4 }}>شناختی کارڈ</div>
+                      <img
+                        src={installment.cnicImageUrl || ''}
+                        alt={t('cnic') || ''}
+                        style={{ width: 120, height: 80, objectFit: 'cover', border: '1.5px solid #06b6d4' }}
+                      />
+                    </div>
+                  )}
+                </div>
+                {/* Details column */}
+                <div style={{ flex: 1, fontFamily: 'inherit', fontSize: 18 }}>
+                  <div style={{ marginBottom: 2 }}><strong>{t('buyerName')}:</strong> {installment?.buyerName}</div>
+                  <div style={{ marginBottom: 2 }}><strong>{t('phone')}:</strong> {installment?.phone}</div>
+                  <div style={{ marginBottom: 2 }}><strong>{t('cnic')}:</strong> {installment?.cnic}</div>
+                  <div style={{ marginBottom: 2 }}><strong>{t('mobileName')}:</strong> {installment?.mobileName}</div>
+                  <div style={{ marginBottom: 2 }}><strong>{t('address')}:</strong> {installment?.address}</div>
+                  <div style={{ marginBottom: 2 }}><strong>{t('totalPayment')}:</strong> {installment?.totalPayment?.toLocaleString()}</div>
+                  <div style={{ marginBottom: 2 }}><strong>{t('advancePayment')}:</strong> {installment?.advancePayment?.toLocaleString()}</div>
+                  <div style={{ marginBottom: 2 }}><strong>{t('monthlyInstallment')}:</strong> {installment?.monthlyInstallment?.toLocaleString()}</div>
+                  <div style={{ marginBottom: 2 }}><strong>{t('duration')}:</strong> {installment?.duration} {t('months')}</div>
+                  <div style={{ marginBottom: 2 }}><strong>{t('status')}:</strong> {capitalizeWords(isClosed ? t('closed') : t('open'))}</div>
+                  <div style={{ marginBottom: 2 }}><strong>{t('totalCollected')}:</strong> {totalPaid.toLocaleString()}</div>
+                  <div style={{ marginBottom: 2 }}><strong>{t('remainingAmount')}:</strong> {remainingAmount.toLocaleString()}</div>
+                </div>
+              </div>
+              {/* Installments Table */}
+              <div style={{ marginBottom: 16, fontFamily: 'inherit' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: 8, fontSize: 20 }}>{t('installments')}:</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 8, fontFamily: 'inherit', fontSize: 16 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ border: '1px solid #06b6d4', padding: 8 }}>{'#'}</th>
+                      <th style={{ border: '1px solid #06b6d4', padding: 8 }}>{t('amountPaid')}</th>
+                      <th style={{ border: '1px solid #06b6d4', padding: 8 }}>{t('paymentDate')}</th>
+                      <th style={{ border: '1px solid #06b6d4', padding: 8 }}>{t('status')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {installment.payments.map((p, idx) => (
+                      <tr key={p.id}>
+                        <td style={{ border: '1px solid #06b6d4', padding: 8 }}>{idx + 1}</td>
+                        <td style={{ border: '1px solid #06b6d4', padding: 8 }}>{p.amountPaid.toLocaleString()}</td>
+                        <td style={{ border: '1px solid #06b6d4', padding: 8 }}>{p.paymentDate}</td>
+                        <td style={{ border: '1px solid #06b6d4', padding: 8 }}>{p.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          {/* Footer always at bottom */}
+          <div style={{
+            borderTop: '4px solid #06b6d4',
+            background: '#06b6d4',
+            color: '#fff',
+            padding: '16px 32px',
+            textAlign: 'center',
+            fontWeight: 'bold',
+            fontSize: 18,
+            borderBottomLeftRadius: 8,
+            borderBottomRightRadius: 8
+          }}>
+            0300-1234567 | muhammadumaru3615@gmail.com | Chungi Stop Darghowala, Lahore
+          </div>
+        </div>
+      )}
       <div className="p-4 md:p-6 max-w-3xl mx-auto">
-        <Button variant="ghost" onClick={() => navigate('/installments')} className="mb-4">&larr; {t('backToAllCommittees')}</Button>
+        <Button variant="ghost" onClick={() => navigate('/installments')} className="mb-4">
+          &larr; {language === Language.UR ? t('backToAllInstallments') || 'تمام اقساط پر واپس جائیں' : 'Back to All Installments'}
+        </Button>
         <div className="bg-white dark:bg-neutral-darker p-6 rounded-lg shadow-md mb-6 w-full max-w-2xl mx-auto flex flex-col sm:flex-row gap-4 items-center">
           <img src={installment.profilePictureUrl || DEFAULT_PROFILE_PIC} alt={installment.buyerName} className="w-24 h-24 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-primary mb-4 sm:mb-0" />
           <div className="flex-1 w-full">

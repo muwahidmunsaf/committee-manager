@@ -13,7 +13,8 @@ const SettingsScreen: React.FC = () => {
     committees, members, isLoading, setIsLoading,
     authMethod, setAuthMethod, pinLength, setPinLength, userProfile, updateUserProfile,
     deleteMember, deleteCommittee, addMember, addCommittee,
-    setCommittees, setMembers, clearAllNotifications
+    setCommittees, setMembers, clearAllNotifications,
+    installments, setInstallments, lockApp
   } = useAppContext();
 
   const [currentPin, setCurrentPin] = useState('');
@@ -31,7 +32,7 @@ const SettingsScreen: React.FC = () => {
   const [isRestoreLoading, setIsRestoreLoading] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [resetSuccess, setResetSuccess] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState('');
   const [restoreProgress, setRestoreProgress] = useState(0);
   const [resetProgress, setResetProgress] = useState(0);
   const [backupProgress, setBackupProgress] = useState(0);
@@ -475,6 +476,7 @@ const SettingsScreen: React.FC = () => {
       const data = {
         committees,
         members,
+        installments,
         userProfile,
         settings: {
           language,
@@ -490,6 +492,7 @@ const SettingsScreen: React.FC = () => {
       saveAs(blob, 'BC_Backup.json');
       setBackupProgress(100);
       setBackupSuccess(language === Language.UR ? 'ڈیٹا کامیابی سے بیک اپ ہو گیا۔' : 'Backup created successfully.');
+      setTimeout(() => window.location.reload(), 1000);
     } catch (err) {
       setBackupError(language === Language.UR ? 'بیک اپ میں خرابی۔ دوبارہ کوشش کریں۔' : 'Error creating backup. Please try again.');
     }
@@ -511,7 +514,7 @@ const SettingsScreen: React.FC = () => {
       setRestoreProgress(15);
       const data = JSON.parse(text);
       // Validate structure
-      if (!data.committees || !data.members || !data.userProfile || !data.settings) {
+      if (!data.committees || !data.members || !data.installments || !data.userProfile || !data.settings) {
         throw new Error('Invalid backup file');
       }
       setRestoreProgress(25);
@@ -531,7 +534,15 @@ const SettingsScreen: React.FC = () => {
         currentStep++;
         setRestoreProgress(25 + (currentStep / totalSteps) * 25);
       }
-      // 2. Add all members and committees from backup using setDoc (preserve IDs)
+      // 2. Delete all existing installments from Firestore
+      const installmentsSnapshot = await getDocs(collection(db, 'installments'));
+      totalSteps += installmentsSnapshot.docs.length;
+      for (const installmentDoc of installmentsSnapshot.docs) {
+        await deleteDoc(doc(db, 'installments', installmentDoc.id));
+        currentStep++;
+        setRestoreProgress(25 + (currentStep / totalSteps) * 25);
+      }
+      // 3. Add all members and committees from backup using setDoc (preserve IDs)
       totalSteps += data.members.length + data.committees.length;
       for (const member of data.members) {
         await setDoc(doc(db, 'members', member.id), member);
@@ -543,7 +554,13 @@ const SettingsScreen: React.FC = () => {
         currentStep++;
         setRestoreProgress(50 + (currentStep / totalSteps) * 30);
       }
-      // 3. Restore user profile and settings
+      // 4. Add all installments from backup
+      for (const installment of data.installments) {
+        await setDoc(doc(db, 'installments', installment.id), installment);
+        currentStep++;
+        setRestoreProgress(50 + (currentStep / totalSteps) * 30);
+      }
+      // 5. Restore user profile and settings
       await setDoc(doc(db, 'settings', 'singleton'), { userProfile: data.userProfile }, { merge: true });
       await setDoc(doc(db, 'settings', 'app'), {
         language: data.settings.language,
@@ -552,8 +569,11 @@ const SettingsScreen: React.FC = () => {
         authMethod: data.settings.authMethod,
         pinLength: data.settings.pinLength,
       }, { merge: true });
+      setInstallments(data.installments);
       setRestoreProgress(95);
-      setRestoreSuccess(language === Language.UR ? 'ڈیٹا کامیابی سے بحال ہو گیا۔' : 'Data restored successfully.');
+      setRestoreSuccess(language === Language.UR 
+        ? 'ڈیٹا کامیابی سے بحال ہو گیا۔ اب ایپ ریفریش ہو رہی ہے...' 
+        : 'Data restored successfully. Now refreshing app...');
       setRestoreProgress(100);
       setTimeout(() => window.location.reload(), 1000);
     } catch (err) {
@@ -585,17 +605,28 @@ const SettingsScreen: React.FC = () => {
         currentStep++;
         setResetProgress(40 + (currentStep / totalSteps) * 40);
       }
-      // 3. Clear local state and storage
+      // 3. Delete all installments from Firestore
+      const installmentsSnapshot = await getDocs(collection(db, 'installments'));
+      totalSteps += installmentsSnapshot.docs.length;
+      for (const installmentDoc of installmentsSnapshot.docs) {
+        await deleteDoc(doc(db, 'installments', installmentDoc.id));
+        currentStep++;
+        setResetProgress(80 + (currentStep / totalSteps) * 20);
+      }
+      // 4. Clear local state and storage
       setCommittees([]);
       setMembers([]);
+      setInstallments([]);
       clearAllNotifications();
       localStorage.removeItem('committees');
       localStorage.removeItem('members');
       localStorage.removeItem('notifications');
       localStorage.removeItem('dashboardAlertDismissed');
       setShowResetConfirm(false);
-      setResetSuccess(true);
-      setResetProgress(90);
+      setResetSuccess(language === Language.UR 
+        ? 'آپ کی ایپلیکیشن کامیابی سے ری سیٹ ہو گئی۔ اب ایپ ریفریش ہو رہی ہے...' 
+        : 'Your application was reset successfully. Now refreshing app...');
+      setResetProgress(100);
       setTimeout(() => {
         setResetProgress(100);
         window.location.reload();
@@ -613,8 +644,8 @@ const SettingsScreen: React.FC = () => {
 
   // Auto-hide reset success message after 3 seconds
   useEffect(() => {
-    if (resetSuccess) {
-      const timer = setTimeout(() => setResetSuccess(false), 3000);
+    if (!!resetSuccess) {
+      const timer = setTimeout(() => setResetSuccess(''), 3000);
       return () => clearTimeout(timer);
     }
   }, [resetSuccess]);
@@ -898,7 +929,15 @@ const SettingsScreen: React.FC = () => {
                 {language === Language.UR ? 'ڈیٹا بحال کریں (JSON)' : 'Restore Data (JSON)'}
               </Button>
             </div>
-            {restoreSuccess && <p className="text-green-500 text-sm">{restoreSuccess}</p>}
+            {restoreSuccess && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                <div className="bg-white dark:bg-neutral-darker rounded-lg shadow-lg px-8 py-8 flex flex-col items-center min-w-[280px]">
+                  <p className="text-lg font-semibold text-neutral-darker dark:text-neutral-light mb-2 text-center">
+                    {restoreSuccess}
+                  </p>
+                </div>
+              </div>
+            )}
             {restoreError && <p className="text-red-500 text-sm">{restoreError}</p>}
             <p className="text-xs text-neutral-DEFAULT dark:text-gray-400">
               {language === Language.UR ? "اپنے ڈیٹا کا مکمل بیک اپ یا بحالی کے لیے JSON فائل استعمال کریں۔" : "Use JSON file for full backup or restore of your data."}
@@ -933,9 +972,13 @@ const SettingsScreen: React.FC = () => {
                 </div>
               </div>
             )}
-            {resetSuccess && (
-              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-2" role="alert">
-                <span className="block sm:inline">{language === Language.UR ? 'ایپلیکیشن کامیابی سے ری سیٹ ہو گئی!' : 'Application reset successfully!'}</span>
+            {!!resetSuccess && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                <div className="bg-white dark:bg-neutral-darker rounded-lg shadow-lg px-8 py-8 flex flex-col items-center min-w-[280px]">
+                  <p className="text-lg font-semibold text-neutral-darker dark:text-neutral-light mb-2 text-center">
+                    {resetSuccess}
+                  </p>
+                </div>
               </div>
             )}
         </div>
