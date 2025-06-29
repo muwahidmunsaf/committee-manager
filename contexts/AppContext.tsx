@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Language, Theme, Translations, Committee, Member, CommitteePayment, UserProfile, PayoutMethod, CommitteeType, AuthMethod, PinLength, Notification, NotificationType, Installment, InstallmentPayment } from '../types';
-import { APP_DATA_STORAGE_KEY, DEFAULT_PROFILE_PIC, DEFAULT_APP_PIN } from '../constants'; // Added DEFAULT_APP_PIN
+import { APP_DATA_STORAGE_KEY, DEFAULT_PROFILE_PIC, DEFAULT_APP_PIN } from '../constants';
 import { generateId, initializePayoutTurns } from '../utils/appUtils';
 import { db } from '../services/firebaseService';
 import {
@@ -12,7 +12,7 @@ import {
   doc,
   setDoc,
   getDoc,
-  onSnapshot // <-- add this import
+  onSnapshot
 } from 'firebase/firestore';
 
 const initialTranslations: Translations = {
@@ -58,18 +58,17 @@ const initialTranslations: Translations = {
     overallTotalMembersDesc: "Unique members across all committees.",
     upcomingPayouts: "Upcoming Payouts",
     paymentTracking: "Payment Tracking",
-    markPaid: "Mark Paid", // May change to "Add Payment"
+    markPaid: "Mark Paid",
     markUnpaid: "Mark Unpaid",
     status: "Status",
-    paid: "Paid", // Overall month status
-    unpaid: "Unpaid", // Overall month status
-    partial: "Partial", // Overall month status
-    cleared: "Cleared", // Individual installment status
-    pending: "Pending", // Individual installment status
+    paid: "Paid",
+    unpaid: "Unpaid",
+    partial: "Partial",
+    cleared: "Cleared",
+    pending: "Pending",
     amountPaid: "Amount Paid",
     paymentDate: "Payment Date",
     generateReceipt: "Generate Receipt",
-    aiAssistant: "AI Assistant",
     getSummary: "Get AI Summary",
     errorFetchingSummary: "Error fetching AI summary.",
     appLock: "App Lock",
@@ -94,7 +93,7 @@ const initialTranslations: Translations = {
     manageMembers: "Manage Members",
     committeeMembers: "Committee Members",
     month: "Month",
-    payments: "Payments", // Title for section showing individual installments
+    payments: "Payments",
     payouts: "Payouts",
     assignTurn: "Assign Turn",
     turnMonth: "Turn Month",
@@ -105,7 +104,7 @@ const initialTranslations: Translations = {
     createNewMember: "Create New Member",
     selectMember: "Select Member",
     confirm: "Confirm",
-    pay: "Add Payment", // Changed from "Pay"
+    pay: "Add Payment",
     receipt: "Receipt",
     committeeName: "Committee Name",
     payerName: "Payer Name",
@@ -136,8 +135,8 @@ const initialTranslations: Translations = {
     paymentHistory: "Payment History",
     payoutHistory: "Payout History",
     totalContributedThisCommittee: "Total Contributed to this Committee",
-    noPaymentsMade: "No payments made for this period.", // For member history report
-    noInstallmentsMade: "No installments made for this month yet.", // For payment modal
+    noPaymentsMade: "No payments made for this period.",
+    noInstallmentsMade: "No installments made for this month yet.",
     noPayoutsReceived: "No payouts received for this period.",
     errorGeneratingPDF: "Error generating PDF.",
     noPaidReceiptsForMonth: "No paid receipts found for the selected month.",
@@ -331,7 +330,6 @@ const initialTranslations: Translations = {
     amountPaid: "ادا شدہ رقم",
     paymentDate: "ادائیگی کی تاریخ",
     generateReceipt: "رسید بنائیں",
-    aiAssistant: "اے آئی اسسٹنٹ",
     getSummary: "اے آئی خلاصہ حاصل کریں",
     errorFetchingSummary: "اے آئی خلاصہ حاصل کرنے میں خرابی۔",
     appLock: "ایپ لاک",
@@ -398,7 +396,7 @@ const initialTranslations: Translations = {
     paymentHistory: "ادائیگی کی تاریخ",
     payoutHistory: "ادائیگی کی تاریخ",
     totalContributedThisCommittee: "اس کمیٹی میں کل حصہ",
-    noPaymentsMade: "اس مدت کے لئے کوئی ادائیگی نہیں کی گئی۔",
+    noPaymentsMade: "اس مدت کے لیے کوئی ادائیگی نہیں کی گئی۔",
     noInstallmentsMade: "اس مہینے ابھی تک کوئی قسط ادا نہیں کی گئی۔",
     noPayoutsReceived: "اس مدت کے لئے کوئی ادائیگی موصول نہیں ہوئی۔",
     errorGeneratingPDF: "پی ڈی ایف بنانے میں خرابی۔",

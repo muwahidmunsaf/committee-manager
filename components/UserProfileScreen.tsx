@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../contexts/AppContext';
-import { UserProfile, Language } from '../types'; // Added Language
+import { UserProfile, Language } from '../types';
 import { Button, Input } from './UIComponents';
 import { isValidPakistaniCnic, isValidPakistaniPhone } from '../utils/appUtils';
 import { DEFAULT_PROFILE_PIC } from '../constants';

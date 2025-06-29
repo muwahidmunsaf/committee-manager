@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Installment, Language, Committee } from '../types';
 import { Button, Input, Modal, PlusCircleIcon, FolderIcon, PencilSquareIcon, TrashIcon, CreditCardIcon } from './UIComponents';
@@ -123,63 +123,45 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
   };
 
   useEffect(() => {
-    if (showCameraModal && photoType) {
-      (async () => {
-        try {
-          let stream;
-          if (photoType === 'profile') {
-            try {
-              stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: cameraFacingMode } });
-            } catch (err) {
-              stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            }
-          } else {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const videoDevices = devices.filter(device => device.kind === 'videoinput');
-            const backCamera = videoDevices.find(device =>
-              device.label.toLowerCase().includes('back') ||
-              device.label.toLowerCase().includes('environment')
-            );
-            if (backCamera) {
-              stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: backCamera.deviceId } } });
-            } else {
-              try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } });
-              } catch (err) {
-                stream = await navigator.mediaDevices.getUserMedia({ video: true });
-              }
-            }
+    if (!showCameraModal) return;
+
+    const startCamera = async () => {
+      try {
+        const constraints = {
+          video: {
+            facingMode: cameraFacingMode,
+            width: { ideal: 640 },
+            height: { ideal: 384 }
           }
-          setCameraStream(stream);
-          setTimeout(() => {
-            if (videoRef.current) {
-              videoRef.current.srcObject = stream;
-              videoRef.current.play();
-            }
-          }, 100);
-        } catch (err) {
-          setCameraError(t('unableToAccessCamera') || 'Unable to access camera. Please allow camera access in your browser.');
-          setShowCameraModal(false);
+        };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        setCameraStream(stream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
         }
-      })();
-    }
-    // Clean up on modal close
+      } catch (error) {
+        console.error('Camera error:', error);
+        setCameraError('Failed to access camera');
+      }
+    };
+
+    startCamera();
+
     return () => {
       if (cameraStream) {
         cameraStream.getTracks().forEach(track => track.stop());
       }
     };
-    // eslint-disable-next-line
-  }, [cameraFacingMode, showCameraModal, photoType]);
+  }, [showCameraModal]);
 
-  const openCameraModal = (type: 'profile' | 'cnic') => {
+  const openCameraModal = useCallback((type: 'profile' | 'cnic') => {
     setCameraError('');
     setShowProfilePhotoMenu(false);
     setShowCnicPhotoMenu(false);
     setPhotoType(type);
     setShowCameraModal(true);
     setCameraFacingMode(type === 'profile' ? 'user' : 'environment');
-  };
+  }, []);
 
   const closeCameraModal = () => {
     setShowCameraModal(false);

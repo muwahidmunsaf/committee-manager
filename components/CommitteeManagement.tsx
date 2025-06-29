@@ -361,36 +361,36 @@ const MemberForm: React.FC<{ committeeId?: string; initialData?: Member; onClose
 
   // Add this useEffect for camera switching
   useEffect(() => {
-    if (showCameraModal) {
-      (async () => {
-        try {
-          let stream;
-          try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: cameraFacingMode } });
-          } catch (err) {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    if (!showCameraModal) return;
+
+    const startCamera = async () => {
+      try {
+        const constraints = {
+          video: {
+            facingMode: cameraFacingMode,
+            width: { ideal: 640 },
+            height: { ideal: 384 }
           }
-          setCameraStream(stream);
-          setTimeout(() => {
-            if (videoRef.current) {
-              videoRef.current.srcObject = stream;
-              videoRef.current.play();
-            }
-          }, 100);
-        } catch (err) {
-          setCameraError('Unable to access camera. Please allow camera access in your browser.');
-          setShowCameraModal(false);
+        };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        setCameraStream(stream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
         }
-      })();
-    }
-    // Clean up on modal close
+      } catch (error) {
+        console.error('Camera error:', error);
+        setCameraError('Failed to access camera');
+      }
+    };
+
+    startCamera();
+
     return () => {
       if (cameraStream) {
         cameraStream.getTracks().forEach(track => track.stop());
       }
     };
-    // eslint-disable-next-line
-  }, [cameraFacingMode, showCameraModal]);
+  }, [showCameraModal]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
