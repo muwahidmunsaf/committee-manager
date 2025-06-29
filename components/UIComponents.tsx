@@ -17,7 +17,7 @@ export const Button: React.FC<ButtonProps> = ({
   className = '',
   ...props
 }) => {
-  const { t } = useAppContext();
+  // const { t } = useAppContext();
   const baseStyle = "font-semibold rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-neutral-darkest transition-colors duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center";
   
   const variantStyles = {
@@ -171,7 +171,7 @@ interface ModalProps {
 }
 
 export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, header, children, size = 'md', isPrintable = false }) => {
-  const { t, language } = useAppContext();
+  const { language } = useAppContext();
   const dir = language === Language.UR ? 'rtl' : 'ltr';
 
   if (!isOpen) return null;

@@ -120,10 +120,10 @@ const InstallmentDetailScreen: React.FC = () => {
   const drawPdfHeader = (pdf: jsPDF, pdfWidth: number, logoImg: string) => {
     pdf.setFillColor(6, 182, 212);
     pdf.rect(0, 0, pdfWidth, 70, 'F');
-    pdf.addImage(String(logoImg || ''), 'PNG', pdfWidth/2 - 25, 10, 50, 35, '', 'FAST');
+    pdf.addImage(String(logoImg ?? ''), 'PNG', pdfWidth/2 - 25, 10, 50, 35, '', 'FAST');
+    pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(24);
     pdf.setTextColor('#fff');
-    pdf.setFont(undefined, 'bold');
     pdf.text("Faisal Mobile's", pdfWidth/2, 55, { align: 'center' });
     pdf.setDrawColor(6, 182, 212);
     pdf.setLineWidth(2);
@@ -132,9 +132,9 @@ const InstallmentDetailScreen: React.FC = () => {
   const drawPdfFooter = (pdf: jsPDF, pdfWidth: number, pdfHeight: number, pageNum = 1, pageCount = 1) => {
     pdf.setFillColor(6, 182, 212);
     pdf.rect(0, pdfHeight - 50, pdfWidth, 40, 'F');
+    pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(13);
     pdf.setTextColor('#fff');
-    pdf.setFont(undefined, 'bold');
     pdf.text('0300-1234567 | muhammadumaru3615@gmail.com | Chungi Stop Darghowala, Lahore', pdfWidth/2, pdfHeight - 28, { align: 'center' });
   };
 
@@ -147,33 +147,35 @@ const InstallmentDetailScreen: React.FC = () => {
     appName: string,
     language: string = 'EN'
   ) => {
-    if (language === 'UR') {
-      pdf.setFont('Arial');
+    if (language === Language.UR) {
+      pdf.setFont('JameelNooriNastaleeq', 'normal');
       pdf.setFontSize(16);
     }
     if (logoBase64) {
-      pdf.addImage(String(logoBase64 || ''), 'PNG', pdfWidth/2-30, language === 'EN' ? 31.3 : 20, 60, 60, '', 'FAST');
+      pdf.addImage(String(logoBase64 ?? ''), 'PNG', pdfWidth/2-30, language === Language.EN ? 31.3 : 20, 60, 60, '', 'FAST');
     }
+    pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(18);
     pdf.setTextColor('#0e7490');
-    if (language === 'UR') {
-      pdf.setFont('Arial');
+    if (language === Language.UR) {
+      pdf.setFont('JameelNooriNastaleeq', 'normal');
     }
     // pdf.text(appName, pdfWidth/2, language === 'EN' ? 106.3 : 95, { align: 'center' });
     pdf.setDrawColor('#06b6d4');
     pdf.setLineWidth(1);
-    pdf.line(40, language === 'EN' ? 121.3 : 110, pdfWidth-40, language === 'EN' ? 121.3 : 110);
+    pdf.line(40, language === Language.EN ? 121.3 : 110, pdfWidth-40, language === Language.EN ? 121.3 : 110);
     // Footer
     const footerY = pdfHeight-40;
     pdf.setFillColor('#06b6d4');
     pdf.rect(0, footerY-10, pdfWidth, 30, 'F');
+    pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(11);
     pdf.setTextColor('#fff');
     const details = [userProfile.phone, userProfile.email, userProfile.address].filter(Boolean).join(' | ');
-    if (language === 'UR') {
-      pdf.setFont('Arial');
+    if (language === Language.UR) {
+      pdf.setFont('JameelNooriNastaleeq', 'normal');
     }
-    pdf.text(details || '', pdfWidth/2, footerY+8, { align: 'center' });
+    pdf.text(details ?? '', pdfWidth/2, footerY+8, { align: 'center' });
     pdf.setTextColor('#222');
   };
 
@@ -213,12 +215,11 @@ const InstallmentDetailScreen: React.FC = () => {
     const paymentDateObj = payment.paymentDate ? new Date(payment.paymentDate) : new Date();
     const monthNames = language === Language.UR ? monthNamesUR : monthNamesEN;
     const receiptMonth = `${monthNames[paymentDateObj.getMonth()]} ${paymentDateObj.getFullYear()}`;
-    pdf.setFontSize(15);
+    pdf.setFont('helvetica', 'bold');
     pdf.setTextColor('#0e7490');
-    pdf.setFont(undefined, 'bold');
     pdf.text(`${t('receipt')}: ${receiptMonth}`, pdfWidth/2, y + 20, { align: 'center' });
     y += 40;
-    pdf.setFontSize(13);
+    pdf.setFont('helvetica', 'normal');
     pdf.setTextColor('#222');
     let imageY = y;
     const lineGap = 20;
@@ -239,18 +240,18 @@ const InstallmentDetailScreen: React.FC = () => {
         pdf.setDrawColor(6, 182, 212);
         pdf.setLineWidth(2);
         pdf.circle(rightX + 40, rightY + 30, 30, 'S');
-        pdf.addImage(String(picBase64 || ''), 'JPEG', rightX, rightY, rightColWidth, 60, '', 'FAST');
+        pdf.addImage(String(picBase64 ?? ''), 'JPEG', rightX, rightY, rightColWidth, 60, '', 'FAST');
         rightY += 70;
       } catch {}
     }
     if (installment.cnicImageUrl) {
       try {
-        pdf.setFont(undefined, 'bold');
+        pdf.setFont('helvetica', 'bold');
         pdf.text('CNIC Image:', rightX, rightY);
         const cnicResp = await fetch(installment.cnicImageUrl);
         const cnicBlob = await cnicResp.blob();
         const cnicBase64 = await new Promise<string>((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result as string); reader.readAsDataURL(cnicBlob); });
-        pdf.addImage(String(cnicBase64 || ''), 'JPEG', rightX, rightY + 10, rightColWidth, 50, '', 'FAST');
+        pdf.addImage(String(cnicBase64 ?? ''), 'JPEG', rightX, rightY + 10, rightColWidth, 50, '', 'FAST');
         rightY += 80;
       } catch {}
     }
@@ -264,23 +265,23 @@ const InstallmentDetailScreen: React.FC = () => {
     ];
     infoFields.forEach(([label, value]) => {
       if (language === Language.UR) {
-        pdf.setFont('Arial');
+        pdf.setFont('JameelNooriNastaleeq', 'normal');
         pdf.setFontSize(16);
       } else {
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(13);
       }
-      pdf.setFont(undefined, 'bold');
-      pdf.text(String(label || ''), leftX, leftY);
-      pdf.setFont(undefined, 'normal');
-      const splitValueReceipt = pdf.splitTextToSize(String(value || '-'), leftColWidth - 140);
-      pdf.text(String(Array.isArray(splitValueReceipt) ? splitValueReceipt.join('\n') : splitValueReceipt || ''), leftX + 140, leftY);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(String(label ?? ''), leftX, leftY);
+      pdf.setFont('helvetica', 'normal');
+      const splitValueReceipt = pdf.splitTextToSize(String(value ?? '-'), leftColWidth - 140);
+      pdf.text(String(Array.isArray(splitValueReceipt) ? splitValueReceipt.join('\n') : splitValueReceipt ?? '-'), leftX + 140, leftY);
       leftY += lineGap * (Array.isArray(splitValueReceipt) ? splitValueReceipt.length : 1);
     });
     // Ensure y for table is below both columns
     y = Math.max(leftY, rightY) + 10;
     // Add heading before table
-    pdf.setFont(undefined, 'bold');
+    pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(15);
     pdf.setTextColor('#0e7490');
     pdf.text('Installments Detail', leftX, y + 10);
@@ -313,7 +314,7 @@ const InstallmentDetailScreen: React.FC = () => {
       },
       margin: { left: 40, right: 40, top: 120, bottom: 60 },
       didDrawPage: (data) => {
-        drawHeader();
+        drawPdfHeader(pdf, pdfWidth, logoImg);
         drawPdfFooter(pdf, pdfWidth, pdfHeight);
       }
     });
@@ -479,10 +480,10 @@ const InstallmentDetailScreen: React.FC = () => {
       pdf.rect(0, 0, pdfWidth, 70, 'F');
       const logoX = 60;
       const logoY = 10;
-      pdf.addImage(String(logoImg || ''), 'PNG', logoX, logoY, 50, 50, '', 'FAST');
+      pdf.addImage(String(logoImg ?? ''), 'PNG', logoX, logoY, 50, 50, '', 'FAST');
+      pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(24);
       pdf.setTextColor('#fff');
-      pdf.setFont(undefined, 'bold');
       pdf.text(appName, logoX + 70, 40, { align: 'left' });
       pdf.setDrawColor(6, 182, 212);
       pdf.setLineWidth(2);
@@ -507,19 +508,19 @@ const InstallmentDetailScreen: React.FC = () => {
         pdf.setDrawColor(6, 182, 212);
         pdf.setLineWidth(2);
         pdf.circle(rightX + rightColWidth/2, rightY + 40, 40, 'S');
-        pdf.addImage(String(picBase64 || ''), 'JPEG', rightX, rightY, rightColWidth, 80, '', 'FAST');
+        pdf.addImage(String(picBase64 ?? ''), 'JPEG', rightX, rightY, rightColWidth, 80, '', 'FAST');
         rightY += 90;
       } catch {}
     }
     if (installment.cnicImageUrl) {
       try {
-        pdf.setFont(undefined, 'bold');
+        pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(13);
         pdf.text('CNIC Image:', rightX, rightY);
         const cnicResp = await fetch(installment.cnicImageUrl);
         const cnicBlob = await cnicResp.blob();
         const cnicBase64 = await new Promise<string>((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result as string); reader.readAsDataURL(cnicBlob); });
-        pdf.addImage(String(cnicBase64 || ''), 'JPEG', rightX, rightY + 10, rightColWidth, 60, '', 'FAST');
+        pdf.addImage(String(cnicBase64 ?? ''), 'JPEG', rightX, rightY + 10, rightColWidth, 60, '', 'FAST');
         rightY += 80;
       } catch {}
     }
@@ -539,21 +540,21 @@ const InstallmentDetailScreen: React.FC = () => {
       [t('remainingAmount') + ':', `PKR ${remainingAmount?.toLocaleString?.() || '0'}`],
     ];
     infoFields.forEach(([label, value]) => {
-      pdf.setFont(undefined, 'bold');
+      pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(13);
       pdf.setTextColor('#222');
-      pdf.text(String(label || ''), leftX, leftY);
-      pdf.setFont(undefined, 'normal');
+      pdf.text(String(label ?? ''), leftX, leftY);
+      pdf.setFont('helvetica', 'normal');
       if (typeof value === 'object' && value !== null && 'value' in value) {
         const xOffset = value.extraSpace ? 140 + value.extraSpace : 140;
         if ('color' in value && value.color) {
           pdf.setTextColor(value.color);
         }
-        pdf.text(String(value.value || ''), leftX + xOffset, leftY);
+        pdf.text(String(value.value ?? ''), leftX + xOffset, leftY);
         pdf.setTextColor('#222');
       } else {
-        const splitValue = pdf.splitTextToSize(String(value || '-'), leftColWidth - 140);
-        pdf.text(String(Array.isArray(splitValue) ? splitValue.join('\n') : splitValue || ''), leftX + 140, leftY);
+        const splitValue = pdf.splitTextToSize(String(value ?? '-'), leftColWidth - 140);
+        pdf.text(String(Array.isArray(splitValue) ? splitValue.join('\n') : splitValue ?? '-'), leftX + 140, leftY);
         leftY += 20 * (Array.isArray(splitValue) ? splitValue.length : 1) - 20;
       }
       leftY += 20;
@@ -561,7 +562,7 @@ const InstallmentDetailScreen: React.FC = () => {
     // Ensure y for table is below both columns
     y = Math.max(leftY, rightY) + 10;
     // Add heading before table
-    pdf.setFont(undefined, 'bold');
+    pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(15);
     pdf.setTextColor('#0e7490');
     pdf.text('Installments Detail', leftX, y + 10);
@@ -758,8 +759,8 @@ const InstallmentDetailScreen: React.FC = () => {
                     <td style={{ border: '1px solid #06b6d4', padding: 8, fontWeight: 'bold' }}>{t('paymentDate')}</td>
                     <td style={{ border: '1px solid #06b6d4', padding: 8 }}>{urduReceiptPayment?.paymentDate}</td>
                   </tr>
-              </tbody>
-            </table>
+                </tbody>
+              </table>
             </div>
           </div>
           {/* Footer */}

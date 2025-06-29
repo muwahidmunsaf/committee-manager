@@ -12,7 +12,10 @@ import Cropper, { ReactCropperElement } from 'react-cropper';
 import 'cropperjs/dist/cropper.css';
 import { optimizeImageWithCanvas } from '../utils/appUtils';
 
-const openCameraWithBackPreference = async (onStream, onError) => {
+const openCameraWithBackPreference = async (
+  onStream: (stream: MediaStream) => void,
+  onError: (err: any) => void
+) => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } });
     onStream(stream);
@@ -466,7 +469,7 @@ const InstallmentManagement: React.FC = () => {
 
   const drawPdfHeader = (pdf: jsPDF, pdfWidth: number, logoImg: string) => {
     // No background color, no app name, just logo centered
-    pdf.addImage(String(logoImg ?? ''), 'PNG', pdfWidth/2 - 25, 10, 50, 35, String(''), 'FAST');
+    pdf.addImage(String(logoImg ?? ''), 'PNG', pdfWidth/2 - 25, 10, 50, 35, '', 'FAST');
     // Add extra vertical space below logo
     // (No app name, no colored bar)
   };
@@ -616,7 +619,7 @@ const InstallmentManagement: React.FC = () => {
         'Buyer Name', 'CNIC', 'Phone', 'Product Name', 'Total Amount', 'Advance', 'Collected Amount', 'Remaining Amount', 'Duration', 'Remaining Installments', 'Account Status'
       ];
     }
-    pdf.text(heading, pdfWidth/2, y + 30, { align: 'center' });
+    pdf.text(String(heading ?? ''), pdfWidth/2, y + 30, { align: 'center' });
     y += 50;
     // Prepare rows with serial number as first column
     const rows = installments.map((inst, idx) => [
@@ -659,8 +662,8 @@ const InstallmentManagement: React.FC = () => {
     pdf.setFont(undefined, 'bold');
     pdf.setFontSize(13);
     pdf.setTextColor('#0e7490');
-    pdf.text('Total Collected: PKR ' + safeTotalCollected.toLocaleString(), 60, lastY);
-    pdf.text('Total Remaining: PKR ' + safeTotalRemaining.toLocaleString(), 320, lastY);
+    pdf.text('Total Collected: PKR ' + String(safeTotalCollected?.toLocaleString?.() ?? '0'), 60, lastY);
+    pdf.text('Total Remaining: PKR ' + String(safeTotalRemaining?.toLocaleString?.() ?? '0'), 320, lastY);
     drawPdfFooter(pdf, pdfWidth, pdfHeight);
     pdf.save('overall_installments_report.pdf');
   };

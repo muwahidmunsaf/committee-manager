@@ -85,7 +85,7 @@ export const getMemberName = (memberId: string, members: Member[]): string => {
   return member ? member.name : 'Unknown Member';
 };
 
-export const initializeCommitteePayments = (committee: Committee): CommitteePayment[] => {
+export const initializeCommitteePayments = (_committee: Committee): CommitteePayment[] => {
   const payments: CommitteePayment[] = [];
   // This function is currently not used to pre-populate. Payments are added on-the-fly.
   // If pre-population were desired, it would look like this:

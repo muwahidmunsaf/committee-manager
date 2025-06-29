@@ -1192,8 +1192,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const recordPayment = async (committeeId: string, paymentDetails: Omit<CommitteePayment, 'id'>) => {
     try {
-    setCommitteesState((prev: Committee[]) => prev.map((c: Committee) => {
-      if (c.id === committeeId) {
+      setCommitteesState((prev: Committee[]) => prev.map((c: Committee) => {
+        if (c.id === committeeId) {
         const newPayment: CommitteePayment = {
           ...paymentDetails,
           id: generateId(), 
@@ -1207,12 +1207,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const member = membersState.find(m => m.id === newPayment.memberId);
         if (member) {
             const notification: Notification = {
-                id: generateId(),
-                type: NotificationType.COMMITTEE_UPDATE,
-                title: t('paymentHistory'),
+        id: generateId(),
+        type: NotificationType.COMMITTEE_UPDATE,
+        title: t('paymentHistory'),
                 message: `Payment of ${newPayment.amountPaid} by ${member.name} for: ${c.title}`,
-                timestamp: new Date().toISOString(),
-                isRead: false,
+        timestamp: new Date().toISOString(),
+        isRead: false,
                 committeeId: c.id,
                 memberId: newPayment.memberId,
                 actionUrl: `/committees/manage/${c.id}`
@@ -1240,8 +1240,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try {
       console.log('Updating payout turn:', turnToUpdate);
       
-    setCommitteesState((prev: Committee[]) => prev.map((c: Committee) => {
-      if (c.id === committeeId) {
+      setCommitteesState((prev: Committee[]) => prev.map((c: Committee) => {
+        if (c.id === committeeId) {
         const updatedCommittee = {
           ...c,
           payoutTurns: c.payoutTurns.map(pt => 
@@ -1291,10 +1291,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
         }
         
-        return updatedCommittee;
-      }
-      return c;
-    }));
+          return updatedCommittee;
+        }
+        return c;
+      }));
     } catch (error) {
       console.error('Error updating payout turn in Firestore:', error);
       // Don't expose sensitive error details
@@ -1324,7 +1324,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         // Check against the latest PIN from Firestore
         if (pin === currentPin) {
-      setIsLockedState(false);
+        setIsLockedState(false);
           setShowDashboardAlertState(true); // Reset alert state on successful login
           
           // Reset auto-lock timer immediately after successful unlock
@@ -1332,15 +1332,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             resetAutoLockTimer();
           }, 100);
           
-      return true;
+        return true;
     }
       }
       return false;
-    } catch (error) {
+      } catch (error) {
       console.error('Error checking PIN');
-      // Don't expose sensitive error details
-    return false;
-    }
+        // Don't expose sensitive error details
+        return false;
+      }
   };
   const lockApp = () => setIsLockedState(true);
 

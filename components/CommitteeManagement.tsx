@@ -1009,7 +1009,7 @@ export const CommitteeDetailScreen: React.FC = () => {
       drawTextLetterhead(pdf, pdfWidth, pdfHeight, userProfile, logoBase64, appName, language);
       pdf.setFontSize(15);
       pdf.setTextColor('#0e7490');
-      pdf.setFont(undefined, 'bold');
+      pdf.setFont('helvetica', 'bold');
       pdf.text(t('receipt'), pdfWidth/2, 140, { align: 'center' });
       pdf.setTextColor('#222');
       pdf.setFontSize(12);
@@ -1017,37 +1017,37 @@ export const CommitteeDetailScreen: React.FC = () => {
       const lineGap = 28;
 
       // Committee Name with bold title
-      pdf.setFont(undefined, 'bold');
+      pdf.setFont('helvetica', 'bold');
       pdf.text(`${t('committeeName')}:`, 60, y);
-      pdf.setFont(undefined, 'normal');
+      pdf.setFont('helvetica', 'normal');
       pdf.text(receiptData.committeeName || '', 180, y);
       y += lineGap;
 
       // Payer Name with bold title
-      pdf.setFont(undefined, 'bold');
+      pdf.setFont('helvetica', 'bold');
       pdf.text(`${t('payerName')}:`, 60, y);
-      pdf.setFont(undefined, 'normal');
+      pdf.setFont('helvetica', 'normal');
       pdf.text(receiptData.payerName || '', 180, y);
       y += lineGap;
 
       // Month with bold title
-      pdf.setFont(undefined, 'bold');
+      pdf.setFont('helvetica', 'bold');
       pdf.text(`${t('month')}:`, 60, y);
-      pdf.setFont(undefined, 'normal');
+      pdf.setFont('helvetica', 'normal');
       pdf.text(receiptData.month || '', 180, y);
       y += lineGap;
 
       // Amount Paid with bold title
-      pdf.setFont(undefined, 'bold');
+      pdf.setFont('helvetica', 'bold');
       pdf.text(`${t('amountPaid')}:`, 60, y);
-      pdf.setFont(undefined, 'normal');
+      pdf.setFont('helvetica', 'normal');
       pdf.text(`PKR ${(receiptData.amount ?? 0).toLocaleString()}`, 180, y);
       y += lineGap;
 
       // Date with bold title
-      pdf.setFont(undefined, 'bold');
+      pdf.setFont('helvetica', 'bold');
       pdf.text(`${t('date')}:`, 60, y);
-      pdf.setFont(undefined, 'normal');
+      pdf.setFont('helvetica', 'normal');
       pdf.text(formatDate(receiptData.paymentDate ?? '', language) || '', 180, y);
       y += lineGap + 10;
 
@@ -2110,15 +2110,15 @@ export const CommitteeDetailScreen: React.FC = () => {
       pdf.text(member.cnic || '', valueX, currentY);
       currentY += 20;
       if (member.address) {
-        pdf.setFont(undefined, 'bold');
+        pdf.setFont('helvetica', 'bold');
         pdf.text(t('address') + ':', labelX, currentY);
-        pdf.setFont(undefined, 'normal');
+        pdf.setFont('helvetica', 'normal');
         pdf.text(member.address, valueX, currentY);
         currentY += 20;
       }
-      pdf.setFont(undefined, 'bold');
+      pdf.setFont('helvetica', 'bold');
       pdf.text(t('joiningDate') + ':', labelX, currentY);
-      pdf.setFont(undefined, 'normal');
+      pdf.setFont('helvetica', 'normal');
       pdf.text(formatDate(member.joiningDate ?? '', language), valueX, currentY);
       currentY += 30;
       
@@ -2155,14 +2155,14 @@ export const CommitteeDetailScreen: React.FC = () => {
       // Committee Participation Section
       pdf.setFontSize(14);
       pdf.setTextColor('#0e7490');
-      pdf.setFont(undefined, 'bold');
+      pdf.setFont('helvetica', 'bold');
       pdf.text(t('committeeParticipation'), margin, currentY);
       currentY += 25;
       
       if (memberCommittees.length === 0) {
         pdf.setFontSize(12);
         pdf.setTextColor('#222');
-        pdf.setFont(undefined, 'normal');
+        pdf.setFont('helvetica', 'normal');
         pdf.text(language === Language.UR ? 'یہ رکن کسی کمیٹی میں شامل نہیں۔' : 'This member is not part of any committees.', margin, currentY);
         currentY += 30;
       } else {
@@ -2176,15 +2176,15 @@ export const CommitteeDetailScreen: React.FC = () => {
           // Committee Section Header
           pdf.setFontSize(13);
           pdf.setTextColor('#0e7490');
-          pdf.setFont(undefined, 'bold');
+          pdf.setFont('helvetica', 'bold');
           pdf.text(`${t('committeeName')}: ${committee.title || ''}`, margin, currentY);
           currentY += 18;
           pdf.setFontSize(11);
           pdf.setTextColor('#222');
-          pdf.setFont(undefined, 'normal');
+          pdf.setFont('helvetica', 'normal');
           pdf.text(`${t('startDate')}: ${formatDate(committee.startDate ?? '', language)}`, margin, currentY);
           currentY += 14;
-          pdf.text(`${t('duration')}: ${(committee.duration ?? '') + ' ' + t((committee.type?.toLowerCase?.() === 'monthly' ? 'months' : committee.type?.toLowerCase?.() === 'weekly' ? 'weeks' : 'days') ?? 'months')}`, margin, currentY);
+          pdf.text(`${t('duration')}: ${(committee.duration ?? '') + ' ' + t((committee.type?.toLowerCase?.() === 'monthly' ? 'months' : committee.type?.toLowerCase?.() === 'weekly' ? 'weeks' : 'days') || 'months')}`, margin, currentY);
           currentY += 14;
           pdf.text(`${t('amountPerMember')}: PKR ${(typeof committee.amountPerMember === 'number' ? committee.amountPerMember.toLocaleString() : '0')}`, margin, currentY);
           currentY += 18;
@@ -2196,7 +2196,7 @@ export const CommitteeDetailScreen: React.FC = () => {
           const remainingAmount = totalDue - totalContributed;
           pdf.setFontSize(12);
           pdf.setTextColor('#0e7490');
-          pdf.setFont(undefined, 'bold');
+          pdf.setFont('helvetica', 'bold');
           pdf.text(t('paymentHistory'), margin, currentY);
           currentY += 16;
           if (paymentsForCommittee.length > 0) {
@@ -2219,7 +2219,7 @@ export const CommitteeDetailScreen: React.FC = () => {
             });
             currentY = (pdf as any).lastAutoTable.finalY + 20; // add more space after table
             // Add total contributed and remaining
-            pdf.setFont(undefined, 'bold');
+            pdf.setFont('helvetica', 'bold');
             pdf.setTextColor('#0e7490');
             pdf.text(`${t('totalContributedThisCommittee')}: PKR ${totalContributed.toLocaleString()}`, margin, currentY);
             currentY += 14;
@@ -2230,7 +2230,7 @@ export const CommitteeDetailScreen: React.FC = () => {
             checkPageBreak(20);
             pdf.setFontSize(12);
             pdf.setTextColor('#222');
-            pdf.setFont(undefined, 'normal');
+            pdf.setFont('helvetica', 'normal');
             pdf.text(t('noPaymentsMade'), margin, currentY);
             currentY += 20;
           }
@@ -2264,7 +2264,7 @@ export const CommitteeDetailScreen: React.FC = () => {
           } else {
             pdf.setFontSize(12);
             pdf.setTextColor('#222');
-            pdf.setFont(undefined, 'normal');
+            pdf.setFont('helvetica', 'normal');
             pdf.text(t('noPayoutsReceived'), margin, currentY);
             currentY += 20;
           }
@@ -2284,12 +2284,12 @@ export const CommitteeDetailScreen: React.FC = () => {
         pdf.setPage(i);
         // For Urdu, move page number and footer up if needed
         let pageNumberY = pdfHeight - 9;
-        if (language === 'ur' || language === 'UR' || language === 'Urdu') {
+        if (language === Language.UR) {
           pageNumberY = pdfHeight - 30; // move up to avoid overlap
         }
         pdf.setFontSize(10);
         pdf.setTextColor('#666');
-        pdf.setFont(undefined, 'normal');
+        pdf.setFont('helvetica', 'normal');
         const pageText = `Page ${i} of ${pageCount}`;
         const pageTextWidth = pdf.getTextWidth(pageText);
         const centerX = (pdfWidth - pageTextWidth) / 2; // Center horizontally

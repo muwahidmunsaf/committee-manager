@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
 import { Language, Theme } from '../types';
-import { Button, UserCircleIcon, CogIcon, Bars3Icon, XMarkIcon, GlobeAltIcon, LockClosedIcon, SunIcon, MoonIcon, HomeIcon, UserGroupIcon, CreditCardIcon, BellIcon, ChartBarIcon, FolderIcon, ClockIcon, StarIcon, HeartIcon, TrophyIcon, GiftIcon, FireIcon, RocketLaunchIcon, AcademicCapIcon, BuildingOfficeIcon, HandRaisedIcon, LightBulbIcon, PuzzlePieceIcon, SparklesIcon2 } from './UIComponents';
+import { UserCircleIcon, Bars3Icon, XMarkIcon, GlobeAltIcon, LockClosedIcon, SunIcon, MoonIcon, CreditCardIcon, BellIcon, ClockIcon, TrophyIcon, AcademicCapIcon, BuildingOfficeIcon } from './UIComponents';
 
 const Navbar: React.FC = () => {
-  const { language, setLanguage, t, userProfile, lockApp, theme, setTheme, notifications, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, getUnreadNotificationCount } = useAppContext();
+  const { language, setLanguage, t, lockApp, theme, setTheme, notifications, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, getUnreadNotificationCount } = useAppContext();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotificationDropdownOpen, setIsNotificationDropdownOpen] = useState(false);
   const notificationDropdownRef = useRef<HTMLDivElement>(null);
