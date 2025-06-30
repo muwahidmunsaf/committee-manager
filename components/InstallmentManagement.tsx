@@ -320,6 +320,7 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
         )}
         <input type="file" id="buyerProfilePicUpload" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, 'profile')} />
         <input type="file" id="buyerProfilePicCamera" className="hidden" accept="image/*" capture="environment" onChange={e => handleFileUpload(e, 'profile')} />
+        <input type="file" id="buyerCnicPicUpload" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, 'cnic')} />
         {formData.profilePictureUrl && formData.profilePictureUrl !== DEFAULT_PROFILE_PIC && (
           <Button
             type="button"

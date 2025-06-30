@@ -1140,7 +1140,7 @@ export const CommitteeDetailScreen: React.FC = () => {
       try {
         // Capture the content as image
         const canvas = await html2canvas(hiddenDiv, {
-          backgroundColor: '#ffffff',
+          background: '#ffffff',
           scale: 2, // Higher resolution
           useCORS: true,
           allowTaint: true
@@ -1343,7 +1343,7 @@ export const CommitteeDetailScreen: React.FC = () => {
       try {
         // Capture the content as image
         const canvas = await html2canvas(hiddenDiv, {
-          backgroundColor: '#ffffff',
+          background: '#ffffff',
           scale: 2, // Higher resolution
           useCORS: true,
           allowTaint: true
@@ -1533,7 +1533,7 @@ export const CommitteeDetailScreen: React.FC = () => {
       try {
         // Render first page (summary + heading + first committee)
         const firstPageCanvas = await html2canvas(firstPageDiv, {
-          backgroundColor: '#ffffff',
+          background: '#ffffff',
           scale: 2,
           useCORS: true,
           allowTaint: true,
@@ -1646,7 +1646,7 @@ export const CommitteeDetailScreen: React.FC = () => {
           document.body.appendChild(committeeDiv);
           // Render committee page
           const committeeCanvas = await html2canvas(committeeDiv, {
-            backgroundColor: '#ffffff',
+            background: '#ffffff',
             scale: 2,
             useCORS: true,
             allowTaint: true,
@@ -2506,7 +2506,7 @@ export const CommitteeDetailScreen: React.FC = () => {
                                                     <ArrowDownTrayIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                                                   </Menu.Button>
                                                   <Menu.Items className="absolute z-10 mt-2 w-56 origin-top-right rounded-md bg-white dark:bg-neutral-darker shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                                                    <div className="py-1">
+                                                    <div className="py-1 flex flex-col">
                                                       <Menu.Item>
                                                         {({ active }) => (
                                                           <button

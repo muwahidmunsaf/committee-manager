@@ -141,9 +141,11 @@ const DashboardScreen: React.FC = () => {
   // CustomTooltip for Installment Collection Overview
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      // For Installment Collection Overview, use new keys
-      const totalValue = payload.find((e: any) => e.name === (language === Language.UR ? 'کل قیمت' : 'Total Value'))?.value || 0;
-      const collected = payload.find((e: any) => e.name === (language === Language.UR ? 'جمع شدہ' : 'Collected'))?.value || 0;
+      // Use translation keys to match data
+      const totalPoolKey = t('totalPool');
+      const totalCollectedKey = t('totalCollected');
+      const totalValue = payload.find((e: any) => e.name === totalPoolKey)?.value || 0;
+      const collected = payload.find((e: any) => e.name === totalCollectedKey)?.value || 0;
       const percent = totalValue > 0 ? Math.round((collected / totalValue) * 100) : 0;
       return (
         <div className="bg-white dark:bg-neutral-darker p-3 border border-gray-300 dark:border-gray-700 rounded shadow-lg">
@@ -617,9 +619,9 @@ const DashboardScreen: React.FC = () => {
         {/* Committee System Stats */}
         <StatCard title={<span>{t('activeCommittees')} <InfoTooltip text="Committees currently running (not completed)." /></span>} value={activeCommittees.length.toString()} icon={<BuildingOfficeIcon className="w-7 h-7 text-blue-600"/>} description={t('activeCommitteesDesc')} />
         <StatCard title={<span>{t('completedCommittees')} <InfoTooltip text="Committees that have finished all payout cycles." /></span>} value={completedCommitteesCount.toString()} icon={<TrophyIcon className="w-7 h-7 text-green-500" />} description={t('completedCommitteesDesc')} />
-        <StatCard title={<span>{t('totalCollected')} <InfoTooltip text="Sum of all cleared payments for all committees." /></span>} value={`PKR ${totalCollectedOverall.toLocaleString()}`} icon={<CreditCardIcon className="w-7 h-7 text-emerald-600" />} description={t('totalCollectedDesc')} />
-        <StatCard title={<span>Collected This Month <InfoTooltip text="Sum of all cleared payments for the current period (all committees)." /></span>} value={`PKR ${currentMonthCollected.toLocaleString()}`} icon={<ChartBarIcon className="w-7 h-7 text-blue-500" />} description="Amount collected in current month (all committees)" />
-        <StatCard title={<span>Remaining This Month <InfoTooltip text="Expected collection for the current period minus cleared payments (all committees)." /></span>} value={`PKR ${currentMonthRemaining.toLocaleString()}`} icon={<ClockIcon className="w-7 h-7 text-orange-500" />} description="Remaining amount in current month (all committees)" />
+        <StatCard title={<span>{t('totalCollected')} <InfoTooltip text={t('totalCollectedDesc')} /></span>} value={`PKR ${totalCollectedOverall.toLocaleString()}`} icon={<CreditCardIcon className="w-7 h-7 text-emerald-600" />} description={t('totalCollectedDesc')} />
+        <StatCard title={<span>{t('collectedThisMonth')} <InfoTooltip text={t('collectedThisMonthDesc')} /></span>} value={`PKR ${currentMonthCollected.toLocaleString()}`} icon={<ChartBarIcon className="w-7 h-7 text-blue-500" />} description={t('collectedThisMonthDesc')} />
+        <StatCard title={<span>{t('remainingCollectionThisMonth')} <InfoTooltip text={t('remainingCollectionThisMonthDesc')} /></span>} value={`PKR ${currentMonthRemaining.toLocaleString()}`} icon={<ClockIcon className="w-7 h-7 text-orange-500" />} description={t('remainingCollectionThisMonthDesc')} />
         <StatCard title={<span>{t('overallTotalMembers')} <InfoTooltip text="Total number of unique members across all committees." /></span>} value={members.length.toString()} icon={<UserGroupIcon className="w-7 h-7 text-violet-600" />} description={t('overallTotalMembersDesc')} />
       </div>
 

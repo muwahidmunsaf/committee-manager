@@ -497,12 +497,18 @@ const App: React.FC = () => {
       <div className={`min-h-screen flex flex-col bg-neutral-light dark:bg-neutral-darkest text-neutral-darker dark:text-neutral-light ${language === Language.UR ? 'font-notoNastaliqUrdu' : 'font-inter'}`} dir={language === Language.UR ? 'rtl' : 'ltr'}>
         {/* Welcome Modal */}
         {showWelcome && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-40">
-            <div className="bg-white dark:bg-neutral-darker rounded-lg shadow-lg px-8 py-8 flex flex-col items-center min-w-[280px]">
-              <p className="text-lg font-semibold text-neutral-darker dark:text-neutral-light mb-2 text-center">
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-40 animate-fadeIn">
+            <div className="bg-white dark:bg-neutral-darker rounded-2xl shadow-2xl px-10 py-10 flex flex-col items-center min-w-[280px] max-w-xs w-full border border-primary/10 animate-popIn">
+              <div className="text-5xl mb-3 animate-wave">👋</div>
+              <h2 className="text-2xl font-bold text-primary mb-2 text-center drop-shadow-sm">
                 {language === Language.UR
                   ? `خوش آمدید، ${userProfile.name}`
-                  : `Welcome, ${userProfile.name}`}
+                  : `Welcome, ${userProfile.name}!`}
+              </h2>
+              <p className="text-neutral-500 dark:text-neutral-300 text-center text-base mt-1">
+                {language === Language.UR
+                  ? 'آپ کی واپسی پر خوشی ہوئی!' 
+                  : 'Glad to see you back!'}
               </p>
             </div>
           </div>

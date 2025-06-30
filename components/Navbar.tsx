@@ -5,7 +5,7 @@ import { Language, Theme } from '../types';
 import { UserCircleIcon, Bars3Icon, XMarkIcon, GlobeAltIcon, LockClosedIcon, SunIcon, MoonIcon, CreditCardIcon, BellIcon, ClockIcon, TrophyIcon, AcademicCapIcon, BuildingOfficeIcon } from './UIComponents';
 
 const Navbar: React.FC = () => {
-  const { language, setLanguage, t, lockApp, theme, setTheme, notifications, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, getUnreadNotificationCount } = useAppContext();
+  const { language, setLanguage, t, lockApp, theme, setTheme, notifications, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, getUnreadNotificationCount, committees, members } = useAppContext();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotificationDropdownOpen, setIsNotificationDropdownOpen] = useState(false);
   const notificationDropdownRef = useRef<HTMLDivElement>(null);
@@ -78,7 +78,14 @@ const Navbar: React.FC = () => {
       isActive ? 'bg-primary-dark dark:bg-primary text-white' : 'text-neutral-dark dark:text-neutral-light hover:bg-primary-dark dark:hover:bg-primary hover:text-white dark:hover:text-white'
     } ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`;
 
-  const unreadCount = getUnreadNotificationCount();
+  // Filter notifications for unique IDs to prevent duplicates in the dropdown
+  const uniqueNotifications = Array.from(new Map(notifications.map(n => [n.id, n])).values());
+  const unreadCount = uniqueNotifications.filter(n => !n.isRead).length;
+  console.log('Notifications:', uniqueNotifications, 'Unread count:', unreadCount);
+
+  // Helper to get member/committee name
+  const getMemberNameById = (id) => members.find(m => m.id === id)?.name || '';
+  const getCommitteeTitleById = (id) => committees.find(c => c.id === id)?.title || '';
 
   return (
     <nav className="bg-primary shadow-md sticky top-0 z-40">
@@ -122,9 +129,10 @@ const Navbar: React.FC = () => {
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('notifications')}</h3>
                       {unreadCount > 0 && (
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
                             markAllNotificationsAsRead();
-                            setIsNotificationDropdownOpen(false);
                           }}
                           className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                         >
@@ -135,12 +143,12 @@ const Navbar: React.FC = () => {
                   </div>
                   
                   <div className="max-h-96 overflow-y-auto">
-                    {notifications.length === 0 ? (
+                    {uniqueNotifications.length === 0 ? (
                       <div className="p-4 text-center text-gray-500 dark:text-gray-400">
                         {t('noNotifications')}
                       </div>
                     ) : (
-                      notifications.map((notification) => (
+                      [...uniqueNotifications].reverse().map((notification) => (
                         <div
                           key={notification.id}
                           className={`p-4 border-b border-gray-100 dark:border-neutral-dark hover:bg-gray-50 dark:hover:bg-neutral-dark cursor-pointer transition-colors ${
@@ -152,10 +160,12 @@ const Navbar: React.FC = () => {
                             {getNotificationIcon(notification.type)}
                             <div className="flex-1 min-w-0">
                               <p className={`text-sm font-medium ${!notification.isRead ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
-                                {notification.title}
+                                {t(notification.title)}
                               </p>
                               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                {notification.message}
+                                {notification.type === 'payment_overdue' && notification.memberId && notification.committeeId
+                                  ? `${getMemberNameById(notification.memberId)} ${language === Language.UR ? t('paymentDue_ur') : t('paymentDue')} ${getCommitteeTitleById(notification.committeeId)}`
+                                  : notification.message}
                               </p>
                               <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                                 {formatTimeAgo(notification.timestamp)}
@@ -163,6 +173,7 @@ const Navbar: React.FC = () => {
                             </div>
                             <button
                               onClick={(e) => {
+                                e.preventDefault();
                                 e.stopPropagation();
                                 deleteNotification(notification.id);
                               }}
@@ -234,9 +245,10 @@ const Navbar: React.FC = () => {
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('notifications')}</h3>
                       {unreadCount > 0 && (
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
                             markAllNotificationsAsRead();
-                            setIsNotificationDropdownOpen(false);
                           }}
                           className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                         >
@@ -247,12 +259,12 @@ const Navbar: React.FC = () => {
                   </div>
                   
                   <div className="max-h-96 overflow-y-auto">
-                    {notifications.length === 0 ? (
+                    {uniqueNotifications.length === 0 ? (
                       <div className="p-4 text-center text-gray-500 dark:text-gray-400">
                         {t('noNotifications')}
                       </div>
                     ) : (
-                      notifications.map((notification) => (
+                      [...uniqueNotifications].reverse().map((notification) => (
                         <div
                           key={notification.id}
                           className={`p-4 border-b border-gray-100 dark:border-neutral-dark hover:bg-gray-50 dark:hover:bg-neutral-dark cursor-pointer transition-colors ${
@@ -264,10 +276,12 @@ const Navbar: React.FC = () => {
                             {getNotificationIcon(notification.type)}
                             <div className="flex-1 min-w-0">
                               <p className={`text-sm font-medium ${!notification.isRead ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
-                                {notification.title}
+                                {t(notification.title)}
                               </p>
                               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                {notification.message}
+                                {notification.type === 'payment_overdue' && notification.memberId && notification.committeeId
+                                  ? `${getMemberNameById(notification.memberId)} ${language === Language.UR ? t('paymentDue_ur') : t('paymentDue')} ${getCommitteeTitleById(notification.committeeId)}`
+                                  : notification.message}
                               </p>
                               <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                                 {formatTimeAgo(notification.timestamp)}
@@ -275,6 +289,7 @@ const Navbar: React.FC = () => {
                             </div>
                             <button
                               onClick={(e) => {
+                                e.preventDefault();
                                 e.stopPropagation();
                                 deleteNotification(notification.id);
                               }}
