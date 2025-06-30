@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAppContext } from './contexts/AppContext';
 import Navbar from './components/Navbar';
 import DashboardScreen from './components/DashboardScreen';
@@ -12,6 +12,9 @@ import { Language, AuthMethod } from './types';
 import { sendLoginNotification } from './services/emailService';
 import InstallmentManagement from './components/InstallmentManagement';
 import InstallmentDetailScreen from './components/InstallmentDetailScreen';
+import UserPortal from './components/UserPortal';
+import UserInstallmentDetail from './components/UserInstallmentDetail';
+import UserCommitteeDetail from './components/UserCommitteeDetail';
 
 const AppLockScreen: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }) => {
   const { t, unlockApp, language, userProfile, updateAppPin, forceUpdateAppPin, authMethod, pinLength } = useAppContext();
@@ -430,10 +433,11 @@ const AppLockScreen: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSucce
   );
 };
 
-
-const App: React.FC = () => {
+const AppWithRouterLogic: React.FC = () => {
   const { language, isLocked, isLoading: appIsLoading, isAuthSettingsLoaded, userProfile } = useAppContext();
   const [showWelcome, setShowWelcome] = useState(false);
+  const location = useLocation();
+  const isUserPortal = location.pathname.startsWith('/user');
 
   // Handler to show welcome message after login
   const handleLoginSuccess = () => {
@@ -462,28 +466,21 @@ const App: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
               {/* App Name */}
               <h1 className={`text-2xl font-bold text-white mb-2 ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>
                 Faisal Mobile's
               </h1>
-              
               {/* Loading text with dots animation */}
               <div className="flex items-center justify-center space-x-1">
-                <p className={`text-white text-lg ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>
-                  {language === Language.UR ? 'لوڈ ہو رہا ہے' : 'Loading'}
-                </p>
+                <p className={`text-white text-lg ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>{language === Language.UR ? 'لوڈ ہو رہا ہے' : 'Loading'}</p>
                 <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                   <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
                   <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                 </div>
               </div>
-              
               {/* Subtitle */}
-              <p className={`text-white text-opacity-80 text-sm mt-4 ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>
-                {language === Language.UR ? 'کمیٹی مینجمنٹ سسٹم' : 'Committee Management System'}
-              </p>
+              <p className={`text-white text-opacity-80 text-sm mt-4 ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>{language === Language.UR ? 'کمیٹی مینجمنٹ سسٹم' : 'Committee Management System'}</p>
             </div>
           </div>
         </div>
@@ -492,11 +489,9 @@ const App: React.FC = () => {
   }
 
   return (
-    <DevToolsProtection>
-    <BrowserRouter>
       <div className={`min-h-screen flex flex-col bg-neutral-light dark:bg-neutral-darkest text-neutral-darker dark:text-neutral-light ${language === Language.UR ? 'font-notoNastaliqUrdu' : 'font-inter'}`} dir={language === Language.UR ? 'rtl' : 'ltr'}>
         {/* Welcome Modal */}
-        {showWelcome && (
+        {showWelcome && !isUserPortal && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-40 animate-fadeIn">
             <div className="bg-white dark:bg-neutral-darker rounded-2xl shadow-2xl px-10 py-10 flex flex-col items-center min-w-[280px] max-w-xs w-full border border-primary/10 animate-popIn">
               <div className="text-5xl mb-3 animate-wave">👋</div>
@@ -513,10 +508,10 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
-        {isLocked && <AppLockScreen onLoginSuccess={handleLoginSuccess} />}
-        {!isLocked && <Navbar />}
-        <main className={`flex-grow w-full max-w-7xl mx-auto ${isLocked ? 'blur-sm pointer-events-none' : ''}`}>
-          {appIsLoading && !isLocked && ( 
+        {!isUserPortal && isLocked && <AppLockScreen onLoginSuccess={handleLoginSuccess} />}
+        {!isUserPortal && !isLocked && <Navbar />}
+        <main className={`flex-grow w-full max-w-7xl mx-auto ${isLocked && !isUserPortal ? 'blur-sm pointer-events-none' : ''}`}>
+          {appIsLoading && !isLocked && !isUserPortal && ( 
             <div className="fixed inset-0 bg-white bg-opacity-75 dark:bg-neutral-darkest dark:bg-opacity-75 flex items-center justify-center z-[999]">
               <LoadingSpinner size="lg" />
             </div>
@@ -529,16 +524,27 @@ const App: React.FC = () => {
             <Route path="/installments/:installmentId" element={isLocked ? <Navigate to="/" /> : <InstallmentDetailScreen />} />
             <Route path="/profile" element={isLocked ? <Navigate to="/" /> : <UserProfileScreen />} />
             <Route path="/settings" element={isLocked ? <Navigate to="/" /> : <SettingsScreen />} /> {/* Add Settings route */}
+            <Route path="/user" element={<UserPortal />} />
+            <Route path="/user/installment/:installmentId" element={<UserInstallmentDetail />} />
+            <Route path="/user/committee/:committeeId/:memberId" element={<UserCommitteeDetail />} />
             <Route path="*" element={<Navigate to="/" />} /> 
           </Routes>
         </main>
-        {!isLocked && (
+        {!isUserPortal && !isLocked && (
           <footer className={`py-4 text-center text-sm text-neutral-DEFAULT dark:text-gray-400 ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>
             © {new Date().getFullYear()} Faisal Mobile's. {language === Language.UR ? "جملہ حقوق محفوظ ہیں." : "All rights reserved."}
           </footer>
         )}
       </div>
-    </BrowserRouter>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <DevToolsProtection>
+      <BrowserRouter>
+        <AppWithRouterLogic />
+      </BrowserRouter>
     </DevToolsProtection>
   );
 };

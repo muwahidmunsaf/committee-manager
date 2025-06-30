@@ -279,6 +279,10 @@ const initialTranslations: Translations = {
     collectedThisMonth: "Collected This Month",
     collectedThisMonthDesc: "Sum of all cleared payments for the current period (all committees).",
     paymentDue: "Your installment is overdue for",
+    userPortal: "User Portal",
+    userPortalDesc: "Check your committee or installment details by searching with your CNIC.",
+    searchCommittee: "Search Committee",
+    searchInstallment: "Search Installment",
   },
   [Language.UR]: {
     appName: "فیصل موبائل شاپ",
@@ -543,6 +547,10 @@ const initialTranslations: Translations = {
     collectedThisMonth: "اس ماہ جمع شدہ",
     collectedThisMonthDesc: "موجودہ مدت میں تمام کمیٹیوں کی کلیئرڈ ادائیگیوں کا مجموعہ۔",
     paymentDue: "Your installment is overdue for",
+    userPortal: "یوزر پورٹل",
+    userPortalDesc: "اپنی کمیٹی یا قسط کی تفصیلات شناختی کارڈ کے ذریعے تلاش کریں۔",
+    searchCommittee: "کمیٹی تلاش کریں",
+    searchInstallment: "قسط تلاش کریں",
   },
 };
 
@@ -610,6 +618,7 @@ const USER_SETTINGS_DOC_ID = 'singleton'; // For now, use a single document for 
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [languageState, setLanguageState] = useState<Language>(Language.EN);
+  // Set default theme to LIGHT
   const [themeState, setThemeState] = useState<Theme>(Theme.LIGHT);
   const [appPinState, setAppPinState] = useState<string>(DEFAULT_APP_PIN);
   const [authMethodState, setAuthMethodState] = useState<AuthMethod>(AuthMethod.PIN);
@@ -778,11 +787,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
           // Update language and theme if they exist
           if (data.language) setLanguageState(data.language);
-          if (data.theme) setThemeState(data.theme);
+          // Default to LIGHT if theme is not set
+          if (data.theme) {
+            setThemeState(data.theme);
+          } else {
+            setThemeState(Theme.LIGHT);
+          }
+        } else {
+          // If no settings doc, default to LIGHT
+          setThemeState(Theme.LIGHT);
         }
       } catch (error) {
         console.error('Error loading auth settings');
         // Don't expose sensitive error details
+        setThemeState(Theme.LIGHT); // fallback to LIGHT on error
       } finally {
         setIsAuthSettingsLoaded(true);
       }
@@ -801,7 +819,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [languageState, themeState]);
 
   const setLanguage = (lang: Language) => setLanguageState(lang);
-  const setTheme = (selectedTheme: Theme) => setThemeState(selectedTheme);
+  const setTheme = async (selectedTheme: Theme) => {
+    setThemeState(selectedTheme);
+    try {
+      await setDoc(doc(db, 'settings', 'app'), {
+        language: languageState,
+        theme: selectedTheme,
+        appPin: appPinState,
+        authMethod: authMethodState,
+        pinLength: pinLengthState,
+      }, { merge: true });
+    } catch (error) {
+      console.error('Error updating theme in Firestore');
+    }
+  };
 
   const setAuthMethod = async (method: AuthMethod) => {
     try {

@@ -138,9 +138,9 @@ const InstallmentForm: React.FC<{ initialData?: Partial<Installment>; onClose: (
           }
         };
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        setCameraStream(stream);
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+          setCameraStream(stream);
+            if (videoRef.current) {
+              videoRef.current.srcObject = stream;
         }
       } catch (error) {
         console.error('Camera error:', error);
@@ -443,6 +443,7 @@ const InstallmentManagement: React.FC = () => {
   const navigate = useNavigate();
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [openReportModal, setOpenReportModal] = useState<null | { installment: Installment, memberCommittees: Committee[] }>(null);
+  const [showReportDropdown, setShowReportDropdown] = useState(false);
 
   const handleOpenFormModal = (installment?: Installment) => {
     setEditingInstallment(installment);
@@ -489,154 +490,58 @@ const InstallmentManagement: React.FC = () => {
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
-    drawPdfHeader(pdf, pdfWidth, logoImg);
+    drawPdfHeader(pdf, pdfWidth, logoImg || '');
     let y = 60;
-    // Calculate totals for Urdu mode
     let totalCollected = 0;
     let totalRemaining = 0;
-    installments.forEach(inst => {
+    let totalAmount = 0;
+    const rows = installments.map((inst, idx) => {
       const totalPaid = inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
       const collectedAmount = (inst.advancePayment || 0) + totalPaid;
       const remainingAmount = (inst.totalPayment || 0) - collectedAmount;
       totalCollected += collectedAmount;
       totalRemaining += remainingAmount > 0 ? remainingAmount : 0;
-    });
-    if (language === Language.UR) {
-      // --- Multi-page image-based export for Urdu overall report ---
-      await document.fonts.load('18px "Jameel Noori Nastaleeq"');
-      const rowsPerPage = 13;
-      const columns = [
-        'نمبر', 'خریدار کا نام', 'شناختی کارڈ', 'فون', 'موبائل کا نام', 'کل رقم', 'پیشگی', 'جمع شدہ رقم', 'باقی رقم', 'مدت', 'باقی اقساط', 'اکاؤنٹ اسٹیٹس'
-      ];
-      const rows = installments.map((inst, idx) => {
-        const totalPaid = inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
-        const collectedAmount = (inst.advancePayment || 0) + totalPaid;
-        const remainingAmount = (inst.totalPayment || 0) - collectedAmount;
-        const remainingInstallments = (inst.duration || 0) - (inst.payments?.length || 0);
-        return [
-          (idx + 1).toString(),
-          inst.buyerName,
-          inst.cnic,
-          inst.phone,
-          inst.mobileName,
-          inst.totalPayment?.toLocaleString?.() || '',
-          inst.advancePayment?.toLocaleString?.() || '',
-          collectedAmount.toLocaleString(),
-          remainingAmount.toLocaleString(),
-          inst.duration,
-          remainingInstallments,
-          (inst.status === 'Closed') ? 'بند' : 'کھلا'
-        ];
-      });
-      // Generate pages
-      for (let i = 0; i < rows.length; i += rowsPerPage) {
-        const pageRows = rows.slice(i, i + rowsPerPage);
-        const isLastPage = (i + rowsPerPage) >= rows.length;
-        const pageDiv = document.createElement('div');
-        pageDiv.style.position = 'absolute';
-        pageDiv.style.left = '-9999px';
-        pageDiv.style.top = '0';
-        pageDiv.style.width = pdfWidth + 'px';
-        pageDiv.style.height = '793px'; // A4 landscape at 96dpi
-        pageDiv.style.minHeight = '793px';
-        pageDiv.style.backgroundColor = 'white';
-        pageDiv.style.fontFamily = 'Jameel Noori Nastaleeq, Noto Nastaliq Urdu, serif';
-        pageDiv.style.direction = 'rtl';
-        pageDiv.style.fontSize = '15px';
-        pageDiv.style.lineHeight = '1.7';
-        pageDiv.innerHTML = `
-       
-  <div style="height: 793px; display: flex; flex-direction: column; justify-content: space-between; background: #fff;">
-    <div>
-      <div style="width: 100%; background: #06b6d4; height: 70px; display: flex; flex-direction: row; align-items: center; justify-content: center; position: relative;">
-        <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; height: 70px; gap: 16px;">
-          <div style="position: relative; width: 54px; height: 54px; display: flex; align-items: center; justify-content: center;">
-            <div style="width: 54px; height: 54px; background: #fff; border-radius: 50%; position: absolute; top: 0; left: 0;"></div>
-            ${logoImg ? `<img src="${logoImg}" style="width: 36px; height: 36px; object-fit: contain; position: absolute; top: 9px; left: 9px; z-index: 1;"/>` : ''}
-          </div>
-          <span style="color: #fff; font-size: 22px; font-weight: bold;">مجموعی قسط رپورٹ</span>
-        </div>
-      </div>
-      <div style="flex: 1; padding: 0 20px; margin-top: 20px; box-sizing: border-box;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
-          <thead>
-            <tr style="background: #06b6d4; color: #fff; font-weight: bold;">
-              ${columns.map(h => `<th style='border: 1px solid #ddd; padding: 5px;'>${h}</th>`).join('')}
-            </tr>
-          </thead>
-          <tbody>
-            ${pageRows.map(row => `
-              <tr style="page-break-inside: avoid;">
-                ${row.map(cell => `<td style='border: 1px solid #ddd; padding: 5px;'>${cell}</td>`).join('')}
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-      ${isLastPage ? `
-        <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: flex-end; width: 100%; padding: 0 60px 20px 60px; font-family: 'Jameel Noori Nastaleeq, Noto Nastaliq Urdu, serif'; color: #0e7490; font-weight: bold; font-size: 20px;">
-          <span>کل جمع شدہ: PKR ${totalCollected.toLocaleString()}</span>
-          <span>کل باقی: PKR ${totalRemaining.toLocaleString()}</span>
-        </div>
-      ` : ''}
-    </div>
-    <div style="width: 100%; background: #06b6d4; height: 40px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-family: 'Jameel Noori Nastaleeq, Noto Nastaliq Urdu, serif';">
-      muhammadumaru3615@gmail.com | Chungi Stop Darghowala, Lahore | 0300-1234567
-    </div>
-  </div>
-`; 
-        document.body.appendChild(pageDiv);
-        const pageCanvas = await html2canvas(pageDiv, { background: '#fff', useCORS: true, allowTaint: true, width: pageDiv.scrollWidth, height: pageDiv.scrollHeight });
-        const pageImgData = pageCanvas.toDataURL('image/jpeg', 1.0);
-        const pageImgWidth = pdfWidth;
-        const pageImgHeight = (pageCanvas.height * pageImgWidth) / pageCanvas.width;
-        if (i > 0) pdf.addPage();
-        pdf.addImage(pageImgData, 'JPEG', 0, 0, pageImgWidth, pageImgHeight);
-        document.body.removeChild(pageDiv);
+      totalAmount += inst.totalPayment || 0;
+      // Remaining installments logic
+      let remainingInstallments = 0;
+      if (remainingAmount <= 0) {
+        remainingInstallments = 0;
+      } else {
+        remainingInstallments = (inst.duration || 0) - (inst.payments?.length || 0);
       }
-        pdf.save('overall_installments_report.pdf');
-        return;
-    }
-    let columns: string[] = [];
-    let heading: string = '';
-    let safeTotalCollected: number = typeof totalCollected === 'number' ? totalCollected : 0;
-    let safeTotalRemaining: number = typeof totalRemaining === 'number' ? totalRemaining : 0;
+      return [
+        (idx + 1).toString(),
+        inst.buyerName,
+        inst.cnic,
+        inst.phone,
+        inst.mobileName,
+        inst.totalPayment?.toLocaleString?.() || '',
+        inst.advancePayment?.toLocaleString?.() || '',
+        collectedAmount.toLocaleString(),
+        (remainingAmount > 0 ? remainingAmount : 0).toLocaleString(),
+        remainingInstallments.toString(),
+        (language === Language.UR ? ((inst.status === 'Closed') ? 'بند' : 'کھلا') : inst.status)
+      ];
+    });
+    let columns = [];
+    let heading = '';
     if (language === Language.UR) {
-      pdf.setFont('JameelNooriNastaleeq', 'normal');
-      pdf.setFontSize(20);
-      pdf.setTextColor('#0e7490');
+      await document.fonts.load('18px "Jameel Noori Nastaleeq"');
       heading = 'مجموعی قسط رپورٹ';
       columns = [
-        'نمبر', // Serial number
-        'خریدار کا نام', 'شناختی کارڈ', 'فون', 'موبائل کا نام', 'کل رقم', 'پیشگی', 'جمع شدہ رقم', 'باقی رقم', 'مدت', 'باقی اقساط', 'اکاؤنٹ اسٹیٹس'
+        'نمبر', 'خریدار کا نام', 'شناختی کارڈ', 'فون', 'موبائل کا نام', 'کل رقم', 'پیشگی', 'جمع شدہ رقم', 'باقی رقم', 'باقی اقساط', 'اکاؤنٹ اسٹیٹس'
       ];
     } else {
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(18);
-      pdf.setTextColor('#0e7490');
       heading = 'Overall Installment Report';
       columns = [
-        'S.No', // Serial number
-        'Buyer Name', 'CNIC', 'Phone', 'Product Name', 'Total Amount', 'Advance', 'Collected Amount', 'Remaining Amount', 'Duration', 'Remaining Installments', 'Account Status'
+        'S.No', 'Buyer Name', 'CNIC', 'Phone', 'Product Name', 'Total Amount', 'Advance', 'Collected Amount', 'Remaining Amount', 'Remaining Installments', 'Account Status'
       ];
     }
+    pdf.setFont(language === Language.UR ? 'JameelNooriNastaleeq' : 'helvetica', 'bold');
+    pdf.setFontSize(18);
+    pdf.setTextColor('#0e7490');
     pdf.text(String(heading ?? ''), pdfWidth/2, y + 30, { align: 'center' });
     y += 50;
-    // Prepare rows with serial number as first column
-    const rows = installments.map((inst, idx) => [
-      (idx + 1).toString(),
-      inst.buyerName,
-      inst.cnic,
-      inst.phone,
-      inst.mobileName,
-      inst.totalPayment?.toLocaleString?.() || '',
-      inst.advancePayment?.toLocaleString?.() || '',
-      (inst.advancePayment + (inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0)).toLocaleString?.() || '',
-      ((inst.totalPayment || 0) - ((inst.advancePayment || 0) + (inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0))).toLocaleString?.() || '',
-          inst.duration,
-      (inst.duration - inst.payments.length),
-      (language === Language.UR ? ((inst.status === 'Closed') ? 'بند' : 'کھلا') : inst.status)
-    ]);
     autoTable(pdf, {
       startY: y,
       head: [columns],
@@ -646,6 +551,12 @@ const InstallmentManagement: React.FC = () => {
       styles: { fontSize: language === Language.UR ? 14 : 10, cellPadding: 4, font: language === Language.UR ? 'JameelNooriNastaleeq' : undefined, halign: language === Language.UR ? 'right' : 'left' },
       margin: { left: 40, right: 40 },
       didParseCell: function (data) {
+        if (data.column.index === columns.length - 2 && data.cell.raw) {
+          // Remaining Installments column
+          if (data.cell.raw === '0') {
+            data.cell.styles.textColor = [22, 163, 74]; // green
+          }
+        }
         if (data.column.index === columns.length - 1 && data.cell.raw) {
           if (data.cell.raw === 'Open' || data.cell.raw === 'کھلا') {
             data.cell.styles.textColor = [22, 163, 74]; // green
@@ -655,7 +566,7 @@ const InstallmentManagement: React.FC = () => {
         }
       },
       didDrawPage: (data) => {
-        drawPdfHeader(pdf, pdfWidth, logoImg);
+        drawPdfHeader(pdf, pdfWidth, logoImg || '');
         drawPdfFooter(pdf, pdfWidth, pdfHeight);
       }
     });
@@ -663,10 +574,125 @@ const InstallmentManagement: React.FC = () => {
     pdf.setFont(undefined, 'bold');
     pdf.setFontSize(13);
     pdf.setTextColor('#0e7490');
-    pdf.text('Total Collected: PKR ' + String(safeTotalCollected?.toLocaleString?.() ?? '0'), 60, lastY);
-    pdf.text('Total Remaining: PKR ' + String(safeTotalRemaining?.toLocaleString?.() ?? '0'), 320, lastY);
+    pdf.text('Total Collected: PKR ' + String(totalCollected?.toLocaleString?.() ?? '0'), 60, lastY);
+    pdf.text('Total Remaining: PKR ' + String(totalRemaining?.toLocaleString?.() ?? '0'), 320, lastY);
+    pdf.text('Total Amount: PKR ' + String(totalAmount?.toLocaleString?.() ?? '0'), 540, lastY);
     drawPdfFooter(pdf, pdfWidth, pdfHeight);
     pdf.save('overall_installments_report.pdf');
+  };
+
+  // Helper to get current month string (YYYY-MM)
+  const getCurrentMonthStr = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  };
+
+  // Helper to get current month name
+  const getCurrentMonthName = () => {
+    const now = new Date();
+    return now.toLocaleString(language === Language.UR ? 'ur-PK' : 'en-US', { month: 'long', year: 'numeric' });
+  };
+
+  // New: Download current month report
+  const handleDownloadCurrentMonthPDF = async () => {
+    const logoImg = await fetch('/assets/logo.png').then(r => r.blob()).then(blob => new Promise<string>((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result as string); reader.readAsDataURL(blob); }));
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    drawPdfHeader(pdf, pdfWidth, logoImg || '');
+    let y = 60;
+    const currentMonthStr = getCurrentMonthStr();
+    const currentMonthName = getCurrentMonthName();
+    let totalCollected = 0;
+    let totalRemaining = 0;
+    let totalAmount = 0;
+    // Filter and calculate for current month, exclude closed accounts
+    const filteredInstallments = installments.filter(inst => inst.status !== 'Closed');
+    const rows = filteredInstallments.map((inst, idx) => {
+      // Payments for current month
+      const monthPayments = (inst.payments || []).filter(p => {
+        if (!p.paymentDate) return false;
+        const d = new Date(p.paymentDate);
+        const mStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        return mStr === currentMonthStr;
+      });
+      const collectedAmount = monthPayments.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
+      const remainingAmount = (inst.monthlyInstallment || 0) - collectedAmount;
+      totalCollected += collectedAmount;
+      totalRemaining += remainingAmount > 0 ? remainingAmount : 0;
+      totalAmount += inst.monthlyInstallment || 0;
+      // Remaining installments logic
+      let remainingInstallments = 0;
+      if (remainingAmount === 0) {
+        remainingInstallments = 0;
+      } else {
+        remainingInstallments = 1;
+      }
+      return [
+        (idx + 1).toString(),
+        inst.buyerName,
+        inst.cnic,
+        inst.phone,
+        inst.mobileName,
+        inst.monthlyInstallment?.toLocaleString?.() || '',
+        collectedAmount.toLocaleString(),
+        (remainingAmount > 0 ? remainingAmount : 0).toLocaleString(),
+        remainingInstallments.toString(),
+        (language === Language.UR ? ((inst.status === 'Closed') ? 'بند' : 'کھلا') : inst.status)
+      ];
+    });
+    let columns;
+    let heading;
+    if (language === Language.UR) {
+      await document.fonts.load('18px "Jameel Noori Nastaleeq"');
+      heading = `${currentMonthName} کی قسط رپورٹ`;
+      columns = ['نمبر', 'خریدار کا نام', 'شناختی کارڈ', 'فون', 'موبائل کا نام', 'ماہانہ قسط', 'جمع شدہ', 'باقی', 'باقی اقساط', 'اکاؤنٹ اسٹیٹس'];
+    } else {
+      heading = `${currentMonthName} Installment Report`;
+      columns = ['S.No', 'Buyer Name', 'CNIC', 'Phone', 'Product Name', 'Monthly Installment', 'Collected', 'Remaining', 'Remaining Installments', 'Account Status'];
+    }
+    pdf.setFont(language === Language.UR ? 'JameelNooriNastaleeq' : 'helvetica', 'bold');
+    pdf.setFontSize(18);
+    pdf.setTextColor('#0e7490');
+    pdf.text(String(heading ?? ''), pdfWidth/2, y + 30, { align: 'center' });
+    y += 50;
+    autoTable(pdf, {
+      startY: y,
+      head: [columns],
+      body: rows,
+      theme: 'grid',
+      headStyles: { fillColor: [6, 182, 212], textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: language === Language.UR ? 14 : 10, cellPadding: 4, font: language === Language.UR ? 'JameelNooriNastaleeq' : undefined, halign: language === Language.UR ? 'right' : 'left' },
+      margin: { left: 40, right: 40 },
+      didParseCell: function (data) {
+        if (data.column.index === columns.length - 2 && data.cell.raw) {
+          // Remaining Installments column
+          if (data.cell.raw === '0') {
+            data.cell.styles.textColor = [22, 163, 74]; // green
+          }
+        }
+        if (data.column.index === columns.length - 1 && data.cell.raw) {
+          if (data.cell.raw === 'Open' || data.cell.raw === 'کھلا') {
+            data.cell.styles.textColor = [22, 163, 74]; // green
+          } else if (data.cell.raw === 'Closed' || data.cell.raw === 'بند') {
+            data.cell.styles.textColor = [220, 38, 38]; // red
+          }
+        }
+      },
+      didDrawPage: (data) => {
+        drawPdfHeader(pdf, pdfWidth, logoImg || '');
+        drawPdfFooter(pdf, pdfWidth, pdfHeight);
+      }
+    });
+    let lastY = (pdf as any).lastAutoTable.finalY + 20;
+    pdf.setFont(undefined, 'bold');
+    pdf.setFontSize(13);
+    pdf.setTextColor('#0e7490');
+    pdf.text('Total Collected: PKR ' + String(totalCollected?.toLocaleString?.() ?? '0'), 60, lastY);
+    pdf.text('Total Remaining: PKR ' + String(totalRemaining?.toLocaleString?.() ?? '0'), 320, lastY);
+    pdf.text('Total Amount: PKR ' + String(totalAmount?.toLocaleString?.() ?? '0'), 540, lastY);
+    drawPdfFooter(pdf, pdfWidth, pdfHeight);
+    pdf.save(`${currentMonthName.replace(/\s/g, '_')}_Installment_Report.pdf`);
   };
 
   // Handler for dropdown actions
@@ -696,10 +722,28 @@ const InstallmentManagement: React.FC = () => {
           <CreditCardIcon className="h-8 w-8 mr-3 text-primary" />
           {t('installments')}
         </h1>
-        <Button onClick={handleDownloadAllBuyersPDF} className="w-full sm:w-auto font-bold border-2 border-primary bg-primary text-white hover:bg-primary-dark hover:text-white transition" variant="primary">
-          <FolderIcon className="h-5 w-5 mr-2" />
-          Download Overall Report
-        </Button>
+        <div className="relative">
+          <Button onClick={() => setShowReportDropdown(v => !v)} className="w-full sm:w-auto font-bold border-2 border-primary bg-primary text-white hover:bg-primary-dark hover:text-white transition" variant="primary">
+            <FolderIcon className="h-5 w-5 mr-2" />
+            Download Report
+          </Button>
+          {showReportDropdown && (
+            <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-neutral-dark rounded shadow-lg z-10">
+              <button
+                className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-neutral-darker"
+                onClick={() => { setShowReportDropdown(false); handleDownloadAllBuyersPDF(); }}
+              >
+                Overall Report
+              </button>
+              <button
+                className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-neutral-darker"
+                onClick={() => { setShowReportDropdown(false); handleDownloadCurrentMonthPDF(); }}
+              >
+                {getCurrentMonthName()} Report
+              </button>
+            </div>
+          )}
+        </div>
         <Button onClick={() => handleOpenFormModal()} className="w-full sm:w-auto">
           <PlusCircleIcon className="h-5 w-5 mr-2" />
           {t('createInstallment')}
@@ -771,7 +815,7 @@ const InstallmentManagement: React.FC = () => {
                     </Button>
                     <Button size="sm" variant="danger" onClick={() => handleDeleteInstallment(installment.id)} aria-label="Delete">
                       <TrashIcon className="w-5 h-5" />
-                        </Button>
+                    </Button>
                   </div>
                 </div>
               </div>
