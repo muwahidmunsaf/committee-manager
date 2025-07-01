@@ -527,7 +527,7 @@ const AppWithRouterLogic: React.FC = () => {
             <Route path="/user" element={<UserPortal />} />
             <Route path="/user/installment/:installmentId" element={<UserInstallmentDetail />} />
             <Route path="/user/committee/:committeeId/:memberId" element={<UserCommitteeDetail />} />
-            <Route path="*" element={<Navigate to="/" />} /> 
+            <Route path="*" element={<Navigate to="/user" />} />
           </Routes>
         </main>
         {!isUserPortal && !isLocked && (
