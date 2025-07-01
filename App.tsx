@@ -517,17 +517,17 @@ const AppWithRouterLogic: React.FC = () => {
             </div>
           )}
           <Routes>
-            <Route path="/" element={isLocked ? <Navigate to="/" /> : <DashboardScreen />} />
-            <Route path="/committees" element={isLocked ? <Navigate to="/" /> : <CommitteeManagement />} />
-            <Route path="/committees/:committeeId" element={isLocked ? <Navigate to="/" /> : <CommitteeDetailScreen />} />
-            <Route path="/installments" element={isLocked ? <Navigate to="/" /> : <InstallmentManagement />} />
-            <Route path="/installments/:installmentId" element={isLocked ? <Navigate to="/" /> : <InstallmentDetailScreen />} />
-            <Route path="/profile" element={isLocked ? <Navigate to="/" /> : <UserProfileScreen />} />
-            <Route path="/settings" element={isLocked ? <Navigate to="/" /> : <SettingsScreen />} /> {/* Add Settings route */}
+            <Route path="/" element={<DashboardScreen />} />
+            <Route path="/committees" element={<CommitteeManagement />} />
+            <Route path="/committees/:committeeId" element={<CommitteeDetailScreen />} />
+            <Route path="/installments" element={<InstallmentManagement />} />
+            <Route path="/installments/:installmentId" element={<InstallmentDetailScreen />} />
+            <Route path="/profile" element={<UserProfileScreen />} />
+            <Route path="/settings" element={<SettingsScreen />} />
             <Route path="/user" element={<UserPortal />} />
             <Route path="/user/installment/:installmentId" element={<UserInstallmentDetail />} />
             <Route path="/user/committee/:committeeId/:memberId" element={<UserCommitteeDetail />} />
-            <Route path="*" element={<Navigate to="/" />} /> 
+            <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>
         {!isUserPortal && !isLocked && (
