@@ -434,7 +434,7 @@ const AppLockScreen: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSucce
 };
 
 const AppWithRouterLogic: React.FC = () => {
-  const { language, isLoading: appIsLoading, isAuthSettingsLoaded } = useAppContext();
+  const { language, isLoading: appIsLoading, isAuthSettingsLoaded, showAutoLockWarning, autoLockCountdown } = useAppContext();
   const [showLoader, setShowLoader] = React.useState(true);
   React.useEffect(() => {
     const timer = setTimeout(() => setShowLoader(false), 1200); // 1.2 seconds
@@ -481,6 +481,15 @@ const AppWithRouterLogic: React.FC = () => {
   }
   return (
     <div className={`min-h-screen flex flex-col bg-neutral-light dark:bg-neutral-darkest text-neutral-darker dark:text-neutral-light ${language === Language.UR ? 'font-notoNastaliqUrdu' : 'font-inter'}`} dir={language === Language.UR ? 'rtl' : 'ltr'}>
+      {/* Auto-lock warning modal */}
+      {showAutoLockWarning && (
+        <div className="fixed top-0 left-0 w-full z-[2000] flex justify-center animate-fadeIn">
+          <div className="bg-orange-100 border-l-4 border-orange-500 text-orange-800 px-6 py-4 rounded-b-lg shadow-lg flex items-center gap-3 mt-2">
+            <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span className="font-semibold">You will be locked out in <b>{autoLockCountdown}</b> seconds due to inactivity.</span>
+          </div>
+        </div>
+      )}
       <main className="flex-grow w-full max-w-7xl mx-auto">
         <Routes>
           <Route path="/" element={<Navigate to="/user" replace />} />
