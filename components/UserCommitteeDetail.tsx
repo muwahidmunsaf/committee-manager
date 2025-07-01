@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
 import { Button, SunIcon, MoonIcon } from './UIComponents';
@@ -39,6 +39,16 @@ const UserCommitteeDetail: React.FC = () => {
   const navigate = useNavigate();
   const committee = committees.find(c => c.id === committeeId);
   const member = members.find(m => m.id === memberId);
+
+  // Redirect to /user if data is missing (after refresh or direct URL)
+  useEffect(() => {
+    if (!committee || !member) {
+      navigate('/user', { replace: true });
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, [committee, member, navigate]);
+
   if (!committee || !member) return <div className="p-8 text-center text-red-500">{t('noCommitteesFound')}</div>;
   const memberPayments = committee.payments.filter((p: any) => p.memberId === member.id);
   const totalPaid = memberPayments.reduce((sum: number, p: any) => sum + (p.amountPaid || 0), 0);

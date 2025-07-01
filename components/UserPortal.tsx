@@ -144,6 +144,22 @@ const UserPortal: React.FC = () => {
     }
   }, []);
 
+  // On mount, clear search history if loaded via browser refresh
+  useEffect(() => {
+    let navType: any = undefined;
+    const navEntries = window.performance.getEntriesByType && window.performance.getEntriesByType('navigation');
+    if (navEntries && navEntries.length > 0 && 'type' in navEntries[0]) {
+      navType = (navEntries[0] as any).type;
+    } else if (window.performance && (window.performance as any).navigation) {
+      navType = (window.performance as any).navigation.type;
+    }
+    if (navType === 'reload' || navType === 1) {
+      sessionStorage.removeItem('userPortalLastResults');
+      sessionStorage.removeItem('userPortalLastSearchType');
+      sessionStorage.removeItem('userPortalScrollToResults');
+    }
+  }, []);
+
   // PDF download logic (English only, similar to InstallmentDetailScreen)
   const handleDownloadPdf = async (item: any, member?: any) => {
     setPdfLoading(true);
@@ -312,7 +328,7 @@ const UserPortal: React.FC = () => {
       <div className="w-full max-w-2xl flex flex-col gap-8 mb-8">
         <div className="flex flex-col items-center gap-4 mb-8">
           <img src={logo} alt="Logo" className="w-28 h-28" />
-          <h1 className="text-3xl font-bold text-cyan-800 dark:text-cyan-300 tracking-tight">User Portal</h1>
+          <h1 className="text-3xl font-bold text-cyan-800 dark:text-cyan-300 tracking-tight">Welcome to User Portal</h1>
           <p className="text-gray-600 dark:text-neutral-200 text-center max-w-md">Check your committee or installment details by searching with your CNIC.</p>
         </div>
         <div className="flex flex-col md:flex-row gap-4 justify-center mb-4">

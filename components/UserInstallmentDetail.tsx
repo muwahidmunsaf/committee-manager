@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
 import { Button, SunIcon, MoonIcon } from './UIComponents';
@@ -32,6 +32,16 @@ const UserInstallmentDetail: React.FC = () => {
   const { installments, t, theme, setTheme } = useAppContext();
   const navigate = useNavigate();
   const installment = installments.find(i => i.id === installmentId);
+
+  // Redirect to /user if data is missing (after refresh or direct URL)
+  useEffect(() => {
+    if (!installment) {
+      navigate('/user', { replace: true });
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, [installment, navigate]);
+
   if (!installment) return <div className="p-8 text-center text-red-500">{t('noInstallmentsFound')}</div>;
   const totalPaid = installment.payments.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
   const remainingAmount = installment.totalPayment - (installment.advancePayment || 0) - totalPaid;
@@ -146,7 +156,8 @@ const UserInstallmentDetail: React.FC = () => {
       <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4 flex items-center gap-2 text-cyan-700 hover:bg-cyan-100 w-full max-w-xs md:max-w-none">
         <span className="text-xl">&larr;</span> Back to Portal
       </Button>
-      {isCurrentMonthUncleared && (
+      {/* Only show alert if account is not closed */}
+      {isCurrentMonthUncleared && !isClosed && (
         <div className="flex items-center gap-2 bg-orange-100 border-l-4 border-orange-400 text-orange-700 p-4 rounded shadow text-sm md:text-base w-full max-w-2xl mb-4">
           <ExclamationCircleIcon className="w-6 h-6" />
           <span>Attention: Your installment for this month is pending or incomplete!</span>
@@ -170,8 +181,8 @@ const UserInstallmentDetail: React.FC = () => {
             <StatCard icon={<BanknotesIcon className="w-6 h-6 text-cyan-700" />} label="Mobile Name" value={capitalizeWords(installment.mobileName)} />
             <StatCard icon={<BanknotesIcon className="w-6 h-6 text-cyan-700" />} label="Advance Payment" value={`PKR ${(installment.advancePayment || 0).toLocaleString()}`} />
             <StatCard icon={isClosed ? <CheckCircleIcon className="w-6 h-6 text-red-600" /> : <ExclamationCircleIcon className="w-6 h-6 text-green-600" />} label="Account Status" value={<span className={`font-bold ${isClosed ? 'text-red-600' : 'text-green-600'}`}>{isClosed ? 'Closed' : 'Open'}</span>} />
-          </div>
         </div>
+      </div>
         <div className="flex flex-wrap gap-4">
           <StatCard icon={<BanknotesIcon className="w-6 h-6 text-cyan-700" />} label="Total Payment" value={`PKR ${installment.totalPayment.toLocaleString()}`} />
           <StatCard icon={<ClipboardDocumentCheckIcon className="w-6 h-6 text-cyan-700" />} label="Total Collected" value={`PKR ${totalPaid.toLocaleString()}`} />
@@ -186,7 +197,8 @@ const UserInstallmentDetail: React.FC = () => {
             <div className="h-3 rounded bg-cyan-500 transition-all duration-500" style={{ width: `${progress}%` }}></div>
           </div>
         </div>
-        {hasDue && (
+        {/* Only show due alert if account is not closed */}
+        {hasDue && !isClosed && (
           <div className="flex items-center gap-2 bg-orange-100 border-l-4 border-orange-400 text-orange-700 p-4 rounded shadow">
             <ExclamationCircleIcon className="w-6 h-6" />
             <span>Installment due! Please pay your installment by <b>{dueDate}</b>.</span>
