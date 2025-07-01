@@ -439,10 +439,11 @@ const AppWithRouterLogic: React.FC = () => {
     <div className={`min-h-screen flex flex-col bg-neutral-light dark:bg-neutral-darkest text-neutral-darker dark:text-neutral-light ${language === Language.UR ? 'font-notoNastaliqUrdu' : 'font-inter'}`} dir={language === Language.UR ? 'rtl' : 'ltr'}>
       <main className="flex-grow w-full max-w-7xl mx-auto">
         <Routes>
+          <Route path="/" element={<Navigate to="/user" replace />} />
           <Route path="/user" element={<UserPortal />} />
           <Route path="/user/installment/:installmentId" element={<UserInstallmentDetail />} />
           <Route path="/user/committee/:committeeId/:memberId" element={<UserCommitteeDetail />} />
-          <Route path="*" element={<Navigate to="/user" />} />
+          <Route path="*" element={<Navigate to="/user" replace />} />
         </Routes>
       </main>
     </div>
