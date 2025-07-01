@@ -434,108 +434,18 @@ const AppLockScreen: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSucce
 };
 
 const AppWithRouterLogic: React.FC = () => {
-  const { language, isLocked, isLoading: appIsLoading, isAuthSettingsLoaded, userProfile } = useAppContext();
-  const [showWelcome, setShowWelcome] = useState(false);
-  const location = useLocation();
-  const isUserPortal = location.pathname.startsWith('/user');
-
-  // Handler to show welcome message after login
-  const handleLoginSuccess = () => {
-    setShowWelcome(true);
-    setTimeout(() => setShowWelcome(false), 1500);
-  };
-
-  // Show loading spinner while auth settings are being loaded
-  if (!isAuthSettingsLoaded) {
-    return (
-      <DevToolsProtection>
-        <div className={`min-h-screen flex flex-col bg-gradient-to-br from-primary to-primary-dark text-neutral-darker dark:text-neutral-light ${language === Language.UR ? 'font-notoNastaliqUrdu' : 'font-inter'}`} dir={language === Language.UR ? 'rtl' : 'ltr'}>
-          <div className="fixed inset-0 flex items-center justify-center z-[999]">
-            <div className="text-center">
-              {/* Animated Logo */}
-              <div className="relative mb-6">
-                <img 
-                  src="/logo.png" 
-                  alt="Faisal Mobile's Logo" 
-                  className="h-32 w-auto mx-auto animate-pulse" 
-                />
-                {/* Loading ring around logo */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-40 h-40 border-4 border-white border-opacity-30 rounded-full animate-spin">
-                    <div className="w-40 h-40 border-4 border-transparent border-t-white rounded-full animate-spin"></div>
-                  </div>
-                </div>
-              </div>
-              {/* App Name */}
-              <h1 className={`text-2xl font-bold text-white mb-2 ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>
-                Faisal Mobile's
-              </h1>
-              {/* Loading text with dots animation */}
-              <div className="flex items-center justify-center space-x-1">
-                <p className={`text-white text-lg ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>{language === Language.UR ? 'لوڈ ہو رہا ہے' : 'Loading'}</p>
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                </div>
-              </div>
-              {/* Subtitle */}
-              <p className={`text-white text-opacity-80 text-sm mt-4 ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>{language === Language.UR ? 'کمیٹی مینجمنٹ سسٹم' : 'Committee Management System'}</p>
-            </div>
-          </div>
-        </div>
-      </DevToolsProtection>
-    );
-  }
-
+  const { language } = useAppContext();
   return (
-      <div className={`min-h-screen flex flex-col bg-neutral-light dark:bg-neutral-darkest text-neutral-darker dark:text-neutral-light ${language === Language.UR ? 'font-notoNastaliqUrdu' : 'font-inter'}`} dir={language === Language.UR ? 'rtl' : 'ltr'}>
-        {/* Welcome Modal */}
-        {showWelcome && !isUserPortal && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-40 animate-fadeIn">
-            <div className="bg-white dark:bg-neutral-darker rounded-2xl shadow-2xl px-10 py-10 flex flex-col items-center min-w-[280px] max-w-xs w-full border border-primary/10 animate-popIn">
-              <div className="text-5xl mb-3 animate-wave">👋</div>
-              <h2 className="text-2xl font-bold text-primary mb-2 text-center drop-shadow-sm">
-                {language === Language.UR
-                  ? `خوش آمدید، ${userProfile.name}`
-                  : `Welcome, ${userProfile.name}!`}
-              </h2>
-              <p className="text-neutral-500 dark:text-neutral-300 text-center text-base mt-1">
-                {language === Language.UR
-                  ? 'آپ کی واپسی پر خوشی ہوئی!' 
-                  : 'Glad to see you back!'}
-              </p>
-            </div>
-          </div>
-        )}
-        {!isUserPortal && isLocked && <AppLockScreen onLoginSuccess={handleLoginSuccess} />}
-        {!isUserPortal && !isLocked && <Navbar />}
-        <main className={`flex-grow w-full max-w-7xl mx-auto ${isLocked && !isUserPortal ? 'blur-sm pointer-events-none' : ''}`}>
-          {appIsLoading && !isLocked && !isUserPortal && ( 
-            <div className="fixed inset-0 bg-white bg-opacity-75 dark:bg-neutral-darkest dark:bg-opacity-75 flex items-center justify-center z-[999]">
-              <LoadingSpinner size="lg" />
-            </div>
-          )}
-          <Routes>
-            <Route path="/" element={isLocked ? <Navigate to="/" /> : <DashboardScreen />} />
-            <Route path="/committees" element={isLocked ? <Navigate to="/" /> : <CommitteeManagement />} />
-            <Route path="/committees/:committeeId" element={isLocked ? <Navigate to="/" /> : <CommitteeDetailScreen />} />
-            <Route path="/installments" element={isLocked ? <Navigate to="/" /> : <InstallmentManagement />} />
-            <Route path="/installments/:installmentId" element={isLocked ? <Navigate to="/" /> : <InstallmentDetailScreen />} />
-            <Route path="/profile" element={isLocked ? <Navigate to="/" /> : <UserProfileScreen />} />
-            <Route path="/settings" element={isLocked ? <Navigate to="/" /> : <SettingsScreen />} /> {/* Add Settings route */}
-            <Route path="/user" element={<UserPortal />} />
-            <Route path="/user/installment/:installmentId" element={<UserInstallmentDetail />} />
-            <Route path="/user/committee/:committeeId/:memberId" element={<UserCommitteeDetail />} />
-            <Route path="*" element={<Navigate to="/user" />} />
-          </Routes>
-        </main>
-        {!isUserPortal && !isLocked && (
-          <footer className={`py-4 text-center text-sm text-neutral-DEFAULT dark:text-gray-400 ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>
-            © {new Date().getFullYear()} Faisal Mobile's. {language === Language.UR ? "جملہ حقوق محفوظ ہیں." : "All rights reserved."}
-          </footer>
-        )}
-      </div>
+    <div className={`min-h-screen flex flex-col bg-neutral-light dark:bg-neutral-darkest text-neutral-darker dark:text-neutral-light ${language === Language.UR ? 'font-notoNastaliqUrdu' : 'font-inter'}`} dir={language === Language.UR ? 'rtl' : 'ltr'}>
+      <main className="flex-grow w-full max-w-7xl mx-auto">
+        <Routes>
+          <Route path="/user" element={<UserPortal />} />
+          <Route path="/user/installment/:installmentId" element={<UserInstallmentDetail />} />
+          <Route path="/user/committee/:committeeId/:memberId" element={<UserCommitteeDetail />} />
+          <Route path="*" element={<Navigate to="/user" />} />
+        </Routes>
+      </main>
+    </div>
   );
 };
 
