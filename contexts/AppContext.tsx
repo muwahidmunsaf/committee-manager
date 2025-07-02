@@ -610,6 +610,10 @@ interface AppContextType {
   addInstallment: (installmentData: Omit<Installment, 'id' | 'payments' | 'status'>) => Promise<Installment>;
   updateInstallment: (updatedInstallment: Installment) => void;
   deleteInstallment: (installmentId: string) => void;
+  showAutoLockWarning: boolean;
+  setShowAutoLockWarning: (show: boolean) => void;
+  autoLockCountdown: number;
+  setAutoLockCountdown: (countdown: number) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -638,6 +642,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Notification state
   const [notificationsState, setNotificationsState] = useState<Notification[]>([]);
+
+  // Add state for warning modal
+  const [showAutoLockWarning, setShowAutoLockWarning] = useState(false);
+  const [autoLockCountdown, setAutoLockCountdown] = useState(60); // seconds
+  let countdownInterval: NodeJS.Timeout | null = null;
 
   // Debug: log notification state changes
   useEffect(() => {
@@ -1342,8 +1351,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         // Check against the latest PIN from Firestore
         if (pin === currentPin) {
-        setIsLockedState(false);
+          setIsLockedState(false);
           setShowDashboardAlertState(true); // Reset alert state on successful login
+          // --- PATCH START ---
+          // Clear any previous auto-lock timers
+          if (autoLockTimer) {
+            clearTimeout(autoLockTimer);
+            setAutoLockTimer(null);
+          }
+          if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+          }
+          setShowAutoLockWarning(false);
+          setAutoLockCountdown(60);
+          setLastActivity(Date.now());
+          // --- PATCH END ---
           // Reset auto-lock timer immediately after successful unlock
           setTimeout(() => {
             resetAutoLockTimer();
@@ -1352,8 +1375,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               resetAutoLockTimer();
             }
           }, 100);
-        return true;
-    }
+          return true;
+        }
       }
       return false;
       } catch (error) {
@@ -1370,12 +1393,41 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     console.log('App locked due to inactivity');
   };
 
+  // Update resetAutoLockTimer to handle warning
   const resetAutoLockTimer = () => {
     if (autoLockTimer) {
       clearTimeout(autoLockTimer);
     }
-    const newTimer = setTimeout(handleAutoLock, AUTO_LOCK_DURATION);
-    setAutoLockTimer(newTimer);
+    setShowAutoLockWarning(false);
+    setAutoLockCountdown(60);
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+    }
+    // Set timer for warning (1 minute before lock)
+    const warningTimer = setTimeout(() => {
+      setShowAutoLockWarning(true);
+      let countdown = 60;
+      setAutoLockCountdown(countdown);
+      countdownInterval = setInterval(() => {
+        countdown -= 1;
+        setAutoLockCountdown(countdown);
+        if (countdown <= 0 && countdownInterval) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+        }
+      }, 1000);
+      // Set timer for actual lock
+      setTimeout(() => {
+        setShowAutoLockWarning(false);
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+        }
+        handleAutoLock();
+      }, 60000);
+    }, AUTO_LOCK_DURATION - 60000);
+    setAutoLockTimer(warningTimer);
     setLastActivity(Date.now());
   };
 
@@ -1396,7 +1448,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // Add event listeners for user activity - more selective to avoid interfering with inputs
     const events = [
       'mousedown', 'mousemove', 'scroll', 'touchstart', 'click',
-      'wheel', 'drag', 'drop', 'contextmenu', 'dblclick', 'mouseenter', 'mouseleave'
+      'wheel', 'drag', 'drop', 'contextmenu', 'dblclick', 'mouseenter', 'mouseleave',
+      // --- PATCH START ---
+      'keydown', 'input', 'pointermove', 'touchmove', 'focusin'
+      // --- PATCH END ---
     ];
     
     events.forEach(event => {
@@ -1601,6 +1656,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       addInstallment,
       updateInstallment,
       deleteInstallment,
+      showAutoLockWarning,
+      setShowAutoLockWarning,
+      autoLockCountdown,
+      setAutoLockCountdown,
     }}>
       {children}
     </AppContext.Provider>
