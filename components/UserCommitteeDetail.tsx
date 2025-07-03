@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
 import { Button, SunIcon, MoonIcon } from './UIComponents';
@@ -37,14 +37,34 @@ const UserCommitteeDetail: React.FC = () => {
   const { committeeId, memberId } = useParams<{ committeeId: string; memberId: string }>();
   const { committees, members, t, theme, setTheme } = useAppContext();
   const navigate = useNavigate();
+
+  // All hooks at the top
+  useEffect(() => {
+    const lastResults = sessionStorage.getItem('userPortalLastResults');
+    const lastSearchType = sessionStorage.getItem('userPortalLastSearchType');
+    if ((!lastResults || !lastSearchType) && (document.referrer === '' || (window.performance && (performance as any).navigation && (performance as any).navigation.type === 1))) {
+      sessionStorage.removeItem('userPortalLastResults');
+      sessionStorage.removeItem('userPortalLastSearchType');
+      sessionStorage.removeItem('userPortalScrollToResults');
+      navigate('/user', { replace: true });
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
+
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+
+  // Now do your logic
   const committee = committees.find(c => c.id === committeeId);
   const member = members.find(m => m.id === memberId);
+
+  // Only after all hooks, do conditional rendering
   if (!committee || !member) return <div className="p-8 text-center text-red-500">{t('noCommitteesFound')}</div>;
   const memberPayments = committee.payments.filter((p: any) => p.memberId === member.id);
   const totalPaid = memberPayments.reduce((sum: number, p: any) => sum + (p.amountPaid || 0), 0);
-  const expected = committee.amountPerMember * (committee.duration || 1);
-  const progress = expected > 0 ? Math.round((totalPaid / expected) * 100) : 0;
-  const remainingAmount = expected - totalPaid;
+  const remainingAmount = committee.amountPerMember * (committee.duration || 1) - totalPaid;
   const duePayment = memberPayments.find((p: any) => p.status !== 'Cleared');
   const hasDue = !!duePayment;
   const dueDate = duePayment?.paymentDate;
@@ -71,6 +91,11 @@ const UserCommitteeDetail: React.FC = () => {
 
   // Calculate member's share count
   const memberShareCount = committee.memberIds.filter((id: string) => id === member.id).length;
+
+  // Calculate total amount and remaining amount for this user (declare only once)
+  const totalAmount = memberShareCount * (committee.duration || 1) * committee.amountPerMember;
+  const remainingUserAmount = totalAmount - totalPaid;
+  const progress = totalAmount > 0 ? Math.round((totalPaid / totalAmount) * 100) : 0;
 
   // For each month, sum payments for that month (if multiple shares, sum all payments for that month)
   const paymentsByMonth: { [key: string]: any[] } = {};
@@ -163,8 +188,6 @@ const UserCommitteeDetail: React.FC = () => {
     doc.save(`committee_${String(committee.title || '').replace(/\s/g, '_')}_${member?.name || ''}.pdf`);
   };
 
-  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-cyan-50 to-white dark:from-neutral-darkest dark:to-neutral-dark flex flex-col items-center py-8 px-2 md:px-0 relative">
       {/* Theme Toggle Button */}
@@ -200,6 +223,8 @@ const UserCommitteeDetail: React.FC = () => {
             <StatCard icon={<IdentificationIcon className="w-6 h-6 text-cyan-700" />} label="CNIC" value={member.cnic} />
             <StatCard icon={<HomeIcon className="w-6 h-6 text-cyan-700" />} label="Address" value={member.address || '-'} />
             <StatCard icon={<UserIcon className="w-6 h-6 text-cyan-700" />} label="Shares" value={memberShareCount} />
+            <StatCard icon={<BanknotesIcon className="w-6 h-6 text-cyan-700" />} label="Total Amount" value={`PKR ${totalAmount.toLocaleString()}`} />
+            <StatCard icon={<BanknotesIcon className="w-6 h-6 text-cyan-700" />} label="Remaining Amount" value={`PKR ${remainingUserAmount.toLocaleString()}`} />
             {(() => {
               const now = new Date();
               const monthLabel = now.toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -216,13 +241,12 @@ const UserCommitteeDetail: React.FC = () => {
           </div>
         </div>
         <div className="flex flex-wrap gap-4 min-w-[250px]">
-          <StatCard icon={<UserGroupIcon className="w-6 h-6 text-cyan-700" />} label="Committee" value={capitalizeWords(committee.title)} />
-          <StatCard icon={<CalendarDaysIcon className="w-6 h-6 text-cyan-700" />} label="Start Date" value={formatDate(startDate)} />
-          <StatCard icon={<CalendarDaysIcon className="w-6 h-6 text-cyan-700" />} label="End Date" value={formatDate(endDate)} />
+          <StatCard icon={<UserGroupIcon className="w-6 h-6 text-cyan-700" />} label="Committee" value={capitalizeWords(committee.title || '')} />
+          <StatCard icon={<CalendarDaysIcon className="w-6 h-6 text-cyan-700" />} label="Start Date" value={formatDate(startDate || '')} />
+          <StatCard icon={<CalendarDaysIcon className="w-6 h-6 text-cyan-700" />} label="End Date" value={formatDate(endDate || '')} />
           <StatCard icon={<CalendarDaysIcon className="w-6 h-6 text-cyan-700" />} label="Duration" value={`${committee.duration} Months`} />
           <StatCard icon={<BanknotesIcon className="w-6 h-6 text-cyan-700" />} label="Amount/Member" value={`PKR ${committee.amountPerMember?.toLocaleString()}`} />
           <StatCard icon={<ClipboardDocumentCheckIcon className="w-6 h-6 text-cyan-700" />} label="Total Paid" value={`PKR ${totalPaid.toLocaleString()}`} />
-          <StatCard icon={<ClipboardDocumentCheckIcon className="w-6 h-6 text-cyan-700" />} label="Remaining" value={`PKR ${remainingAmount > 0 ? remainingAmount.toLocaleString() : 0}`} />
           <StatCard icon={<ClipboardDocumentCheckIcon className="w-6 h-6 text-cyan-700" />} label="Remaining Committees" value={remainingCommittees} />
         </div>
         <div className="w-full bg-gray-100 rounded-lg p-4 flex flex-col gap-2">
@@ -243,7 +267,7 @@ const UserCommitteeDetail: React.FC = () => {
         {hasDue && (
           <div className="flex items-center gap-2 bg-orange-100 border-l-4 border-orange-400 text-orange-700 p-4 rounded shadow">
             <ExclamationTriangleIcon className="w-6 h-6" />
-            <span>Payment due! Please pay your committee installment by <b>{formatDate(dueDate)}</b>.</span>
+            <span>Payment due! Please pay your committee installment by <b>{formatDate(dueDate || '')}</b>.</span>
           </div>
         )}
       </div>
@@ -345,4 +369,4 @@ const UserCommitteeDetail: React.FC = () => {
   );
 };
 
-export default UserCommitteeDetail; 
+export default UserCommitteeDetail;
