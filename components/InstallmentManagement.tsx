@@ -439,7 +439,7 @@ const InstallmentManagement: React.FC = () => {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingInstallment, setEditingInstallment] = useState<Installment | undefined>(undefined);
   const [search, setSearch] = useState('');
-  const { installments, deleteInstallment, isLoading, t, language, committees, members } = useAppContext();
+  const { installments, deleteInstallment, isLoading, t, language, committees, members, userProfile } = useAppContext();
   const navigate = useNavigate();
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [openReportModal, setOpenReportModal] = useState<null | { installment: Installment, memberCommittees: Committee[] }>(null);
@@ -481,8 +481,12 @@ const InstallmentManagement: React.FC = () => {
     pdf.setFontSize(13);
     pdf.setTextColor('#fff');
     pdf.setFont(undefined, 'bold');
-    pdf.text(String('0300-1234567 | muhammadumaru3615@gmail.com | Chungi Stop Darghowala, Lahore'), pdfWidth/2, pdfHeight - 28, { align: 'center' });
-    // Page number removed from footer
+    // Compose owner details from userProfile (no name)
+    const ownerPhone = userProfile?.phone || 'Phone N/A';
+    const ownerEmail = userProfile?.email || 'Email N/A';
+    const ownerAddress = userProfile?.address || 'Address N/A';
+    const footerText = `${ownerPhone} | ${ownerEmail} | ${ownerAddress}`;
+    pdf.text(String(footerText), pdfWidth/2, pdfHeight - 28, { align: 'center' });
   };
 
   const handleDownloadAllBuyersPDF = async () => {
@@ -571,6 +575,12 @@ const InstallmentManagement: React.FC = () => {
       }
     });
     let lastY = (pdf as any).lastAutoTable.finalY + 20;
+    // Ensure there is enough space for the summary, otherwise add a new page
+    const summaryHeight = 40; // estimated height needed for summary lines
+    if (lastY + summaryHeight > pdfHeight - 60) { // leave space for footer
+      pdf.addPage();
+      lastY = 60; // top margin for new page
+    }
     pdf.setFont(undefined, 'bold');
     pdf.setFontSize(13);
     pdf.setTextColor('#0e7490');
@@ -685,6 +695,12 @@ const InstallmentManagement: React.FC = () => {
       }
     });
     let lastY = (pdf as any).lastAutoTable.finalY + 20;
+    // Ensure there is enough space for the summary, otherwise add a new page
+    const summaryHeight = 40; // estimated height needed for summary lines
+    if (lastY + summaryHeight > pdfHeight - 60) { // leave space for footer
+      pdf.addPage();
+      lastY = 60; // top margin for new page
+    }
     pdf.setFont(undefined, 'bold');
     pdf.setFontSize(13);
     pdf.setTextColor('#0e7490');

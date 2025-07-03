@@ -200,6 +200,19 @@ const UserCommitteeDetail: React.FC = () => {
             <StatCard icon={<IdentificationIcon className="w-6 h-6 text-cyan-700" />} label="CNIC" value={member.cnic} />
             <StatCard icon={<HomeIcon className="w-6 h-6 text-cyan-700" />} label="Address" value={member.address || '-'} />
             <StatCard icon={<UserIcon className="w-6 h-6 text-cyan-700" />} label="Shares" value={memberShareCount} />
+            {(() => {
+              const now = new Date();
+              const monthLabel = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+              const currentMonthKey = now.toISOString().slice(0, 7);
+              const currentMonthPayments = paymentsByMonth[currentMonthKey] || [];
+              const currentMonthTotalPaid = currentMonthPayments.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
+              const currentMonthTotalDue = memberShareCount * committee.amountPerMember;
+              const currentMonthRemaining = Math.max(0, currentMonthTotalDue - currentMonthTotalPaid);
+              return [
+                <StatCard key="month-total" icon={<BanknotesIcon className="w-6 h-6 text-cyan-700" />} label={`Total for ${monthLabel}`} value={`PKR ${currentMonthTotalDue.toLocaleString()}`} />,
+                <StatCard key="month-remaining" icon={<BanknotesIcon className="w-6 h-6 text-cyan-700" />} label={`Remaining for ${monthLabel}`} value={`PKR ${currentMonthRemaining.toLocaleString()}`} />
+              ];
+            })()}
           </div>
         </div>
         <div className="flex flex-wrap gap-4 min-w-[250px]">

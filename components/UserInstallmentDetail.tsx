@@ -170,8 +170,8 @@ const UserInstallmentDetail: React.FC = () => {
             <StatCard icon={<BanknotesIcon className="w-6 h-6 text-cyan-700" />} label="Mobile Name" value={capitalizeWords(installment.mobileName)} />
             <StatCard icon={<BanknotesIcon className="w-6 h-6 text-cyan-700" />} label="Advance Payment" value={`PKR ${(installment.advancePayment || 0).toLocaleString()}`} />
             <StatCard icon={isClosed ? <CheckCircleIcon className="w-6 h-6 text-red-600" /> : <ExclamationCircleIcon className="w-6 h-6 text-green-600" />} label="Account Status" value={<span className={`font-bold ${isClosed ? 'text-red-600' : 'text-green-600'}`}>{isClosed ? 'Closed' : 'Open'}</span>} />
-          </div>
         </div>
+      </div>
         <div className="flex flex-wrap gap-4">
           <StatCard icon={<BanknotesIcon className="w-6 h-6 text-cyan-700" />} label="Total Payment" value={`PKR ${installment.totalPayment.toLocaleString()}`} />
           <StatCard icon={<ClipboardDocumentCheckIcon className="w-6 h-6 text-cyan-700" />} label="Total Collected" value={`PKR ${totalPaid.toLocaleString()}`} />
