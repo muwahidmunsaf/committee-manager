@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
 import { Button, SunIcon, MoonIcon } from './UIComponents';
@@ -31,6 +31,23 @@ const UserInstallmentDetail: React.FC = () => {
   const { installmentId } = useParams<{ installmentId: string }>();
   const { installments, t, theme, setTheme } = useAppContext();
   const navigate = useNavigate();
+
+  // Redirect to /user if page is loaded directly (e.g., on refresh)
+  useEffect(() => {
+    const lastResults = sessionStorage.getItem('userPortalLastResults');
+    const lastSearchType = sessionStorage.getItem('userPortalLastSearchType');
+    if ((!lastResults || !lastSearchType) && (document.referrer === '' || (window.performance && (performance as any).navigation && (performance as any).navigation.type === 1))) {
+      sessionStorage.removeItem('userPortalLastResults');
+      sessionStorage.removeItem('userPortalLastSearchType');
+      sessionStorage.removeItem('userPortalScrollToResults');
+      navigate('/user', { replace: true });
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
+
   const installment = installments.find(i => i.id === installmentId);
   if (!installment) return <div className="p-8 text-center text-red-500">{t('noInstallmentsFound')}</div>;
   const totalPaid = installment.payments.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
