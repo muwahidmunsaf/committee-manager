@@ -10,7 +10,7 @@ import html2canvas from 'html2canvas';
 
 const InstallmentDetailScreen: React.FC = () => {
   const { installmentId } = useParams<{ installmentId: string }>();
-  const { installments, updateInstallment, t, language } = useAppContext();
+  const { installments, updateInstallment, t, language, userProfile } = useAppContext();
   const installment = installments.find(i => i.id === installmentId);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -120,11 +120,11 @@ const InstallmentDetailScreen: React.FC = () => {
   const drawPdfHeader = (pdf: jsPDF, pdfWidth: number, logoImg: string) => {
     pdf.setFillColor(6, 182, 212);
     pdf.rect(0, 0, pdfWidth, 70, 'F');
-    pdf.addImage(String(logoImg ?? ''), 'PNG', pdfWidth/2 - 25, 10, 50, 35, '', 'FAST');
+    pdf.addImage(String(logoImg ?? ''), 'PNG', 60, 10, 50, 50, '', 'FAST');
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(24);
+    pdf.setFontSize(28);
     pdf.setTextColor('#fff');
-    pdf.text("Faisal Mobile's", pdfWidth/2, 55, { align: 'center' });
+    pdf.text("Faisal Mobile's", 130, 45, { align: 'left' });
     pdf.setDrawColor(6, 182, 212);
     pdf.setLineWidth(2);
     pdf.line(40, 75, pdfWidth - 40, 75);
@@ -133,50 +133,13 @@ const InstallmentDetailScreen: React.FC = () => {
     pdf.setFillColor(6, 182, 212);
     pdf.rect(0, pdfHeight - 50, pdfWidth, 40, 'F');
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(13);
+    pdf.setFontSize(10);
     pdf.setTextColor('#fff');
-    pdf.text('0300-1234567 | muhammadumaru3615@gmail.com | Chungi Stop Darghowala, Lahore', pdfWidth/2, pdfHeight - 28, { align: 'center' });
-  };
-
-  const drawTextLetterhead = (
-    pdf: jsPDF,
-    pdfWidth: number,
-    pdfHeight: number,
-    userProfile: { phone?: string; email?: string; address?: string },
-    logoBase64: string,
-    appName: string,
-    language: string = 'EN'
-  ) => {
-    if (language === Language.UR) {
-      pdf.setFont('JameelNooriNastaleeq', 'normal');
-      pdf.setFontSize(16);
-    }
-    if (logoBase64) {
-      pdf.addImage(String(logoBase64 ?? ''), 'PNG', pdfWidth/2-30, language === Language.EN ? 31.3 : 20, 60, 60, '', 'FAST');
-    }
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(18);
-    pdf.setTextColor('#0e7490');
-    if (language === Language.UR) {
-      pdf.setFont('JameelNooriNastaleeq', 'normal');
-    }
-    // pdf.text(appName, pdfWidth/2, language === 'EN' ? 106.3 : 95, { align: 'center' });
-    pdf.setDrawColor('#06b6d4');
-    pdf.setLineWidth(1);
-    pdf.line(40, language === Language.EN ? 121.3 : 110, pdfWidth-40, language === Language.EN ? 121.3 : 110);
-    // Footer
-    const footerY = pdfHeight-40;
-    pdf.setFillColor('#06b6d4');
-    pdf.rect(0, footerY-10, pdfWidth, 30, 'F');
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(11);
-    pdf.setTextColor('#fff');
-    const details = [userProfile.phone, userProfile.email, userProfile.address].filter(Boolean).join(' | ');
-    if (language === Language.UR) {
-      pdf.setFont('JameelNooriNastaleeq', 'normal');
-    }
-    pdf.text(details ?? '', pdfWidth/2, footerY+8, { align: 'center' });
-    pdf.setTextColor('#222');
+    const ownerPhone = userProfile?.phone || 'Phone N/A';
+    const ownerEmail = userProfile?.email || 'Email N/A';
+    const ownerAddress = userProfile?.address || 'Address N/A';
+    const footerText = `${ownerPhone} | ${ownerEmail} | ${ownerAddress}`;
+    pdf.text(footerText, pdfWidth/2, pdfHeight - 28, { align: 'center' });
   };
 
   const handleDownloadReceipt = async (payment: import('../types').InstallmentPayment) => {
@@ -202,120 +165,170 @@ const InstallmentDetailScreen: React.FC = () => {
       }, 100);
       return;
     }
-    const userProfile = { phone: '0300-1234567', email: 'muhammadumaru3615@gmail.com', address: 'Chungi Stop Darghowala, Lahore' };
     const appName = t('appName');
     const logoImg = await fetch('/assets/logo.png').then(r => r.blob()).then(blob => new Promise<string>((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result as string); reader.readAsDataURL(blob); }));
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
-    drawTextLetterhead(pdf, pdfWidth, pdfHeight, userProfile, logoImg, appName, language);
-    let y = 130;
-    const monthNamesEN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    const monthNamesUR = ["جنوری", "فروری", "مارچ", "اپریل", "مئی", "جون", "جولائی", "اگست", "ستمبر", "اکتوبر", "نومبر", "دسمبر"];
-    const paymentDateObj = payment.paymentDate ? new Date(payment.paymentDate) : new Date();
-    const monthNames = language === Language.UR ? monthNamesUR : monthNamesEN;
-    const receiptMonth = `${monthNames[paymentDateObj.getMonth()]} ${paymentDateObj.getFullYear()}`;
+    // --- Professional Receipt Layout ---
+    const receiptNumber = payment.id?.slice(-6).toUpperCase() || Math.floor(Math.random()*1000000).toString().padStart(6, '0');
+    // Professional Header
+    pdf.setFillColor(6, 182, 212);
+    pdf.rect(0, 0, pdfWidth, 70, 'F');
+    // Logo to the left, company name to the right
+    pdf.addImage(String(logoImg ?? ''), 'PNG', 60, 10, 50, 50, '', 'FAST');
     pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor('#0e7490');
-    pdf.text(`${t('receipt')}: ${receiptMonth}`, pdfWidth/2, y + 20, { align: 'center' });
-    y += 40;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor('#222');
-    let imageY = y;
-    const lineGap = 20;
-    // --- Improved two-column layout for receipt PDF ---
-    const leftX = 60;
-    const rightColWidth = 80; // image width
-    const rightMargin = 72; // 1 inch
-    const rightX = pdfWidth - rightMargin - rightColWidth;
-    const leftColWidth = rightX - leftX - 40; // 40px gap between columns
-    let leftY = y;
-    let rightY = y;
-    // Draw images on right (stacked, with vertical spacing)
-    if (installment.profilePictureUrl && installment.profilePictureUrl !== DEFAULT_PROFILE_PIC) {
-      try {
-        const picResp = await fetch(installment.profilePictureUrl);
-        const picBlob = await picResp.blob();
-        const picBase64 = await new Promise<string>((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result as string); reader.readAsDataURL(picBlob); });
-        pdf.setDrawColor(6, 182, 212);
-        pdf.setLineWidth(2);
-        pdf.circle(rightX + 40, rightY + 30, 30, 'S');
-        pdf.addImage(String(picBase64 ?? ''), 'JPEG', rightX, rightY, rightColWidth, 60, '', 'FAST');
-        rightY += 70;
-      } catch {}
-    }
-    if (installment.cnicImageUrl) {
-      try {
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('CNIC Image:', rightX, rightY);
-        const cnicResp = await fetch(installment.cnicImageUrl);
-        const cnicBlob = await cnicResp.blob();
-        const cnicBase64 = await new Promise<string>((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result as string); reader.readAsDataURL(cnicBlob); });
-        pdf.addImage(String(cnicBase64 ?? ''), 'JPEG', rightX, rightY + 10, rightColWidth, 50, '', 'FAST');
-        rightY += 80;
-      } catch {}
-    }
-    // Info fields in the requested order
-    const infoFields = [
-      [t('buyerName') + ':', capitalizeWords(installment.buyerName || '')],
-      [t('phone') + ':', formatPhone(installment.phone || '')],
-      [t('cnic') + ':', formatCNIC(installment.cnic || '')],
-      [t('mobileName') + ':', capitalizeWords(installment.mobileName || '')],
-      [t('address') + ':', installment.address || '-'],
-    ];
-    infoFields.forEach(([label, value]) => {
-      if (language === Language.UR) {
-        pdf.setFont('JameelNooriNastaleeq', 'normal');
-        pdf.setFontSize(16);
-      } else {
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(13);
-      }
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(String(label ?? ''), leftX, leftY);
-      pdf.setFont('helvetica', 'normal');
-      const splitValueReceipt = pdf.splitTextToSize(String(value ?? '-'), leftColWidth - 140);
-      pdf.text(String(Array.isArray(splitValueReceipt) ? splitValueReceipt.join('\n') : splitValueReceipt ?? '-'), leftX + 140, leftY);
-      leftY += lineGap * (Array.isArray(splitValueReceipt) ? splitValueReceipt.length : 1);
-    });
-    // Ensure y for table is below both columns
-    y = Math.max(leftY, rightY) + 10;
-    // Add heading before table
+    pdf.setFontSize(28);
+    pdf.setTextColor('#fff');
+    pdf.text("Faisal Mobile's", 130, 45, { align: 'left' });
+    pdf.setDrawColor(6, 182, 212);
+    pdf.setLineWidth(2);
+    pdf.line(40, 75, pdfWidth - 40, 75);
+    let y = 110;
+    // Receipt Title
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(15);
+    pdf.setFontSize(20);
     pdf.setTextColor('#0e7490');
-    pdf.text('Installments Detail', leftX, y + 10);
+    pdf.text(`Installment Payment Receipt`, pdfWidth/2, y, { align: 'center' });
     y += 30;
-    const tableHead = [
-      [
-        '#',
-        t('amountPaid'),
-        t('paymentDate'),
-        t('status')
-      ]
+    // Receipt Number and Date
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(12);
+    pdf.setTextColor('#222');
+    pdf.text(`Receipt #: ${receiptNumber}`, 60, y);
+    pdf.text(`Date: ${payment.paymentDate || '-'}`, pdfWidth - 200, y);
+    y += 20;
+    // Two-column Info Section
+        pdf.setFont('helvetica', 'bold');
+    pdf.text('Buyer Details', 60, y);
+    pdf.text('Installment Details', pdfWidth/2 + 40, y);
+    // Underline both titles
+    const buyerTitleWidth = pdf.getTextWidth('Buyer Details');
+    pdf.setDrawColor(6, 182, 212);
+    pdf.setLineWidth(1.2);
+    pdf.line(60, y + 2, 60 + buyerTitleWidth, y + 2);
+    const instTitleWidth = pdf.getTextWidth('Installment Details');
+    pdf.line(pdfWidth/2 + 40, y + 2, pdfWidth/2 + 40 + instTitleWidth, y + 2);
+    y += 18;
+    pdf.setFont('helvetica', 'normal');
+    const leftInfo = [
+      [`Name:`, capitalizeWords(installment.buyerName || '-')],
+      [`Phone:`, formatPhone(installment.phone || '-')],
+      [`CNIC:`, formatCNIC(installment.cnic || '-')],
+      [`Address:`, installment.address || '-'],
     ];
-    const tableBody = installment.payments.map((p, idx) => [
-        String(idx + 1),
-        `PKR ${p.amountPaid?.toLocaleString?.() || '0'}`,
-        String(p.paymentDate || '-'),
-        p.status ? t(p.status.toLowerCase()) : '-'
+    const rightInfo = [
+      [`Mobile:`, capitalizeWords(installment.mobileName || '-')],
+      [`Total Payment:`, `PKR ${installment.totalPayment?.toLocaleString?.() || '0'}`],
+      [`Advance:`, `PKR ${(installment.advancePayment || 0).toLocaleString()}`],
+      [`Monthly:`, `PKR ${installment.monthlyInstallment?.toLocaleString?.() || '0'}`],
+      [`Duration:`, `${installment.duration ?? '-'} Months`],
+      [`Status:`, { value: capitalizeWords(remainingAmount <= 0 ? t('closed') : t('open')), color: remainingAmount <= 0 ? '#dc2626' : '#16a34a' }],
+    ];
+    let infoY = y;
+    let maxRows = Math.max(leftInfo.length, rightInfo.length);
+    for (let i = 0; i < maxRows; i++) {
+      // Left column
+      if (leftInfo[i]) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(leftInfo[i][0], 60, infoY);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(String(leftInfo[i][1]), 140, infoY);
+      }
+      // Right column
+      if (rightInfo[i]) {
+      pdf.setFont('helvetica', 'bold');
+        pdf.text(rightInfo[i][0], pdfWidth/2 + 40, infoY);
+      pdf.setFont('helvetica', 'normal');
+        const rightValue = rightInfo[i][1];
+        if (typeof rightValue === 'object' && rightValue !== null && 'value' in rightValue && 'color' in rightValue) {
+          pdf.setTextColor(rightValue.color);
+          pdf.text(String(rightValue.value), pdfWidth/2 + 130, infoY);
+          pdf.setTextColor('#222');
+        } else {
+          pdf.text(String(rightValue), pdfWidth/2 + 130, infoY);
+        }
+      }
+      infoY += 16;
+    }
+    y = infoY + 16;
+    // Only show the current payment in the table
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(14);
+    pdf.setTextColor('#0e7490');
+    pdf.text('Installment Payment Detail', 60, y);
+    y += 10;
+    const tableHead = [[ '#', 'Amount Paid', 'Payment Date', 'Status' ]];
+    // Calculate total paid and remaining as of this payment
+    const sortedPayments = [...installment.payments].sort((a, b) => new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime());
+    let runningTotal = 0;
+    let found = false;
+    for (const p of sortedPayments) {
+      runningTotal += p.amountPaid || 0;
+      if (p.id === payment.id) {
+        found = true;
+        break;
+      }
+    }
+    const paidAsOfThis = runningTotal;
+    const remainingAsOfThis = installment.totalPayment - (installment.advancePayment || 0) - paidAsOfThis;
+    const tableBody = [[
+      '1',
+      `PKR ${payment.amountPaid?.toLocaleString?.() || '0'}`,
+      String(payment.paymentDate || '-') ,
+      payment.status ? t(payment.status.toLowerCase()) : '-'
+    ]];
+    // Add summary row (bold, shaded) for this payment
+    tableBody.push([
+      '',
+      `Total Paid: PKR ${paidAsOfThis.toLocaleString()}`,
+      '',
+      `Remaining: PKR ${remainingAsOfThis.toLocaleString()}`
     ]);
     autoTable(pdf, {
-      startY: y,
+      startY: y + 10,
       head: tableHead,
       body: tableBody,
       theme: 'grid',
       headStyles: { fillColor: [6, 182, 212], textColor: 255, fontStyle: 'bold' },
-      styles: {
-        fontSize: 11,
-        cellPadding: 4,
-        font: undefined,
-        halign: 'left',
-      },
+      bodyStyles: { fontSize: 11, cellPadding: 4, font: undefined, halign: 'left' },
       margin: { left: 40, right: 40, top: 120, bottom: 60 },
+      didParseCell: function (data) {
+        // Make summary row bold and shaded
+        if (data.row.index === tableBody.length - 1) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [224, 242, 254];
+        }
+      },
       didDrawPage: (data) => {
-        drawPdfHeader(pdf, pdfWidth, logoImg);
-        drawPdfFooter(pdf, pdfWidth, pdfHeight);
+        // PAID stamp if paid
+        if (payment.status && payment.status.toLowerCase() === 'paid') {
+          pdf.saveGraphicsState();
+          pdf.setTextColor(220, 38, 38);
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(48);
+          pdf.setDrawColor(220, 38, 38);
+          pdf.setLineWidth(2);
+          pdf.setGState(new pdf.GState({ opacity: 0.18 }));
+          pdf.text('PAID', pdfWidth/2, pdfHeight/2, { align: 'center', angle: -20 });
+          pdf.restoreGraphicsState();
+          // Computer generated note just after PAID stamp
+          pdf.setFont('helvetica', 'italic');
+          pdf.setFontSize(10);
+          pdf.setTextColor('#888');
+          pdf.text('This is a computer generated receipt and does not require a signature.', pdfWidth/2, pdfHeight/2 + 40, { align: 'center' });
+        }
+        // Professional Footer
+        pdf.setFillColor(6, 182, 212);
+        pdf.rect(0, pdfHeight - 50, pdfWidth, 40, 'F');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(10);
+        pdf.setTextColor('#fff');
+        const ownerPhone = userProfile?.phone || 'Phone N/A';
+        const ownerEmail = userProfile?.email || 'Email N/A';
+        const ownerAddress = userProfile?.address || 'Address N/A';
+        const footerText = `${ownerPhone} | ${ownerEmail} | ${ownerAddress}`;
+        pdf.text(footerText, pdfWidth/2, pdfHeight - 28, { align: 'center' });
       }
     });
     pdf.save(`receipt_${String(installment.buyerName || '').replace(/\s/g, '_')}_${String(payment.paymentDate || '')}.pdf`);
@@ -324,7 +337,6 @@ const InstallmentDetailScreen: React.FC = () => {
 
   const handleDownloadHistory = async () => {
     setPdfLoading(true);
-    const userProfile = { phone: '0300-1234567', email: 'muhammadumaru3615@gmail.com', address: 'Chungi Stop Darghowala, Lahore' };
     const appName = t('appName');
     const logoImg = await fetch('/assets/logo.png').then(r => r.blob()).then(blob => new Promise<string>((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result as string); reader.readAsDataURL(blob); }));
           const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
@@ -334,6 +346,7 @@ const InstallmentDetailScreen: React.FC = () => {
       // --- Multi-page image-based export for Urdu ---
       const rowsPerPage = 16; // Adjust as needed for fitting table rows per page
       // 1. Buyer details page
+      const footerText = (userProfile?.email || 'Email N/A') + ' | ' + (userProfile?.address || 'Address N/A') + ' | ' + (userProfile?.phone || 'Phone N/A');
       const detailsDiv = document.createElement('div');
       detailsDiv.style.position = 'absolute';
       detailsDiv.style.left = '-9999px';
@@ -389,8 +402,8 @@ const InstallmentDetailScreen: React.FC = () => {
               </div>
             </div>
           </div>
-          <div style="width: 100%; background: #06b6d4; height: 40px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; position: absolute; left: 0; bottom: 0;">
-            muhammadumaru3615@gmail.com | Chungi Stop Darghowala, Lahore | 0300-1234567
+          <div style="width: 100%; background: #06b6d4; height: 40px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; position: absolute; left: 0; bottom: 0;">
+            ${footerText}
           </div>
         </div>
       `;
@@ -455,8 +468,8 @@ const InstallmentDetailScreen: React.FC = () => {
                 </tbody>
               </table>
             </div>
-            <div style="width: 100%; background: #06b6d4; height: 40px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; position: absolute; left: 0; bottom: 0;">
-              muhammadumaru3615@gmail.com | Chungi Stop Darghowala, Lahore | 0300-1234567
+            <div style="width: 100%; background: #06b6d4; height: 40px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; position: absolute; left: 0; bottom: 0;">
+              ${footerText}
             </div>
           </div>
         `;
@@ -546,7 +559,10 @@ const InstallmentDetailScreen: React.FC = () => {
       pdf.text(String(label ?? ''), leftX, leftY);
       pdf.setFont('helvetica', 'normal');
       if (typeof value === 'object' && value !== null && 'value' in value) {
-        const xOffset = value.extraSpace ? 140 + value.extraSpace : 140;
+        let xOffset = 140;
+        if ('extraSpace' in value && typeof value.extraSpace === 'number') {
+          xOffset += value.extraSpace;
+        }
         if ('color' in value && value.color) {
           pdf.setTextColor(value.color);
         }
@@ -771,7 +787,7 @@ const InstallmentDetailScreen: React.FC = () => {
             padding: '16px 32px',
             textAlign: 'center',
             fontWeight: 'bold',
-            fontSize: 18,
+            fontSize: 10,
             borderBottomLeftRadius: 8,
             borderBottomRightRadius: 8
           }}>
@@ -909,7 +925,7 @@ const InstallmentDetailScreen: React.FC = () => {
             padding: '16px 32px',
             textAlign: 'center',
             fontWeight: 'bold',
-            fontSize: 18,
+            fontSize: 10,
             borderBottomLeftRadius: 8,
             borderBottomRightRadius: 8
           }}>

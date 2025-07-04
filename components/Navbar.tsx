@@ -11,6 +11,13 @@ const Navbar: React.FC = () => {
   const notificationDropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
+  // Date/time state
+  const [dateTime, setDateTime] = useState(new Date());
+  useEffect(() => {
+    const interval = setInterval(() => setDateTime(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Close notification dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -220,6 +227,15 @@ const Navbar: React.FC = () => {
             >
               <UserCircleIcon className="h-8 w-8" />
             </button>
+            {/* Date and Time Display: 2 rows */}
+            <span className="ml-4 text-white text-sm font-mono hidden md:inline-flex flex-col items-start select-none leading-tight">
+              <span>
+                {dateTime.toLocaleDateString(language === Language.UR ? 'ur-PK' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+              </span>
+              <span>
+                {dateTime.toLocaleTimeString(language === Language.UR ? 'ur-PK' : 'en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </span>
+            </span>
           </div>
           <div className="md:hidden flex items-center space-x-2 rtl:space-x-reverse">
             {/* Notification Bell for Mobile */}

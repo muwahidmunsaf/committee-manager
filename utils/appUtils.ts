@@ -193,3 +193,26 @@ export async function optimizeImageWithCanvas(
     reader.readAsDataURL(file);
   });
 }
+
+/**
+ * Returns the label for a committee period (column header) based on committee type.
+ * - Monthly: 'Month Year' (e.g., June 2024)
+ * - Weekly: 'Week X' (e.g., Week 1)
+ * - Daily: 'Day X' (e.g., Day 1)
+ */
+export function getCommitteePeriodLabel(
+  committeeType: CommitteeType,
+  startDate: string,
+  periodIndex: number,
+  locale: string = 'en-US'
+): string {
+  if (committeeType === CommitteeType.MONTHLY) {
+    return getCommitteeMonthName(startDate, periodIndex, locale);
+  } else if (committeeType === CommitteeType.WEEKLY) {
+    return `Week ${periodIndex + 1}`;
+  } else if (committeeType === CommitteeType.DAILY) {
+    return `Day ${periodIndex + 1}`;
+  } else {
+    return `Period ${periodIndex + 1}`;
+  }
+}

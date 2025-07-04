@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { Language, Theme, Translations, Committee, Member, CommitteePayment, UserProfile, PayoutMethod, CommitteeType, AuthMethod, PinLength, Notification, NotificationType, Installment, InstallmentPayment } from '../types';
 import { APP_DATA_STORAGE_KEY, DEFAULT_PROFILE_PIC, DEFAULT_APP_PIN } from '../constants';
 import { generateId, initializePayoutTurns } from '../utils/appUtils';
@@ -610,6 +610,10 @@ interface AppContextType {
   addInstallment: (installmentData: Omit<Installment, 'id' | 'payments' | 'status'>) => Promise<Installment>;
   updateInstallment: (updatedInstallment: Installment) => void;
   deleteInstallment: (installmentId: string) => void;
+  showAutoLockWarning: boolean;
+  setShowAutoLockWarning: (show: boolean) => void;
+  autoLockCountdown: number;
+  setAutoLockCountdown: (countdown: number) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -638,6 +642,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Notification state
   const [notificationsState, setNotificationsState] = useState<Notification[]>([]);
+
+  // Add state for warning modal
+  const [showAutoLockWarning, setShowAutoLockWarning] = useState(false);
+  const [autoLockCountdown, setAutoLockCountdown] = useState(60); // seconds
+  const autoLockTimer = useRef<NodeJS.Timeout | null>(null);
+  const countdownInterval = useRef<NodeJS.Timeout | null>(null);
 
   // Debug: log notification state changes
   useEffect(() => {
@@ -734,7 +744,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [committeesState, membersState, generateNotificationsFromCommittees]);
 
   // Auto-lock functionality
-  const [autoLockTimer, setAutoLockTimer] = useState<NodeJS.Timeout | null>(null);
   const [lastActivity, setLastActivity] = useState<number>(Date.now());
   const AUTO_LOCK_DURATION = 10 * 60 * 1000; // 10 minutes in milliseconds
 
@@ -1370,13 +1379,49 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     console.log('App locked due to inactivity');
   };
 
+  // Update resetAutoLockTimer to handle warning
   const resetAutoLockTimer = () => {
-    if (autoLockTimer) {
-      clearTimeout(autoLockTimer);
+    setLastActivity(Date.now()); // Always update activity timestamp on reset
+
+    // Clear previous auto-lock timer
+    if (autoLockTimer.current) {
+      clearTimeout(autoLockTimer.current);
+      autoLockTimer.current = null;
     }
-    const newTimer = setTimeout(handleAutoLock, AUTO_LOCK_DURATION);
-    setAutoLockTimer(newTimer);
-    setLastActivity(Date.now());
+
+    setShowAutoLockWarning(false);
+    setAutoLockCountdown(60);
+
+    // Clear previous countdown interval
+    if (countdownInterval.current) {
+      clearInterval(countdownInterval.current);
+      countdownInterval.current = null;
+    }
+
+    // Set timer for warning (1 minute before lock)
+    autoLockTimer.current = setTimeout(() => {
+      setShowAutoLockWarning(true);
+      let countdown = 60;
+      setAutoLockCountdown(countdown);
+      countdownInterval.current = setInterval(() => {
+        countdown -= 1;
+        setAutoLockCountdown(countdown);
+        if (countdown <= 0 && countdownInterval.current) {
+          clearInterval(countdownInterval.current);
+          countdownInterval.current = null;
+        }
+      }, 1000);
+
+      // Set timer for actual lock
+      setTimeout(() => {
+        setShowAutoLockWarning(false);
+        if (countdownInterval.current) {
+          clearInterval(countdownInterval.current);
+          countdownInterval.current = null;
+        }
+        handleAutoLock();
+      }, 60000);
+    }, AUTO_LOCK_DURATION - 60000);
   };
 
   const getAutoLockTimeRemaining = () => {
@@ -1433,21 +1478,31 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       window.removeEventListener('focus', handleWindowFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       
-      // Cleanup timer
-      if (autoLockTimer) {
-        clearTimeout(autoLockTimer);
+      // Cleanup timers
+      if (autoLockTimer.current) {
+        clearTimeout(autoLockTimer.current);
+        autoLockTimer.current = null;
+      }
+      if (countdownInterval.current) {
+        clearInterval(countdownInterval.current);
+        countdownInterval.current = null;
       }
     };
   }, [isLockedState]);
 
-  // Cleanup timer on unmount
+  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      if (autoLockTimer) {
-        clearTimeout(autoLockTimer);
+      if (autoLockTimer.current) {
+        clearTimeout(autoLockTimer.current);
+        autoLockTimer.current = null;
+      }
+      if (countdownInterval.current) {
+        clearInterval(countdownInterval.current);
+        countdownInterval.current = null;
       }
     };
-  }, [autoLockTimer]);
+  }, []);
 
   // Firestore CRUD for Installments
   const addInstallment = async (installmentData: Omit<Installment, 'id' | 'payments' | 'status'>): Promise<Installment> => {
@@ -1601,6 +1656,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       addInstallment,
       updateInstallment,
       deleteInstallment,
+      showAutoLockWarning,
+      setShowAutoLockWarning,
+      autoLockCountdown,
+      setAutoLockCountdown,
     }}>
       {children}
     </AppContext.Provider>

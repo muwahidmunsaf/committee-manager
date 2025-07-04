@@ -434,8 +434,17 @@ const AppLockScreen: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSucce
 };
 
 const AppWithRouterLogic: React.FC = () => {
-  const { language, isLoading: appIsLoading, isAuthSettingsLoaded, showAutoLockWarning, autoLockCountdown } = useAppContext();
+  const { language, isLoading: appIsLoading, isAuthSettingsLoaded, showAutoLockWarning, autoLockCountdown, isLocked, userProfile } = useAppContext();
   const [showLoader, setShowLoader] = React.useState(true);
+  const [showWelcome, setShowWelcome] = React.useState(false);
+  const location = useLocation();
+  const isUserPortal = location.pathname.startsWith('/user');
+
+  const handleLoginSuccess = () => {
+    setShowWelcome(true);
+    setTimeout(() => setShowWelcome(false), 1500);
+  };
+
   React.useEffect(() => {
     const timer = setTimeout(() => setShowLoader(false), 1200); // 1.2 seconds
     return () => clearTimeout(timer);
@@ -490,15 +499,51 @@ const AppWithRouterLogic: React.FC = () => {
           </div>
         </div>
       )}
-      <main className="flex-grow w-full max-w-7xl mx-auto">
+      {!isUserPortal && isLocked && <AppLockScreen onLoginSuccess={handleLoginSuccess} />}
+      {!isUserPortal && !isLocked && <Navbar />}
+      <main className={`flex-grow w-full max-w-7xl mx-auto ${isLocked && !isUserPortal ? 'blur-sm pointer-events-none' : ''}`}>
+        {appIsLoading && !isLocked && !isUserPortal && ( 
+          <div className="fixed inset-0 bg-white bg-opacity-75 dark:bg-neutral-darkest dark:bg-opacity-75 flex items-center justify-center z-[999]">
+            <LoadingSpinner size="lg" />
+          </div>
+        )}
         <Routes>
-          <Route path="/" element={<Navigate to="/user" replace />} />
+          <Route path="/" element={<DashboardScreen />} />
+          <Route path="/committees" element={<CommitteeManagement />} />
+          <Route path="/committees/:committeeId" element={<CommitteeDetailScreen />} />
+          <Route path="/installments" element={<InstallmentManagement />} />
+          <Route path="/installments/:installmentId" element={<InstallmentDetailScreen />} />
+          <Route path="/profile" element={<UserProfileScreen />} />
+          <Route path="/settings" element={<SettingsScreen />} />
           <Route path="/user" element={<UserPortal />} />
           <Route path="/user/installment/:installmentId" element={<UserInstallmentDetail />} />
           <Route path="/user/committee/:committeeId/:memberId" element={<UserCommitteeDetail />} />
-          <Route path="*" element={<Navigate to="/user" replace />} />
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
+      {!isUserPortal && !isLocked && (
+        <footer className={`py-4 text-center text-sm text-neutral-DEFAULT dark:text-gray-400 ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>
+          © {new Date().getFullYear()} Faisal Mobile's. {language === Language.UR ? "جملہ حقوق محفوظ ہیں." : "All rights reserved."}
+        </footer>
+      )}
+      {/* Welcome Modal */}
+      {showWelcome && !isUserPortal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-40 animate-fadeIn">
+          <div className="bg-white dark:bg-neutral-darker rounded-2xl shadow-2xl px-10 py-10 flex flex-col items-center min-w-[280px] max-w-xs w-full border border-primary/10 animate-popIn">
+            <div className="text-5xl mb-3 animate-wave">👋</div>
+            <h2 className="text-2xl font-bold text-primary mb-2 text-center drop-shadow-sm">
+              {language === Language.UR
+                ? `خوش آمدید، ${userProfile?.name || ''}`
+                : `Welcome, ${userProfile?.name || ''}!`}
+            </h2>
+            <p className="text-neutral-500 dark:text-neutral-300 text-center text-base mt-1">
+              {language === Language.UR
+                ? 'آپ کی واپسی پر خوشی ہوئی!'
+                : 'Glad to see you back!'}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

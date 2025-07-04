@@ -526,3 +526,16 @@ export const ProgressBar: React.FC<{ percent: number; className?: string }> = ({
     </span>
   </div>
 );
+
+// Add after other icon exports
+export const CheckCircleIcon: React.FC<{ className?: string }> = ({ className = "" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`w-6 h-6 ${className}`}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75l2.25 2.25 4.5-4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
+export const ExclamationTriangleIcon: React.FC<{ className?: string }> = ({ className = "" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`w-6 h-6 ${className}`}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0 3.75h.008v-.008H12v.008zm-9.401 2.25a1.5 1.5 0 001.302 2.25h15.198a1.5 1.5 0 001.302-2.25l-7.599-13.5a1.5 1.5 0 00-2.604 0l-7.599 13.5z" />
+  </svg>
+);

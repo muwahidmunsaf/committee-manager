@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
 import { Committee, Member, CommitteeType, PayoutMethod, CommitteePayment, CommitteeMemberTurn, Language } from '../types'; 
-import { Button, Input, Select, Modal, LoadingSpinner, PlusCircleIcon, TrashIcon, PencilSquareIcon, Textarea, UserGroupIcon, DocumentTextIcon, ArrowDownTrayIcon, UserCircleIcon as DefaultUserIcon, ArrowLeftIcon, ArrowRightIcon, ArrowDownTrayIcon as DownloadIcon, XMarkIcon, HomeIcon, CreditCardIcon, ClockIcon, StarIcon, HeartIcon, TrophyIcon, GiftIcon, FireIcon, RocketLaunchIcon, AcademicCapIcon, BuildingOfficeIcon, HandRaisedIcon, LightBulbIcon, PuzzlePieceIcon, SparklesIcon2, ChartBarIcon, FolderIcon, BellIcon, ShieldCheckIcon, GlobeAltIcon, PaintBrushIcon, CalendarDaysIcon } from './UIComponents';
-import { isValidPakistaniCnic, isValidPakistaniPhone, formatDate, getCommitteeMonthName, calculateTotalPool, getMemberName, initializePayoutTurns } from '../utils/appUtils';
+import { Button, Input, Select, Modal, LoadingSpinner, PlusCircleIcon, TrashIcon, PencilSquareIcon, Textarea, UserGroupIcon, DocumentTextIcon, ArrowDownTrayIcon, UserCircleIcon as DefaultUserIcon, ArrowLeftIcon, ArrowRightIcon, ArrowDownTrayIcon as DownloadIcon, XMarkIcon, HomeIcon, CreditCardIcon, ClockIcon, StarIcon, HeartIcon, TrophyIcon, GiftIcon, FireIcon, RocketLaunchIcon, AcademicCapIcon, BuildingOfficeIcon, HandRaisedIcon, LightBulbIcon, PuzzlePieceIcon, SparklesIcon2, ChartBarIcon, FolderIcon, BellIcon, ShieldCheckIcon, GlobeAltIcon, PaintBrushIcon, CalendarDaysIcon, CheckCircleIcon, ExclamationTriangleIcon } from './UIComponents';
+import { isValidPakistaniCnic, isValidPakistaniPhone, formatDate, getCommitteeMonthName, calculateTotalPool, getMemberName, initializePayoutTurns, getCommitteePeriodLabel } from '../utils/appUtils';
 import { DEFAULT_PROFILE_PIC } from '../constants';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -155,6 +155,28 @@ const CommitteeManagement: React.FC = () => {
                 <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-1">Type: {t(committee.type.toLowerCase())}</p>
                 <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-1">{t('totalMembers')}: {committee.memberIds.length}</p>
                 <p className="text-sm text-neutral-DEFAULT dark:text-gray-400 mb-3">{t('totalPool')}: PKR {(committee.amountPerMember * committee.memberIds.length * committee.duration).toLocaleString()}</p>
+                {/* Current Month Stats */}
+                {(() => {
+                  const now = new Date();
+                  const monthLabel = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+                  const currentMonth = now.getMonth();
+                  const currentYear = now.getFullYear();
+                  // All payments for this committee in the current month
+                  const currentMonthPayments = committee.payments.filter(p => {
+                    const payDate = new Date(p.paymentDate);
+                    return payDate.getMonth() === currentMonth && payDate.getFullYear() === currentYear && p.status === 'Cleared';
+                  });
+                  const totalCollected = currentMonthPayments.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
+                  const totalDue = committee.amountPerMember * committee.memberIds.length;
+                  const totalRemaining = Math.max(0, totalDue - totalCollected);
+                  return (
+                    <div className="flex flex-col gap-1 mb-2">
+                      <span className="text-xs text-cyan-700 font-semibold">Total for {monthLabel}: <span className="font-bold text-cyan-900">PKR {totalDue.toLocaleString()}</span></span>
+                      <span className="text-xs text-green-700 font-semibold">Collected for {monthLabel}: <span className="font-bold text-green-900">PKR {totalCollected.toLocaleString()}</span></span>
+                      <span className="text-xs text-red-700 font-semibold">Remaining for {monthLabel}: <span className="font-bold text-red-900">PKR {totalRemaining.toLocaleString()}</span></span>
+                    </div>
+                  );
+                })()}
                 <div className={`mt-auto flex space-x-2 ${language === Language.UR ? 'flex-row-reverse space-x-reverse' : ''}`}>
                   <Button size="sm" onClick={() => navigate(`/committees/${committee.id}`)} className="flex-grow flex items-center justify-center">
                     <FolderIcon className="w-4 h-4 mr-1" />
@@ -1219,26 +1241,27 @@ export const CommitteeDetailScreen: React.FC = () => {
       hiddenDiv.style.fontSize = '12px';
 
       // Build summary section
+      const monthLabel = getCommitteeMonthName(committee?.startDate ?? '', monthIndex, language);
       const summarySection = `
-        <div style="margin-bottom: 20px; padding: 15px; background-color: #f0f9ff; border-radius: 8px;">
-          <h3 style="color: #0e7490; margin: 0 0 15px 0; font-size: 16px;">${t('summary')}</h3>
+        <div style=\"margin-bottom: 20px; padding: 15px; background-color: #f0f9ff; border-radius: 8px;\">
+          <h3 style=\"color: #0e7490; margin: 0 0 15px 0; font-size: 16px;\">${t('summary')}</h3>
           <div><strong>${t('committeeName')}:</strong> ${committee.title}</div>
           <div><strong>${t('type')}:</strong> ${t(committee.type.toLowerCase())}</div>
           <div><strong>${t('duration')}:</strong> ${committee.duration} ${t(committee.type === CommitteeType.MONTHLY ? 'months' : committee.type === CommitteeType.WEEKLY ? 'weeks' : 'days')}</div>
           <div><strong>${t('startDate')}:</strong> ${formatDate(committee.startDate, language)}</div>
           <div><strong>${t('amountPerMember')}:</strong> PKR ${committee.amountPerMember.toLocaleString()}</div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 10px;">
-            <div style="text-align: center;">
-              <div style="font-weight: bold; color: #0e7490;">${t('totalDue')}</div>
-              <div style="font-size: 18px; font-weight: bold;">PKR ${totalDue.toLocaleString()}</div>
+          <div style=\"display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 10px;\">
+            <div style=\"text-align: center;\">
+              <div style=\"font-weight: bold; color: #0e7490;\">Total for ${monthLabel}</div>
+              <div style=\"font-size: 18px; font-weight: bold;\">PKR ${totalDue.toLocaleString()}</div>
             </div>
-            <div style="text-align: center;">
-              <div style="font-weight: bold; color: #16a34a;">${t('totalCollected')}</div>
-              <div style="font-size: 18px; font-weight: bold; color: #16a34a;">PKR ${totalCollected.toLocaleString()}</div>
+            <div style=\"text-align: center;\">
+              <div style=\"font-weight: bold; color: #16a34a;\">Collected for ${monthLabel}</div>
+              <div style=\"font-size: 18px; font-weight: bold; color: #16a34a;\">PKR ${totalCollected.toLocaleString()}</div>
             </div>
-            <div style="text-align: center;">
-              <div style="font-weight: bold; color: #dc2626;">${t('totalRemaining')}</div>
-              <div style="font-size: 18px; font-weight: bold; color: #dc2626;">PKR ${totalRemaining.toLocaleString()}</div>
+            <div style=\"text-align: center;\">
+              <div style=\"font-weight: bold; color: #dc2626;\">Remaining for ${monthLabel}</div>
+              <div style=\"font-size: 18px; font-weight: bold; color: #dc2626;\">PKR ${totalRemaining.toLocaleString()}</div>
             </div>
           </div>
         </div>
@@ -1808,6 +1831,7 @@ export const CommitteeDetailScreen: React.FC = () => {
       pdf.setTextColor('#222');
       // Move content down by 0.4cm (11.3pt)
       let yPosition = 170 + 11.3;
+      const monthLabel = getCommitteeMonthName(committee?.startDate ?? '', monthIndex, language);
       pdf.setFont(undefined, 'bold');
       pdf.text(capitalizeWords(t('committeeName')) + ':', 40, yPosition);
       pdf.setFont(undefined, 'normal');
@@ -1834,12 +1858,17 @@ export const CommitteeDetailScreen: React.FC = () => {
       pdf.text(`PKR ${committee.amountPerMember?.toLocaleString() || '0'}`, 220, yPosition);
       yPosition += 18;
       pdf.setFont(undefined, 'bold');
-      pdf.text(capitalizeWords(t('totalCollected')) + ':', 40, yPosition);
+      pdf.text(`Total for ${monthLabel}:`, 40, yPosition);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(`PKR ${totalDue?.toLocaleString() || '0'}`, 220, yPosition);
+      yPosition += 18;
+      pdf.setFont(undefined, 'bold');
+      pdf.text(`Collected for ${monthLabel}:`, 40, yPosition);
       pdf.setFont(undefined, 'normal');
       pdf.text(`PKR ${totalCollected?.toLocaleString() || '0'}`, 220, yPosition);
       yPosition += 18;
       pdf.setFont(undefined, 'bold');
-      pdf.text(capitalizeWords(t('totalRemaining')) + ':', 40, yPosition);
+      pdf.text(`Remaining for ${monthLabel}:`, 40, yPosition);
       pdf.setFont(undefined, 'normal');
       pdf.text(`PKR ${totalRemaining?.toLocaleString() || '0'}`, 220, yPosition);
       yPosition += 18;
@@ -2418,6 +2447,47 @@ export const CommitteeDetailScreen: React.FC = () => {
                               <div className="text-base font-bold text-neutral-darker dark:text-neutral-light">PKR {(committee.amountPerMember * committee.memberIds.length * committee.duration - committee.payments.filter(p => p.status === 'Cleared').reduce((sum, p) => sum + p.amountPaid, 0)).toLocaleString()}</div>
                             </div>
                           </div>
+                          {/* Current Month Stat Cards */}
+                          {(() => {
+                            const now = new Date();
+                            const month = now.getMonth();
+                            const year = now.getFullYear();
+                            const monthLabel = now.toLocaleString(language === Language.UR ? 'ur-PK' : 'en-US', { month: 'long', year: 'numeric' });
+                            const currentMonthPayments = committee.payments.filter(p => {
+                              if (p.status !== 'Cleared') return false;
+                              const d = new Date(p.paymentDate);
+                              return d.getMonth() === month && d.getFullYear() === year;
+                            });
+                            const totalDue = committee.amountPerMember * committee.memberIds.length;
+                            const collected = currentMonthPayments.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
+                            const remaining = totalDue - collected;
+                            return (
+                              <>
+                                <div className="bg-blue-100 dark:bg-blue-900/40 rounded-lg p-4 flex items-center gap-3 shadow-sm min-w-[180px]">
+                                  <CalendarDaysIcon className="h-7 w-7 text-blue-500" />
+                                  <div className="flex flex-col items-start">
+                                    <div className="text-xs font-semibold text-blue-700 dark:text-blue-200 mb-1">Total for {monthLabel}</div>
+                                    <div className="text-lg font-bold text-neutral-darker dark:text-neutral-light">PKR {totalDue.toLocaleString()}</div>
+                                  </div>
+                                </div>
+                                <div className="bg-green-100 dark:bg-green-900/40 rounded-lg p-4 flex items-center gap-3 shadow-sm min-w-[180px]">
+                                  <CheckCircleIcon className="h-7 w-7 text-green-600" />
+                                  <div className="flex flex-col items-start">
+                                    <div className="text-xs font-semibold text-green-700 dark:text-green-200 mb-1">Collected for {monthLabel}</div>
+                                    <div className="text-lg font-bold text-green-700 dark:text-green-200">PKR {collected.toLocaleString()}</div>
+                                  </div>
+                                </div>
+                                <div className="bg-red-100 dark:bg-red-900/40 rounded-lg p-4 flex items-center gap-3 shadow-sm min-w-[180px]">
+                                  <ExclamationTriangleIcon className="h-7 w-7 text-red-500" />
+                                  <div className="flex flex-col items-start">
+                                    <div className="text-xs font-semibold text-red-700 dark:text-red-200 mb-1">Remaining for {monthLabel}</div>
+                                    <div className="text-lg font-bold text-red-700 dark:text-red-200">PKR {remaining.toLocaleString()}</div>
+                                  </div>
+                                </div>
+                              </>
+                            );
+                          })()}
+                          {/* End Current Month Stat Cards */}
                           <div className="bg-gray-50 dark:bg-gray-800/30 rounded-lg p-4 flex items-center gap-3 shadow-sm">
                             <HandRaisedIcon className="h-7 w-7 text-gray-500" />
                             <div>
@@ -2571,9 +2641,11 @@ export const CommitteeDetailScreen: React.FC = () => {
                         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700">
                             <thead className="bg-gray-50 dark:bg-neutral-dark">
                                 <tr>
-                                    <th className={`sticky ${language === Language.UR ? 'right-0' : 'left-0'} bg-gray-50 dark:bg-neutral-dark z-10 px-3 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${language === Language.UR ? 'text-right' : 'text-left'}`}>{t('memberName')}</th>
-                                    {paymentGridHeader.map(monthName => (
-                                        <th key={monthName} className={`px-3 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-center`}>{monthName}</th>
+                                    <th className={`sticky ${language === Language.UR ? 'right-0' : 'left-0'} bg-white dark:bg-neutral-darker z-10 px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-center`}>{t('memberName')}</th>
+                                    {Array.from({ length: committee.duration }, (_, periodIndex) => (
+                                      <th key={periodIndex} className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-center">
+                                        {getCommitteePeriodLabel(committee.type, committee.startDate, periodIndex, language === Language.UR ? 'ur-PK' : 'en-US')}
+                                      </th>
                                     ))}
                                 </tr>
                             </thead>

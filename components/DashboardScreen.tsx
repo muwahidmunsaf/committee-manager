@@ -141,11 +141,15 @@ const DashboardScreen: React.FC = () => {
   // CustomTooltip for Installment Collection Overview
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      // Use translation keys to match data
+      // Try both committee and installment keys
       const totalPoolKey = t('totalPool');
       const totalCollectedKey = t('totalCollected');
-      const totalValue = payload.find((e: any) => e.name === totalPoolKey)?.value || 0;
-      const collected = payload.find((e: any) => e.name === totalCollectedKey)?.value || 0;
+      const totalValue = payload.find((e: any) => e.name === totalPoolKey)?.value
+        ?? payload.find((e: any) => e.name === 'Total Value')?.value
+        ?? 0;
+      const collected = payload.find((e: any) => e.name === totalCollectedKey)?.value
+        ?? payload.find((e: any) => e.name === 'Collected')?.value
+        ?? 0;
       const percent = totalValue > 0 ? Math.round((collected / totalValue) * 100) : 0;
       return (
         <div className="bg-white dark:bg-neutral-darker p-3 border border-gray-300 dark:border-gray-700 rounded shadow-lg">
