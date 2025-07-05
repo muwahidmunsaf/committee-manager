@@ -164,7 +164,7 @@ const UserCommitteeDetail: React.FC = () => {
       const status = totalPaid >= required ? 'Cleared' : 'Uncleared';
       const remaining = Math.max(0, required - totalPaid);
       return [
-        String(idx + 1),
+      String(idx + 1),
         getMonthName(payments[0].paymentDate),
         `PKR ${totalPaid.toLocaleString()}`,
         status,
@@ -305,7 +305,7 @@ const UserCommitteeDetail: React.FC = () => {
                     <td className="px-4 py-2 text-center">
                       <Button size="sm" variant="ghost" onClick={() => handleDownloadPdf()} className="text-cyan-700 hover:bg-cyan-100">PDF</Button>
                     </td>
-                  </tr>
+                </tr>
                 );
               })}
             </tbody>
@@ -369,4 +369,4 @@ const UserCommitteeDetail: React.FC = () => {
   );
 };
 
-export default UserCommitteeDetail;
+export default UserCommitteeDetail; 

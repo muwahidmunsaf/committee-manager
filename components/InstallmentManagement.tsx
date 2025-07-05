@@ -445,6 +445,13 @@ const InstallmentManagement: React.FC = () => {
   const [openReportModal, setOpenReportModal] = useState<null | { installment: Installment, memberCommittees: Committee[] }>(null);
   const [showReportDropdown, setShowReportDropdown] = useState(false);
 
+  // Filter and sort state
+  const [statusFilter, setStatusFilter] = useState<'all' | 'Open' | 'Closed'>('all');
+  const [dateFilter, setDateFilter] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'status'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [showFilters, setShowFilters] = useState(false);
+
   const handleOpenFormModal = (installment?: Installment) => {
     setEditingInstallment(installment);
     setIsFormModalOpen(true);
@@ -462,12 +469,70 @@ const InstallmentManagement: React.FC = () => {
     }
   };
 
-  const filtered = installments.filter(i =>
-    i.buyerName.toLowerCase().includes(search.toLowerCase()) ||
-    i.phone.includes(search) ||
-    i.cnic.includes(search) ||
-    i.mobileName.toLowerCase().includes(search.toLowerCase())
-  );
+  // Enhanced filtering and sorting logic
+  const filteredAndSorted = installments
+    .filter(i => {
+      // Text search filter
+      const matchesSearch = 
+        i.buyerName.toLowerCase().includes(search.toLowerCase()) ||
+        i.phone.includes(search) ||
+        i.cnic.includes(search) ||
+        i.mobileName.toLowerCase().includes(search.toLowerCase());
+
+      // Status filter
+      const totalPaid = i.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
+      const remainingAmount = (i.totalPayment || 0) - (i.advancePayment || 0) - totalPaid;
+      const currentStatus = remainingAmount <= 0 ? 'Closed' : 'Open';
+      const matchesStatus = statusFilter === 'all' || currentStatus === statusFilter;
+
+      // Date filter
+      const matchesDate = !dateFilter || i.startDate === dateFilter;
+
+      return matchesSearch && matchesStatus && matchesDate;
+    })
+    .sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortBy) {
+        case 'name':
+          aValue = a.buyerName?.toLowerCase() || '';
+          bValue = b.buyerName?.toLowerCase() || '';
+          break;
+        case 'date':
+          aValue = new Date(a.startDate || '');
+          bValue = new Date(b.startDate || '');
+          break;
+        case 'status':
+          const aTotalPaid = a.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
+          const bTotalPaid = b.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
+          const aRemaining = (a.totalPayment || 0) - (a.advancePayment || 0) - aTotalPaid;
+          const bRemaining = (b.totalPayment || 0) - (b.advancePayment || 0) - bTotalPaid;
+          aValue = aRemaining <= 0 ? 'Closed' : 'Open';
+          bValue = bRemaining <= 0 ? 'Closed' : 'Open';
+          break;
+        default:
+          return 0;
+      }
+
+      if (sortOrder === 'asc') {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      } else {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      }
+    });
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearch('');
+    setStatusFilter('all');
+    setDateFilter('');
+    setSortBy('name');
+    setSortOrder('asc');
+  };
+
+  // Get unique dates for date filter dropdown
+  const uniqueDates = [...new Set(installments.map(i => i.startDate))].sort();
 
   const drawPdfHeader = (pdf: jsPDF, pdfWidth: number, logoImg: string) => {
     // No background color, no app name, just logo centered
@@ -513,20 +578,20 @@ const InstallmentManagement: React.FC = () => {
       } else {
         remainingInstallments = (inst.duration || 0) - (inst.payments?.length || 0);
       }
-      return [
-        (idx + 1).toString(),
-        inst.buyerName,
-        inst.cnic,
-        inst.phone,
-        inst.mobileName,
-        inst.totalPayment?.toLocaleString?.() || '',
-        inst.advancePayment?.toLocaleString?.() || '',
-        collectedAmount.toLocaleString(),
+        return [
+          (idx + 1).toString(),
+          inst.buyerName,
+          inst.cnic,
+          inst.phone,
+          inst.mobileName,
+          inst.totalPayment?.toLocaleString?.() || '',
+          inst.advancePayment?.toLocaleString?.() || '',
+          collectedAmount.toLocaleString(),
         (remainingAmount > 0 ? remainingAmount : 0).toLocaleString(),
         remainingInstallments.toString(),
         (language === Language.UR ? ((inst.status === 'Closed') ? 'بند' : 'کھلا') : inst.status)
-      ];
-    });
+        ];
+      });
     let columns = [];
     let heading = '';
     if (language === Language.UR) {
@@ -639,16 +704,16 @@ const InstallmentManagement: React.FC = () => {
         remainingInstallments = 1;
       }
       return [
-        (idx + 1).toString(),
-        inst.buyerName,
-        inst.cnic,
-        inst.phone,
-        inst.mobileName,
+      (idx + 1).toString(),
+      inst.buyerName,
+      inst.cnic,
+      inst.phone,
+      inst.mobileName,
         inst.monthlyInstallment?.toLocaleString?.() || '',
         collectedAmount.toLocaleString(),
         (remainingAmount > 0 ? remainingAmount : 0).toLocaleString(),
         remainingInstallments.toString(),
-        (language === Language.UR ? ((inst.status === 'Closed') ? 'بند' : 'کھلا') : inst.status)
+      (language === Language.UR ? ((inst.status === 'Closed') ? 'بند' : 'کھلا') : inst.status)
       ];
     });
     let columns;
@@ -740,9 +805,9 @@ const InstallmentManagement: React.FC = () => {
         </h1>
         <div className="relative">
           <Button onClick={() => setShowReportDropdown(v => !v)} className="w-full sm:w-auto font-bold border-2 border-primary bg-primary text-white hover:bg-primary-dark hover:text-white transition" variant="primary">
-            <FolderIcon className="h-5 w-5 mr-2" />
+          <FolderIcon className="h-5 w-5 mr-2" />
             Download Report
-          </Button>
+        </Button>
           {showReportDropdown && (
             <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-neutral-dark rounded shadow-lg z-10">
               <button
@@ -765,10 +830,12 @@ const InstallmentManagement: React.FC = () => {
           {t('createInstallment')}
         </Button>
       </div>
-      <Input
-        name="search"
-        label={t('searchInstallments')}
-        value={search}
+      <div className="mb-6 space-y-4">
+        {/* Search Input */}
+        <Input
+          name="search"
+          label={t('searchInstallments')}
+          value={search}
           onChange={e => {
             let value = e.target.value;
             // Phone formatting: starts with 03
@@ -794,15 +861,118 @@ const InstallmentManagement: React.FC = () => {
             }
             setSearch(value);
           }}
-        className="mb-4 max-w-md"
-      />
+          className="max-w-md"
+        />
+
+        {/* Filter and Sort Controls */}
+        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+          {/* Filter Toggle Button */}
+          <Button
+            onClick={() => setShowFilters(!showFilters)}
+            variant="ghost"
+            className="flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+            </svg>
+            {showFilters ? 'Hide Filters' : 'Show Filters'}
+          </Button>
+
+          {/* Clear Filters Button */}
+          {(search || statusFilter !== 'all' || dateFilter || sortBy !== 'name' || sortOrder !== 'asc') && (
+            <Button
+              onClick={clearFilters}
+              variant="ghost"
+              className="text-red-600 hover:text-red-700"
+            >
+              Clear All Filters
+            </Button>
+          )}
+        </div>
+
+        {/* Filter Controls */}
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-gray-50 dark:bg-neutral-darker rounded-lg">
+            {/* Status Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Account Status
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as 'all' | 'Open' | 'Closed')}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-neutral-dark text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="all">All Status</option>
+                <option value="Open">Open</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </div>
+
+            {/* Date Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Start Date
+              </label>
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-neutral-dark text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="">All Dates</option>
+                {uniqueDates.map(date => (
+                  <option key={date} value={date}>
+                    {new Date(date).toLocaleDateString()}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sort By */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Sort By
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'name' | 'date' | 'status')}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-neutral-dark text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="name">Name</option>
+                <option value="date">Date</option>
+                <option value="status">Status</option>
+              </select>
+            </div>
+
+            {/* Sort Order */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Sort Order
+              </label>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-neutral-dark text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Results Summary */}
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          Showing {filteredAndSorted.length} of {installments.length} installments
+        </div>
+      </div>
       {isLoading ? (
         <div className="flex justify-center items-center h-64">{t('loading')}</div>
-      ) : filtered.length === 0 ? (
+      ) : filteredAndSorted.length === 0 ? (
         <p className="text-center text-neutral-DEFAULT dark:text-gray-400 py-8">{t('noInstallmentsFound')}</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map(installment => {
+          {filteredAndSorted.map(installment => {
               // Find the member by CNIC or phone (assuming unique)
               const member = members.find(m => m.cnic === installment.cnic || m.phone === installment.phone);
               // Find all committees this member is part of

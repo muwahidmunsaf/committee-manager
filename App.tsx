@@ -508,11 +508,17 @@ const AppWithRouterLogic: React.FC = () => {
           </div>
         )}
         <Routes>
-          <Route path="/" element={<Navigate to="/user" replace />} />
+          <Route path="/" element={<DashboardScreen />} />
+          <Route path="/committees" element={<CommitteeManagement />} />
+          <Route path="/committees/:committeeId" element={<CommitteeDetailScreen />} />
+          <Route path="/installments" element={<InstallmentManagement />} />
+          <Route path="/installments/:installmentId" element={<InstallmentDetailScreen />} />
+          <Route path="/profile" element={<UserProfileScreen />} />
+          <Route path="/settings" element={<SettingsScreen />} />
           <Route path="/user" element={<UserPortal />} />
           <Route path="/user/installment/:installmentId" element={<UserInstallmentDetail />} />
           <Route path="/user/committee/:committeeId/:memberId" element={<UserCommitteeDetail />} />
-          <Route path="*" element={<Navigate to="/user" replace />} />
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
       {!isUserPortal && !isLocked && (
