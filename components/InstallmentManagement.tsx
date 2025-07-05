@@ -571,7 +571,6 @@ const InstallmentManagement: React.FC = () => {
       totalCollected += collectedAmount;
       totalRemaining += remainingAmount > 0 ? remainingAmount : 0;
       totalAmount += inst.totalPayment || 0;
-      // Remaining installments logic
       let remainingInstallments = 0;
       if (remainingAmount <= 0) {
         remainingInstallments = 0;
@@ -584,6 +583,7 @@ const InstallmentManagement: React.FC = () => {
         inst.cnic,
         inst.phone,
         inst.mobileName,
+        inst.startDate ? new Date(inst.startDate).toLocaleDateString() : '',
         inst.totalPayment?.toLocaleString?.() || '',
         inst.advancePayment?.toLocaleString?.() || '',
         collectedAmount.toLocaleString(),
@@ -598,12 +598,12 @@ const InstallmentManagement: React.FC = () => {
       await document.fonts.load('18px "Jameel Noori Nastaleeq"');
       heading = 'مجموعی قسط رپورٹ';
       columns = [
-        'نمبر', 'خریدار کا نام', 'شناختی کارڈ', 'فون', 'موبائل کا نام', 'کل رقم', 'پیشگی', 'جمع شدہ رقم', 'باقی رقم', 'باقی اقساط', 'اکاؤنٹ اسٹیٹس'
+        'نمبر', 'خریدار کا نام', 'شناختی کارڈ', 'فون', 'موبائل کا نام', 'آغاز تاریخ', 'کل رقم', 'پیشگی', 'جمع شدہ رقم', 'باقی رقم', 'باقی اقساط', 'اکاؤنٹ اسٹیٹس'
       ];
     } else {
       heading = 'Overall Installment Report';
       columns = [
-        'S.No', 'Buyer Name', 'CNIC', 'Phone', 'Product Name', 'Total Amount', 'Advance', 'Collected Amount', 'Remaining Amount', 'Remaining Installments', 'Account Status'
+        'S.No', 'Buyer Name', 'CNIC', 'Phone', 'Product Name', 'Start Date', 'Total Amount', 'Advance', 'Collected Amount', 'Remaining Amount', 'Remaining Installments', 'Account Status'
       ];
     }
     pdf.setFont(language === Language.UR ? 'JameelNooriNastaleeq' : 'helvetica', 'bold');
@@ -714,6 +714,7 @@ const InstallmentManagement: React.FC = () => {
         inst.cnic,
         inst.phone,
         inst.mobileName,
+        inst.startDate ? new Date(inst.startDate).toLocaleDateString() : '',
         inst.monthlyInstallment?.toLocaleString?.() || '',
         collectedAmount.toLocaleString(),
         (remainingAmount > 0 ? remainingAmount : 0).toLocaleString(),
@@ -726,10 +727,10 @@ const InstallmentManagement: React.FC = () => {
     if (language === Language.UR) {
       await document.fonts.load('18px "Jameel Noori Nastaleeq"');
       heading = `${currentMonthName} کی قسط رپورٹ`;
-      columns = ['نمبر', 'خریدار کا نام', 'شناختی کارڈ', 'فون', 'موبائل کا نام', 'ماہانہ قسط', 'جمع شدہ', 'باقی', 'باقی اقساط', 'اکاؤنٹ اسٹیٹس'];
+      columns = ['نمبر', 'خریدار کا نام', 'شناختی کارڈ', 'فون', 'موبائل کا نام', 'آغاز تاریخ', 'ماہانہ قسط', 'جمع شدہ', 'باقی', 'باقی اقساط', 'اکاؤنٹ اسٹیٹس'];
     } else {
       heading = `${currentMonthName} Installment Report`;
-      columns = ['S.No', 'Buyer Name', 'CNIC', 'Phone', 'Product Name', 'Monthly Installment', 'Collected', 'Remaining', 'Remaining Installments', 'Account Status'];
+      columns = ['S.No', 'Buyer Name', 'CNIC', 'Phone', 'Product Name', 'Start Date', 'Monthly Installment', 'Collected', 'Remaining', 'Remaining Installments', 'Account Status'];
     }
     pdf.setFont(language === Language.UR ? 'JameelNooriNastaleeq' : 'helvetica', 'bold');
     pdf.setFontSize(18);
