@@ -185,6 +185,7 @@ const UserInstallmentDetail: React.FC = () => {
             <StatCard icon={<IdentificationIcon className="w-6 h-6 text-cyan-700" />} label="CNIC" value={installment.cnic} />
             <StatCard icon={<HomeIcon className="w-6 h-6 text-cyan-700" />} label="Address" value={capitalizeWords(installment.address)} />
             <StatCard icon={<BanknotesIcon className="w-6 h-6 text-cyan-700" />} label="Mobile Name" value={capitalizeWords(installment.mobileName)} />
+            <StatCard icon={<CalendarDaysIcon className="w-6 h-6 text-cyan-700" />} label="Start Date" value={installment.startDate ? new Date(installment.startDate).toLocaleDateString() : '-'} />
             <StatCard icon={<BanknotesIcon className="w-6 h-6 text-cyan-700" />} label="Advance Payment" value={`PKR ${(installment.advancePayment || 0).toLocaleString()}`} />
             <StatCard icon={isClosed ? <CheckCircleIcon className="w-6 h-6 text-red-600" /> : <ExclamationCircleIcon className="w-6 h-6 text-green-600" />} label="Account Status" value={<span className={`font-bold ${isClosed ? 'text-red-600' : 'text-green-600'}`}>{isClosed ? 'Closed' : 'Open'}</span>} />
         </div>
