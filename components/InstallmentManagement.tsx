@@ -564,7 +564,7 @@ const InstallmentManagement: React.FC = () => {
     let totalCollected = 0;
     let totalRemaining = 0;
     let totalAmount = 0;
-    const rows = installments.map((inst, idx) => {
+    const rows = filteredAndSorted.map((inst, idx) => {
       const totalPaid = inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
       const collectedAmount = (inst.advancePayment || 0) + totalPaid;
       const remainingAmount = (inst.totalPayment || 0) - collectedAmount;
@@ -578,20 +578,20 @@ const InstallmentManagement: React.FC = () => {
       } else {
         remainingInstallments = (inst.duration || 0) - (inst.payments?.length || 0);
       }
-        return [
-          (idx + 1).toString(),
-          inst.buyerName,
-          inst.cnic,
-          inst.phone,
-          inst.mobileName,
-          inst.totalPayment?.toLocaleString?.() || '',
-          inst.advancePayment?.toLocaleString?.() || '',
-          collectedAmount.toLocaleString(),
+      return [
+        (idx + 1).toString(),
+        inst.buyerName,
+        inst.cnic,
+        inst.phone,
+        inst.mobileName,
+        inst.totalPayment?.toLocaleString?.() || '',
+        inst.advancePayment?.toLocaleString?.() || '',
+        collectedAmount.toLocaleString(),
         (remainingAmount > 0 ? remainingAmount : 0).toLocaleString(),
         remainingInstallments.toString(),
         (language === Language.UR ? ((inst.status === 'Closed') ? 'بند' : 'کھلا') : inst.status)
-        ];
-      });
+      ];
+    });
     let columns = [];
     let heading = '';
     if (language === Language.UR) {
@@ -681,8 +681,13 @@ const InstallmentManagement: React.FC = () => {
     let totalCollected = 0;
     let totalRemaining = 0;
     let totalAmount = 0;
-    // Filter and calculate for current month, exclude closed accounts
-    const filteredInstallments = installments.filter(inst => inst.status !== 'Closed');
+    // Use filteredAndSorted and then filter for current month, exclude closed accounts
+    const filteredInstallments = filteredAndSorted.filter(inst => {
+      const totalPaid = inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
+      const remainingAmount = (inst.totalPayment || 0) - (inst.advancePayment || 0) - totalPaid;
+      const status = remainingAmount <= 0 ? 'Closed' : 'Open';
+      return status !== 'Closed';
+    });
     const rows = filteredInstallments.map((inst, idx) => {
       // Payments for current month
       const monthPayments = (inst.payments || []).filter(p => {
@@ -701,19 +706,19 @@ const InstallmentManagement: React.FC = () => {
       if (remainingAmount === 0) {
         remainingInstallments = 0;
       } else {
-        remainingInstallments = 1;
+        remainingInstallments = 1; // Only current month
       }
       return [
-      (idx + 1).toString(),
-      inst.buyerName,
-      inst.cnic,
-      inst.phone,
-      inst.mobileName,
+        (idx + 1).toString(),
+        inst.buyerName,
+        inst.cnic,
+        inst.phone,
+        inst.mobileName,
         inst.monthlyInstallment?.toLocaleString?.() || '',
         collectedAmount.toLocaleString(),
         (remainingAmount > 0 ? remainingAmount : 0).toLocaleString(),
         remainingInstallments.toString(),
-      (language === Language.UR ? ((inst.status === 'Closed') ? 'بند' : 'کھلا') : inst.status)
+        (language === Language.UR ? ((inst.status === 'Closed') ? 'بند' : 'کھلا') : inst.status)
       ];
     });
     let columns;
