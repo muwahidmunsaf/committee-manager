@@ -100,6 +100,13 @@ const CommitteeManagement: React.FC = () => {
   const [editingCommittee, setEditingCommittee] = useState<Committee | undefined>(undefined);
   const navigate = useNavigate();
 
+  // Filter and sort state
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [dateFilter, setDateFilter] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'status'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [showFilters, setShowFilters] = useState(false);
+
   const handleOpenFormModal = (committee?: Committee) => {
     setEditingCommittee(committee);
     setIsFormModalOpen(true);
@@ -125,29 +132,181 @@ const CommitteeManagement: React.FC = () => {
     }
   };
 
+  // Helper: get end date for a committee
+  const getCommitteeEndDate = (committee: Committee) => {
+    if (!committee.startDate || !committee.duration) return null;
+    const start = new Date(committee.startDate);
+    return new Date(start.setMonth(start.getMonth() + committee.duration));
+  };
+
+  // Unique start dates for filter dropdown
+  const uniqueDates = [...new Set(committees.map(c => c.startDate))].sort();
+
+  // Filtering and sorting logic
+  const filteredAndSorted = committees
+    .filter(c => {
+      // Status filter
+      let isActive = true;
+      const endDate = getCommitteeEndDate(c);
+      if (endDate) {
+        isActive = endDate > new Date();
+      }
+      const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? isActive : !isActive);
+      // Date filter
+      const matchesDate = !dateFilter || c.startDate === dateFilter;
+      return matchesStatus && matchesDate;
+    })
+    .sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+      switch (sortBy) {
+        case 'name':
+          aValue = a.title?.toLowerCase() || '';
+          bValue = b.title?.toLowerCase() || '';
+          break;
+        case 'date':
+          aValue = new Date(a.startDate || '');
+          bValue = new Date(b.startDate || '');
+          break;
+        case 'status':
+          const aEnd = getCommitteeEndDate(a);
+          const bEnd = getCommitteeEndDate(b);
+          aValue = aEnd && aEnd > new Date() ? 'active' : 'inactive';
+          bValue = bEnd && bEnd > new Date() ? 'active' : 'inactive';
+          break;
+        default:
+          return 0;
+      }
+      if (sortOrder === 'asc') {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      } else {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      }
+    });
+
+  // Clear all filters
+  const clearFilters = () => {
+    setStatusFilter('all');
+    setDateFilter('');
+    setSortBy('name');
+    setSortOrder('asc');
+  };
 
   if (appIsLoading) {
     return <div className="flex justify-center items-center h-64"><LoadingSpinner size="lg" /></div>;
   }
 
   return (
-    <div className={`p-4 md:p-6 ${language === Language.UR ? 'font-notoNastaliqUrdu text-right' : ''}`}>
-      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 ${language === Language.UR ? 'sm:flex-row-reverse' : ''}`}>
-        <h1 className="text-2xl md:text-3xl font-bold text-neutral-darker dark:text-neutral-light flex items-center">
-          <BuildingOfficeIcon className="h-8 w-8 mr-3 text-primary" />
-          {t('committees')}
-        </h1>
-        <Button onClick={() => handleOpenFormModal()} className="w-full sm:w-auto">
-          <PlusCircleIcon className={`h-5 w-5 ${language === Language.UR ? 'ml-2' : 'mr-2'}`} />
-          {t('newCommittee')}
-        </Button>
+    <div className={`p-4 md:p-6 ${language === Language.UR ? 'font-notoNastaliqUrdu text-right' : ''}`}> 
+      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 ${language === Language.UR ? 'sm:flex-row-reverse' : ''}`}> 
+        <h1 className="text-2xl md:text-3xl font-bold text-neutral-darker dark:text-neutral-light flex items-center"> 
+          <BuildingOfficeIcon className="h-8 w-8 mr-3 text-primary" /> 
+          {t('committees')} 
+        </h1> 
+        <Button onClick={() => handleOpenFormModal()} className="w-full sm:w-auto"> 
+          <PlusCircleIcon className={`h-5 w-5 ${language === Language.UR ? 'ml-2' : 'mr-2'}`} /> 
+          {t('newCommittee')} 
+        </Button> 
       </div>
-
-      {committees.length === 0 ? (
+      {/* Filter and Sort Controls */}
+      <div className="mb-6 space-y-4">
+        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+          <Button
+            onClick={() => setShowFilters(!showFilters)}
+            variant="ghost"
+            className="flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+            </svg>
+            {showFilters ? 'Hide Filters' : 'Show Filters'}
+          </Button>
+          {(statusFilter !== 'all' || dateFilter || sortBy !== 'name' || sortOrder !== 'asc') && (
+            <Button
+              onClick={clearFilters}
+              variant="ghost"
+              className="text-red-600 hover:text-red-700"
+            >
+              Clear All Filters
+            </Button>
+          )}
+        </div>
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-gray-50 dark:bg-neutral-darker rounded-lg">
+            {/* Status Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Status
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-neutral-dark text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="all">All</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            {/* Date Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Start Date
+              </label>
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-neutral-dark text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="">All Dates</option>
+                {uniqueDates.map(date => (
+                  <option key={date} value={date}>
+                    {new Date(date).toLocaleDateString()}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Sort By */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Sort By
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'name' | 'date' | 'status')}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-neutral-dark text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="name">Name</option>
+                <option value="date">Start Date</option>
+                <option value="status">Status</option>
+              </select>
+            </div>
+            {/* Sort Order */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Sort Order
+              </label>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-neutral-dark text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+              </select>
+            </div>
+          </div>
+        )}
+        {/* Results Summary */}
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          Showing {filteredAndSorted.length} of {committees.length} committees
+        </div>
+      </div>
+      {filteredAndSorted.length === 0 ? (
         <p className="text-center text-neutral-DEFAULT dark:text-gray-400 py-8">{t('noCommittees')}</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {committees.map(committee => (
+          {filteredAndSorted.map(committee => (
             <div key={committee.id} className="bg-white dark:bg-neutral-darker rounded-lg shadow-lg overflow-hidden transition-all hover:shadow-xl flex flex-col">
               {/* Committee profile picture removed */}
               <div className="p-5 flex flex-col flex-grow">
@@ -177,25 +336,24 @@ const CommitteeManagement: React.FC = () => {
                     </div>
                   );
                 })()}
-                <div className={`mt-auto flex space-x-2 ${language === Language.UR ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                  <Button size="sm" onClick={() => navigate(`/committees/${committee.id}`)} className="flex-grow flex items-center justify-center">
-                    <FolderIcon className="w-4 h-4 mr-1" />
-                    {t('viewDetails')}
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleOpenFormModal(committee)} aria-label={t('edit')}>
-                    <PencilSquareIcon className="w-5 h-5" />
-                  </Button>
-                  <Button size="sm" variant="danger" onClick={() => handleDeleteCommitteeWrapper(committee.id)} aria-label={t('delete')}>
-                    <TrashIcon className="w-5 h-5" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+                <div className={`mt-auto flex space-x-2 ${language === Language.UR ? 'flex-row-reverse space-x-reverse' : ''}`}> 
+                  <Button size="sm" onClick={() => navigate(`/committees/${committee.id}`)} className="flex-grow flex items-center justify-center"> 
+                    <FolderIcon className="w-4 h-4 mr-1" /> 
+                    {t('viewDetails')} 
+                  </Button> 
+                  <Button size="sm" variant="ghost" onClick={() => handleOpenFormModal(committee)} aria-label={t('edit')}> 
+                    <PencilSquareIcon className="w-5 h-5" /> 
+                  </Button> 
+                  <Button size="sm" variant="danger" onClick={() => handleDeleteCommitteeWrapper(committee.id)} aria-label={t('delete')}> 
+                    <TrashIcon className="w-5 h-5" /> 
+                  </Button> 
+                </div> 
+              </div> 
+            </div> 
+          ))} 
+        </div> 
       )}
-
-      <Modal isOpen={isFormModalOpen} onClose={handleCloseFormModal} title={editingCommittee ? t('edit') + " " + t('committee') : t('newCommittee')}>
+      <Modal isOpen={isFormModalOpen} onClose={handleCloseFormModal} title={editingCommittee ? t('edit') + " " + t('committee') : t('newCommittee')}> 
         <CommitteeForm 
           initialData={editingCommittee} 
           onClose={handleCloseFormModal}
