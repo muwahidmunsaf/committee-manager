@@ -498,34 +498,28 @@ const AppWithRouterLogic: React.FC = () => {
             <span className="font-semibold">You will be locked out in <b>{autoLockCountdown}</b> seconds due to inactivity.</span>
           </div>
         </div>
-      )}
-      {!isUserPortal && isLocked && <AppLockScreen onLoginSuccess={handleLoginSuccess} />}
-      {!isUserPortal && !isLocked && <Navbar />}
-      <main className={`flex-grow w-full max-w-7xl mx-auto ${isLocked && !isUserPortal ? 'blur-sm pointer-events-none' : ''}`}>
-        {appIsLoading && !isLocked && !isUserPortal && ( 
-          <div className="fixed inset-0 bg-white bg-opacity-75 dark:bg-neutral-darkest dark:bg-opacity-75 flex items-center justify-center z-[999]">
-            <LoadingSpinner size="lg" />
-          </div>
         )}
-        <Routes>
-          <Route path="/" element={<DashboardScreen />} />
-          <Route path="/committees" element={<CommitteeManagement />} />
-          <Route path="/committees/:committeeId" element={<CommitteeDetailScreen />} />
-          <Route path="/installments" element={<InstallmentManagement />} />
-          <Route path="/installments/:installmentId" element={<InstallmentDetailScreen />} />
-          <Route path="/profile" element={<UserProfileScreen />} />
-          <Route path="/settings" element={<SettingsScreen />} />
-          <Route path="/user" element={<UserPortal />} />
-          <Route path="/user/installment/:installmentId" element={<UserInstallmentDetail />} />
-          <Route path="/user/committee/:committeeId/:memberId" element={<UserCommitteeDetail />} />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </main>
-      {!isUserPortal && !isLocked && (
-        <footer className={`py-4 text-center text-sm text-neutral-DEFAULT dark:text-gray-400 ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>
-          © {new Date().getFullYear()} Faisal Mobile's. {language === Language.UR ? "جملہ حقوق محفوظ ہیں." : "All rights reserved."}
-        </footer>
-      )}
+        {!isUserPortal && isLocked && <AppLockScreen onLoginSuccess={handleLoginSuccess} />}
+        {!isUserPortal && !isLocked && <Navbar />}
+        <main className={`flex-grow w-full max-w-7xl mx-auto ${isLocked && !isUserPortal ? 'blur-sm pointer-events-none' : ''}`}>
+          {appIsLoading && !isLocked && !isUserPortal && ( 
+            <div className="fixed inset-0 bg-white bg-opacity-75 dark:bg-neutral-darkest dark:bg-opacity-75 flex items-center justify-center z-[999]">
+              <LoadingSpinner size="lg" />
+            </div>
+          )}
+          <Routes>
+            <Route path="/" element={<Navigate to="/user" replace />} />
+            <Route path="/user" element={<UserPortal />} />
+            <Route path="/user/installment/:installmentId" element={<UserInstallmentDetail />} />
+            <Route path="/user/committee/:committeeId/:memberId" element={<UserCommitteeDetail />} />
+            <Route path="*" element={<Navigate to="/user" replace />} />
+          </Routes>
+        </main>
+        {!isUserPortal && !isLocked && (
+          <footer className={`py-4 text-center text-sm text-neutral-DEFAULT dark:text-gray-400 ${language === Language.UR ? 'font-notoNastaliqUrdu' : ''}`}>
+            © {new Date().getFullYear()} Faisal Mobile's. {language === Language.UR ? "جملہ حقوق محفوظ ہیں." : "All rights reserved."}
+          </footer>
+        )}
       {/* Welcome Modal */}
       {showWelcome && !isUserPortal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-40 animate-fadeIn">
@@ -543,8 +537,8 @@ const AppWithRouterLogic: React.FC = () => {
             </p>
           </div>
         </div>
-      )}
-    </div>
+        )}
+      </div>
   );
 };
 
