@@ -239,7 +239,11 @@ const UserInstallmentDetail: React.FC = () => {
                   <td className="px-4 py-2 text-center font-semibold text-cyan-900">{idx + 1}</td>
                   <td className="px-4 py-2 text-center text-black">{getMonthName(p.paymentDate)}</td>
                   <td className="px-4 py-2 text-center text-cyan-800 font-semibold">PKR {p.amountPaid.toLocaleString()}</td>
-                  <td className={`px-4 py-2 text-center font-semibold ${p.status === 'Paid' ? 'text-green-600' : 'text-orange-500'}`}>{capitalizeWords(p.status)}</td>
+                  <td className={`px-4 py-2 text-center font-semibold ${
+                    p.status === 'Paid' ? 'text-green-600' : 
+                    p.status === 'Partial' ? 'text-orange-500' : 
+                    'text-red-500'
+                  }`}>{capitalizeWords(p.status)}</td>
                   <td className="px-4 py-2 text-center text-black">{p.paymentDate}</td>
                   <td className="px-4 py-2 text-center">
                     <Button size="sm" variant="ghost" onClick={handleDownloadPdf} className="text-cyan-700 hover:bg-cyan-100">PDF</Button>

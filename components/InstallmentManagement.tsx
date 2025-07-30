@@ -699,10 +699,31 @@ const InstallmentManagement: React.FC = () => {
       const collectedAmount = monthPayments.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
       const remainingAmount = (inst.monthlyInstallment || 0) - collectedAmount;
       
-      // Calculate total remaining amount (current month + future months)
-      const totalPaid = inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
-      const totalCollectedOverall = (inst.advancePayment || 0) + totalPaid;
-      const totalRemainingOverall = (inst.totalPayment || 0) - totalCollectedOverall;
+      // Calculate total pending amount: (Total months × Monthly installment) - Total collected
+      let totalPendingAmount = 0;
+      
+      // Calculate total collected (advance + all payments)
+      const totalCollectedOverall = (inst.advancePayment || 0) + inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
+      
+      // Calculate total months from start date to current month (inclusive)
+      const currentDate = new Date();
+      const startDate = new Date(inst.startDate);
+      const monthsSinceStart = Math.max(0, 
+        (currentDate.getFullYear() - startDate.getFullYear()) * 12 + 
+        (currentDate.getMonth() - startDate.getMonth())
+      );
+      
+      // Total months including current month
+      const totalMonths = monthsSinceStart + 1;
+      
+      // Total expected amount = Total months × Monthly installment
+      const totalExpectedAmount = totalMonths * (inst.monthlyInstallment || 0);
+      
+      // Calculate total pending: Total expected - Total collected
+      totalPendingAmount = totalExpectedAmount - totalCollectedOverall;
+      
+      // Ensure it's not negative
+      totalPendingAmount = Math.max(0, totalPendingAmount);
       
       totalCollected += collectedAmount;
       totalRemaining += remainingAmount > 0 ? remainingAmount : 0;
@@ -726,7 +747,7 @@ const InstallmentManagement: React.FC = () => {
         inst.monthlyInstallment?.toLocaleString?.() || '',
         collectedAmount.toLocaleString(),
         (remainingAmount > 0 ? remainingAmount : 0).toLocaleString(),
-        totalRemainingOverall.toLocaleString(),
+        totalPendingAmount.toLocaleString(),
         remainingInstallments.toString(),
         (language === Language.UR ? ((inst.status === 'Closed') ? 'بند' : 'کھلا') : inst.status)
       ];
@@ -736,10 +757,10 @@ const InstallmentManagement: React.FC = () => {
     if (language === Language.UR) {
       await document.fonts.load('18px "Jameel Noori Nastaleeq"');
       heading = `${currentMonthName} کی قسط رپورٹ`;
-      columns = ['نمبر', 'خریدار کا نام', 'شناختی کارڈ', 'فون', 'موبائل کا نام', 'آغاز تاریخ', 'ماہانہ قسط', 'جمع شدہ', `${currentMonthName} باقی`, 'کل باقی رقم', 'باقی اقساط', 'اکاؤنٹ اسٹیٹس'];
+      columns = ['نمبر', 'خریدار کا نام', 'شناختی کارڈ', 'فون', 'موبائل کا نام', 'آغاز تاریخ', 'ماہانہ قسط', 'جمع شدہ', `${currentMonthName} باقی`, 'کل معطل رقم', 'باقی اقساط', 'اکاؤنٹ اسٹیٹس'];
     } else {
       heading = `${currentMonthName} Installment Report`;
-      columns = ['S.No', 'Buyer Name', 'CNIC', 'Phone', 'Product Name', 'Start Date', 'Monthly Installment', 'Collected', `${currentMonthName} Remaining`, 'Total Remaining Amount', 'Remaining Installments', 'Account Status'];
+      columns = ['S.No', 'Buyer Name', 'CNIC', 'Phone', 'Product Name', 'Start Date', 'Monthly Installment', 'Collected', `${currentMonthName} Remaining`, 'Total Pending Amount', 'Remaining Installments', 'Account Status'];
     }
     pdf.setFont(language === Language.UR ? 'JameelNooriNastaleeq' : 'helvetica', 'bold');
     pdf.setFontSize(18);

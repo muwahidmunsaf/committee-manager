@@ -47,7 +47,7 @@ const InstallmentDetailScreen: React.FC = () => {
 
   const handleSavePayment = async () => {
     const amount = parseFloat(paymentAmount);
-    if (!amount || amount <= 0) {
+    if (isNaN(amount) || amount < 0) {
       setError(t('enterValidAmount'));
       return;
     }
@@ -55,12 +55,23 @@ const InstallmentDetailScreen: React.FC = () => {
       setError(t('amountExceedsBalance'));
       return;
     }
+    
+    // Determine payment status based on amount
+    let paymentStatus: 'Paid' | 'Unpaid' | 'Partial';
+    if (amount === 0) {
+      paymentStatus = 'Unpaid';
+    } else if (amount === installment.monthlyInstallment) {
+      paymentStatus = 'Paid';
+    } else {
+      paymentStatus = 'Partial';
+    }
+    
     const newPayment = {
       id: Math.random().toString(),
       installmentId: installment.id,
       amountPaid: amount,
       paymentDate,
-      status: 'Paid' as const,
+      status: paymentStatus,
     };
     const updated = {
       ...installment,
@@ -80,7 +91,7 @@ const InstallmentDetailScreen: React.FC = () => {
 
   const handleSaveEditPayment = async () => {
     const amount = parseFloat(editAmount);
-    if (!amount || amount <= 0) {
+    if (isNaN(amount) || amount < 0) {
       setEditError(t('enterValidAmount'));
       return;
     }
@@ -89,8 +100,19 @@ const InstallmentDetailScreen: React.FC = () => {
       return;
     }
     if (!editPayment) return;
+    
+    // Determine payment status based on amount
+    let paymentStatus: 'Paid' | 'Unpaid' | 'Partial';
+    if (amount === 0) {
+      paymentStatus = 'Unpaid';
+    } else if (amount === installment.monthlyInstallment) {
+      paymentStatus = 'Paid';
+    } else {
+      paymentStatus = 'Partial';
+    }
+    
     const updatedPayments = installment.payments.map(p =>
-      p.id === editPayment.id ? { ...p, amountPaid: amount, paymentDate: editDate } : p
+      p.id === editPayment.id ? { ...p, amountPaid: amount, paymentDate: editDate, status: paymentStatus } : p
     );
     const updated = {
       ...installment,
@@ -990,7 +1012,11 @@ const InstallmentDetailScreen: React.FC = () => {
                     <td className="px-3 py-2 text-center">{idx + 1}</td>
                     <td className="px-3 py-2 text-center">PKR {p.amountPaid.toLocaleString()}</td>
                     <td className="px-3 py-2 text-center">{p.paymentDate}</td>
-                    <td className="px-3 py-2 text-center">{p.status}</td>
+                    <td className={`px-3 py-2 text-center font-semibold ${
+                      p.status === 'Paid' ? 'text-green-600' : 
+                      p.status === 'Partial' ? 'text-orange-500' : 
+                      'text-red-500'
+                    }`}>{capitalizeWords(p.status)}</td>
                     <td className="px-3 py-2 text-center">
                       <Button size="sm" variant="ghost" onClick={() => handleDownloadReceipt(p)} disabled={pdfLoading}>PDF</Button>
                     </td>
@@ -1013,7 +1039,7 @@ const InstallmentDetailScreen: React.FC = () => {
         </div>
         <Modal isOpen={isPaymentModalOpen} onClose={() => setIsPaymentModalOpen(false)} title={t('pay')}>
           <div className="space-y-4">
-            <Input name="amount" label={t('amountPaid')} type="number" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} required />
+            <Input name="amount" label={t('amountPaid')} type="number" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} min="0" required />
             <Input name="date" label={t('paymentDate')} type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} required />
             {error && <div className="text-red-500 text-sm">{error}</div>}
             <div className="flex justify-end space-x-2 rtl:space-x-reverse pt-4">
@@ -1024,7 +1050,7 @@ const InstallmentDetailScreen: React.FC = () => {
         </Modal>
         <Modal isOpen={!!editPayment} onClose={() => setEditPayment(null)} title={t('edit')}>
           <div className="space-y-4">
-            <Input name="editAmount" label={t('amountPaid')} type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} required />
+            <Input name="editAmount" label={t('amountPaid')} type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} min="0" required />
             <Input name="editDate" label={t('paymentDate')} type="date" value={editDate} onChange={e => setEditDate(e.target.value)} required />
             {editError && <div className="text-red-500 text-sm">{editError}</div>}
             <div className="flex justify-end space-x-2 rtl:space-x-reverse pt-4">

@@ -165,7 +165,7 @@ export interface InstallmentPayment {
   installmentId: string;
   amountPaid: number;
   paymentDate: string; // ISO Date string
-  status: 'Paid' | 'Unpaid';
+  status: 'Paid' | 'Unpaid' | 'Partial';
   receiptGenerated?: boolean;
 }
 

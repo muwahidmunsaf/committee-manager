@@ -58,12 +58,12 @@ const DashboardScreen: React.FC = () => {
   const totalInstallmentValue = installments.reduce((sum, inst) => sum + inst.totalPayment, 0);
   // Collected = advance + all payments
   const totalInstallmentCollected = installments.reduce((sum, inst) => {
-    const totalPaid = inst.payments.filter(p => p.status === 'Paid').reduce((paymentSum, payment) => paymentSum + payment.amountPaid, 0);
+    const totalPaid = inst.payments.filter(p => p.status === 'Paid' || p.status === 'Partial').reduce((paymentSum, payment) => paymentSum + payment.amountPaid, 0);
     return sum + (inst.advancePayment || 0) + totalPaid;
   }, 0);
   // Remaining = total - advance - all payments
   const totalInstallmentRemaining = installments.reduce((sum, inst) => {
-    const totalPaid = inst.payments.filter(p => p.status === 'Paid').reduce((paymentSum, payment) => paymentSum + payment.amountPaid, 0);
+    const totalPaid = inst.payments.filter(p => p.status === 'Paid' || p.status === 'Partial').reduce((paymentSum, payment) => paymentSum + payment.amountPaid, 0);
     return sum + inst.totalPayment - (inst.advancePayment || 0) - totalPaid;
   }, 0);
 
@@ -73,7 +73,7 @@ const DashboardScreen: React.FC = () => {
     const startDate = new Date(inst.startDate);
     const monthsSinceStart = (today.getFullYear() - startDate.getFullYear()) * 12 + (today.getMonth() - startDate.getMonth());
     const expectedPayments = Math.min(monthsSinceStart + 1, inst.duration);
-    const actualPayments = inst.payments.filter(p => p.status === 'Paid').length;
+    const actualPayments = inst.payments.filter(p => p.status === 'Paid' || p.status === 'Partial').length;
     return expectedPayments > actualPayments;
   });
 
@@ -85,7 +85,7 @@ const DashboardScreen: React.FC = () => {
       const paymentDate = new Date(p.paymentDate);
       return paymentDate.getMonth() === currentMonth && 
              paymentDate.getFullYear() === currentYear && 
-             p.status === 'Paid';
+             (p.status === 'Paid' || p.status === 'Partial');
     });
     return sum + monthPayments.reduce((monthSum, payment) => monthSum + payment.amountPaid, 0);
   }, 0);
@@ -107,7 +107,7 @@ const DashboardScreen: React.FC = () => {
 
   // Installment chart data (for collection overview)
   const installmentData = activeInstallments.slice(0, 7).map(inst => {
-    const totalPaid = inst.payments.filter(p => p.status === 'Paid').reduce((sum, p) => sum + p.amountPaid, 0);
+    const totalPaid = inst.payments.filter(p => p.status === 'Paid' || p.status === 'Partial').reduce((sum, p) => sum + p.amountPaid, 0);
     const collected = (inst.advancePayment || 0) + totalPaid;
     return {
     name: inst.buyerName.substring(0, 15) + (inst.buyerName.length > 15 ? '...' : ''),
