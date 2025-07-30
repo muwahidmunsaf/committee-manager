@@ -702,19 +702,19 @@ const InstallmentManagement: React.FC = () => {
       // Calculate total pending amount: (Total months × Monthly installment) - Total collected
       let totalPendingAmount = 0;
       
-      // Calculate total collected (advance + all payments)
-      const totalCollectedOverall = (inst.advancePayment || 0) + inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
+      // Calculate total collected (only installment payments, exclude advance)
+      const totalCollectedOverall = inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
       
-      // Calculate total months from start date to current month (inclusive)
+      // Calculate total months: from the month AFTER the start date up to and including the current month
       const currentDate = new Date();
       const startDate = new Date(inst.startDate);
-      const monthsSinceStart = Math.max(0, 
-        (currentDate.getFullYear() - startDate.getFullYear()) * 12 + 
-        (currentDate.getMonth() - startDate.getMonth())
-      );
-      
-      // Total months including current month
-      const totalMonths = monthsSinceStart + 1;
+      // Move startDate to the first day of the next month
+      const nextMonthStartDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 1);
+      let monthsSinceStart = (currentDate.getFullYear() - nextMonthStartDate.getFullYear()) * 12 + 
+        (currentDate.getMonth() - nextMonthStartDate.getMonth()) + 1; // inclusive of current month
+      // Ensure at least 1 if current/report month is the first due month
+      monthsSinceStart = Math.max(1, monthsSinceStart);
+      const totalMonths = monthsSinceStart;
       
       // Total expected amount = Total months × Monthly installment
       const totalExpectedAmount = totalMonths * (inst.monthlyInstallment || 0);
