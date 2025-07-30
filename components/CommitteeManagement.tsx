@@ -197,16 +197,16 @@ const CommitteeManagement: React.FC = () => {
   }
 
   return (
-    <div className={`p-4 md:p-6 ${language === Language.UR ? 'font-notoNastaliqUrdu text-right' : ''}`}> 
-      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 ${language === Language.UR ? 'sm:flex-row-reverse' : ''}`}> 
-        <h1 className="text-2xl md:text-3xl font-bold text-neutral-darker dark:text-neutral-light flex items-center"> 
-          <BuildingOfficeIcon className="h-8 w-8 mr-3 text-primary" /> 
-          {t('committees')} 
-        </h1> 
-        <Button onClick={() => handleOpenFormModal()} className="w-full sm:w-auto"> 
-          <PlusCircleIcon className={`h-5 w-5 ${language === Language.UR ? 'ml-2' : 'mr-2'}`} /> 
-          {t('newCommittee')} 
-        </Button> 
+    <div className={`p-4 md:p-6 ${language === Language.UR ? 'font-notoNastaliqUrdu text-right' : ''}`}>
+      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 ${language === Language.UR ? 'sm:flex-row-reverse' : ''}`}>
+        <h1 className="text-2xl md:text-3xl font-bold text-neutral-darker dark:text-neutral-light flex items-center">
+          <BuildingOfficeIcon className="h-8 w-8 mr-3 text-primary" />
+          {t('committees')}
+        </h1>
+        <Button onClick={() => handleOpenFormModal()} className="w-full sm:w-auto">
+          <PlusCircleIcon className={`h-5 w-5 ${language === Language.UR ? 'ml-2' : 'mr-2'}`} />
+          {t('newCommittee')}
+        </Button>
       </div>
       {/* Filter and Sort Controls */}
       <div className="mb-6 space-y-4">
@@ -336,24 +336,24 @@ const CommitteeManagement: React.FC = () => {
                     </div>
                   );
                 })()}
-                <div className={`mt-auto flex space-x-2 ${language === Language.UR ? 'flex-row-reverse space-x-reverse' : ''}`}> 
-                  <Button size="sm" onClick={() => navigate(`/committees/${committee.id}`)} className="flex-grow flex items-center justify-center"> 
-                    <FolderIcon className="w-4 h-4 mr-1" /> 
-                    {t('viewDetails')} 
-                  </Button> 
-                  <Button size="sm" variant="ghost" onClick={() => handleOpenFormModal(committee)} aria-label={t('edit')}> 
-                    <PencilSquareIcon className="w-5 h-5" /> 
-                  </Button> 
-                  <Button size="sm" variant="danger" onClick={() => handleDeleteCommitteeWrapper(committee.id)} aria-label={t('delete')}> 
-                    <TrashIcon className="w-5 h-5" /> 
-                  </Button> 
-                </div> 
-              </div> 
-            </div> 
-          ))} 
-        </div> 
+                <div className={`mt-auto flex space-x-2 ${language === Language.UR ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                  <Button size="sm" onClick={() => navigate(`/committees/${committee.id}`)} className="flex-grow flex items-center justify-center">
+                    <FolderIcon className="w-4 h-4 mr-1" />
+                    {t('viewDetails')}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => handleOpenFormModal(committee)} aria-label={t('edit')}>
+                    <PencilSquareIcon className="w-5 h-5" />
+                  </Button>
+                  <Button size="sm" variant="danger" onClick={() => handleDeleteCommitteeWrapper(committee.id)} aria-label={t('delete')}>
+                    <TrashIcon className="w-5 h-5" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
-      <Modal isOpen={isFormModalOpen} onClose={handleCloseFormModal} title={editingCommittee ? t('edit') + " " + t('committee') : t('newCommittee')}> 
+      <Modal isOpen={isFormModalOpen} onClose={handleCloseFormModal} title={editingCommittee ? t('edit') + " " + t('committee') : t('newCommittee')}>
         <CommitteeForm 
           initialData={editingCommittee} 
           onClose={handleCloseFormModal}

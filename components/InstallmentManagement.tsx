@@ -474,9 +474,9 @@ const InstallmentManagement: React.FC = () => {
     .filter(i => {
       // Text search filter
       const matchesSearch = 
-        i.buyerName.toLowerCase().includes(search.toLowerCase()) ||
-        i.phone.includes(search) ||
-        i.cnic.includes(search) ||
+    i.buyerName.toLowerCase().includes(search.toLowerCase()) ||
+    i.phone.includes(search) ||
+    i.cnic.includes(search) ||
         i.mobileName.toLowerCase().includes(search.toLowerCase());
 
       // Status filter
@@ -577,21 +577,21 @@ const InstallmentManagement: React.FC = () => {
       } else {
         remainingInstallments = (inst.duration || 0) - (inst.payments?.length || 0);
       }
-      return [
-        (idx + 1).toString(),
-        inst.buyerName,
-        inst.cnic,
-        inst.phone,
-        inst.mobileName,
+        return [
+          (idx + 1).toString(),
+          inst.buyerName,
+          inst.cnic,
+          inst.phone,
+          inst.mobileName,
         inst.startDate ? new Date(inst.startDate).toLocaleDateString() : '',
-        inst.totalPayment?.toLocaleString?.() || '',
-        inst.advancePayment?.toLocaleString?.() || '',
-        collectedAmount.toLocaleString(),
+          inst.totalPayment?.toLocaleString?.() || '',
+          inst.advancePayment?.toLocaleString?.() || '',
+          collectedAmount.toLocaleString(),
         (remainingAmount > 0 ? remainingAmount : 0).toLocaleString(),
         remainingInstallments.toString(),
         (language === Language.UR ? ((inst.status === 'Closed') ? 'بند' : 'کھلا') : inst.status)
-      ];
-    });
+        ];
+      });
     let columns = [];
     let heading = '';
     if (language === Language.UR) {
@@ -698,9 +698,16 @@ const InstallmentManagement: React.FC = () => {
       });
       const collectedAmount = monthPayments.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
       const remainingAmount = (inst.monthlyInstallment || 0) - collectedAmount;
+      
+      // Calculate total remaining amount (current month + future months)
+      const totalPaid = inst.payments?.reduce((sum, p) => sum + (p.amountPaid || 0), 0) || 0;
+      const totalCollectedOverall = (inst.advancePayment || 0) + totalPaid;
+      const totalRemainingOverall = (inst.totalPayment || 0) - totalCollectedOverall;
+      
       totalCollected += collectedAmount;
       totalRemaining += remainingAmount > 0 ? remainingAmount : 0;
       totalAmount += inst.monthlyInstallment || 0;
+      
       // Remaining installments logic
       let remainingInstallments = 0;
       if (remainingAmount === 0) {
@@ -708,6 +715,7 @@ const InstallmentManagement: React.FC = () => {
       } else {
         remainingInstallments = 1; // Only current month
       }
+      
       return [
         (idx + 1).toString(),
         inst.buyerName,
@@ -718,6 +726,7 @@ const InstallmentManagement: React.FC = () => {
         inst.monthlyInstallment?.toLocaleString?.() || '',
         collectedAmount.toLocaleString(),
         (remainingAmount > 0 ? remainingAmount : 0).toLocaleString(),
+        totalRemainingOverall.toLocaleString(),
         remainingInstallments.toString(),
         (language === Language.UR ? ((inst.status === 'Closed') ? 'بند' : 'کھلا') : inst.status)
       ];
@@ -727,10 +736,10 @@ const InstallmentManagement: React.FC = () => {
     if (language === Language.UR) {
       await document.fonts.load('18px "Jameel Noori Nastaleeq"');
       heading = `${currentMonthName} کی قسط رپورٹ`;
-      columns = ['نمبر', 'خریدار کا نام', 'شناختی کارڈ', 'فون', 'موبائل کا نام', 'آغاز تاریخ', 'ماہانہ قسط', 'جمع شدہ', 'باقی', 'باقی اقساط', 'اکاؤنٹ اسٹیٹس'];
+      columns = ['نمبر', 'خریدار کا نام', 'شناختی کارڈ', 'فون', 'موبائل کا نام', 'آغاز تاریخ', 'ماہانہ قسط', 'جمع شدہ', `${currentMonthName} باقی`, 'کل باقی رقم', 'باقی اقساط', 'اکاؤنٹ اسٹیٹس'];
     } else {
       heading = `${currentMonthName} Installment Report`;
-      columns = ['S.No', 'Buyer Name', 'CNIC', 'Phone', 'Product Name', 'Start Date', 'Monthly Installment', 'Collected', 'Remaining', 'Remaining Installments', 'Account Status'];
+      columns = ['S.No', 'Buyer Name', 'CNIC', 'Phone', 'Product Name', 'Start Date', 'Monthly Installment', 'Collected', `${currentMonthName} Remaining`, 'Total Remaining Amount', 'Remaining Installments', 'Account Status'];
     }
     pdf.setFont(language === Language.UR ? 'JameelNooriNastaleeq' : 'helvetica', 'bold');
     pdf.setFontSize(18);
@@ -838,10 +847,10 @@ const InstallmentManagement: React.FC = () => {
       </div>
       <div className="mb-6 space-y-4">
         {/* Search Input */}
-        <Input
-          name="search"
-          label={t('searchInstallments')}
-          value={search}
+      <Input
+        name="search"
+        label={t('searchInstallments')}
+        value={search}
           onChange={e => {
             let value = e.target.value;
             // Phone formatting: starts with 03
