@@ -1431,6 +1431,34 @@ export const CommitteeDetailScreen: React.FC = () => {
         const paid = memberPaymentsMap.get(memberData.member.id) || 0;
         const memberTotalDue = committee.amountPerMember * memberData.shares;
         const remaining = memberTotalDue - paid;
+        
+        // Calculate current month due (for the selected month)
+        const currentMonthDue = memberTotalDue;
+        
+        // Calculate previous month pending (cumulative pending up to previous month)
+        const previousMonthIndex = monthIndex - 1;
+        let previousMonthPending = 0;
+        if (previousMonthIndex >= 0) {
+          // Calculate cumulative amount due up to previous month
+          const monthsUpToPrevious = previousMonthIndex + 1;
+          const cumulativeAmountDue = memberTotalDue * monthsUpToPrevious;
+          
+          // Calculate total paid up to previous month
+          const allPaymentsUpToPreviousMonth = committee.payments.filter(p => 
+            p.memberId === memberData.member.id && 
+            p.monthIndex <= previousMonthIndex && 
+            p.status === 'Cleared'
+          );
+          const cumulativeAmountPaid = allPaymentsUpToPreviousMonth.reduce((sum, p) => sum + p.amountPaid, 0);
+          
+          // Previous month pending = cumulative due - cumulative paid
+          previousMonthPending = cumulativeAmountDue - cumulativeAmountPaid;
+          previousMonthPending = Math.max(0, previousMonthPending);
+        }
+        
+        // Calculate total (current month due + previous month pending)
+        const total = currentMonthDue + previousMonthPending;
+        
         memberTableRows += `
           <tr>
             <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${idx + 1}</td>
@@ -1439,6 +1467,9 @@ export const CommitteeDetailScreen: React.FC = () => {
             <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">PKR ${memberTotalDue.toLocaleString()}</td>
             <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">PKR ${paid.toLocaleString()}</td>
             <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">PKR ${remaining.toLocaleString()}</td>
+            <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">PKR ${currentMonthDue.toLocaleString()}</td>
+            <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">PKR ${previousMonthPending.toLocaleString()}</td>
+            <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">PKR ${total.toLocaleString()}</td>
           </tr>
         `;
       });
@@ -1455,6 +1486,9 @@ export const CommitteeDetailScreen: React.FC = () => {
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">${t('totalDue')}</th>
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">${t('amountPaid')}</th>
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">${t('remainingAmount')}</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Current Month Due</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Previous Month Pending</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Total</th>
         </tr>
             </thead>
             <tbody>
@@ -1918,18 +1952,48 @@ export const CommitteeDetailScreen: React.FC = () => {
         const memberTotalDue = committee.amountPerMember * memberData.shares;
         const remaining = memberTotalDue - paid;
         
-        totalDue += memberTotalDue;
-          totalCollected += paid;
-          totalRemaining += remaining;
+        // Calculate current month due (for the selected month)
+        const currentMonthDue = memberTotalDue;
         
-          return [
-            (idx + 1).toString(),
+        // Calculate previous month pending (cumulative pending up to previous month)
+        const previousMonthIndex = monthIndex - 1;
+        let previousMonthPending = 0;
+        if (previousMonthIndex >= 0) {
+          // Calculate cumulative amount due up to previous month
+          const monthsUpToPrevious = previousMonthIndex + 1;
+          const cumulativeAmountDue = memberTotalDue * monthsUpToPrevious;
+          
+          // Calculate total paid up to previous month
+          const allPaymentsUpToPreviousMonth = committee.payments.filter(p => 
+            p.memberId === memberData.member.id && 
+            p.monthIndex <= previousMonthIndex && 
+            p.status === 'Cleared'
+          );
+          const cumulativeAmountPaid = allPaymentsUpToPreviousMonth.reduce((sum, p) => sum + p.amountPaid, 0);
+          
+          // Previous month pending = cumulative due - cumulative paid
+          previousMonthPending = cumulativeAmountDue - cumulativeAmountPaid;
+          previousMonthPending = Math.max(0, previousMonthPending);
+        }
+        
+        // Calculate total (current month due + previous month pending)
+        const total = currentMonthDue + previousMonthPending;
+        
+        totalDue += memberTotalDue;
+        totalCollected += paid;
+        totalRemaining += remaining;
+        
+        return [
+          (idx + 1).toString(),
           memberData.member.name || '',
           memberData.shares.toString(),
           `PKR ${memberTotalDue.toLocaleString()}`,
-            `PKR ${paid.toLocaleString()}`,
-            `PKR ${remaining.toLocaleString()}`
-          ];
+          `PKR ${paid.toLocaleString()}`,
+          `PKR ${remaining.toLocaleString()}`,
+          `PKR ${currentMonthDue.toLocaleString()}`,
+          `PKR ${previousMonthPending.toLocaleString()}`,
+          `PKR ${total.toLocaleString()}`
+        ];
       });
 
       // Get payout history for this month - ONLY show who was actually paid
@@ -2037,7 +2101,7 @@ export const CommitteeDetailScreen: React.FC = () => {
       yPosition += 20;
       autoTable(pdf, {
         startY: yPosition,
-        head: [[t('serialNo') || 'S.No', t('memberName'), 'Shares', 'Total Due', t('amountPaid'), t('remainingAmount')]],
+        head: [[t('serialNo') || 'S.No', t('memberName'), 'Shares', 'Total Due', t('amountPaid'), t('remainingAmount'), 'Current Month Due', 'Previous Month Pending', 'Total']],
         body: tableBody.map(row => row.map(cell => cell || '')),
         theme: 'grid',
         headStyles: { fillColor: [6, 182, 212], textColor: 255, fontStyle: 'bold' },
@@ -2816,8 +2880,21 @@ export const CommitteeDetailScreen: React.FC = () => {
                                             const memberInstallmentsForMonth = committee.payments.filter(p => p.memberId === member.member.id && p.monthIndex === monthIndex && p.status === 'Cleared');
                                             const totalPaidForMonth = memberInstallmentsForMonth.reduce((sum, p) => sum + p.amountPaid, 0);
                                             
-                                            // Calculate total amount due for this member (considering shares)
+                                            // Calculate cumulative amounts up to this month
                                             const totalAmountDueForMember = committee.amountPerMember * member.shares;
+                                            const monthsUpToCurrent = monthIndex + 1; // Including current month
+                                            const cumulativeAmountDue = totalAmountDueForMember * monthsUpToCurrent;
+                                            
+                                            // Calculate total paid up to this month (including all previous months)
+                                            const allPaymentsUpToMonth = committee.payments.filter(p => 
+                                                p.memberId === member.member.id && 
+                                                p.monthIndex <= monthIndex && 
+                                                p.status === 'Cleared'
+                                            );
+                                            const cumulativeAmountPaid = allPaymentsUpToMonth.reduce((sum, p) => sum + p.amountPaid, 0);
+                                            
+                                            // Calculate cumulative pending amount
+                                            const cumulativePendingAmount = cumulativeAmountDue - cumulativeAmountPaid;
                                             
                                             let derivedMonthlyStatus: 'Paid' | 'Unpaid' | 'Partial' = 'Unpaid';
                                             if (totalPaidForMonth >= totalAmountDueForMember) {
@@ -2846,6 +2923,11 @@ export const CommitteeDetailScreen: React.FC = () => {
                                                         PKR {totalPaidForMonth.toLocaleString()}
                                                     </span>
                                                     <span className={`text-xs ${statusTextColor}`}>({t(derivedMonthlyStatus.toLowerCase())})</span>
+                                                    {cumulativePendingAmount > 0 && (
+                                                        <div className={`text-xs mt-1 ${statusTextColor}`}>
+                                                            Pending: PKR {cumulativePendingAmount.toLocaleString()}
+                                                        </div>
+                                                    )}
                                                     <div className="mt-1 space-x-1 rtl:space-x-reverse">
                                                       <Button size="sm" variant="ghost" className="text-xs p-1" onClick={() => handleOpenPaymentModal(member.member.id, monthIndex)}>{t('addInstallment')}</Button>
                                                       {memberInstallmentsForMonth.map(inst => (
